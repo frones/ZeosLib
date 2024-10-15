@@ -464,10 +464,12 @@ var ZTrans: IZFirebirdTransaction;
 begin
   ZTrans := GetActiveTransaction;
   FBTrans := ZTrans.GetTransaction;
+  if DriverManager.HasLoggingListener then begin
   {$IFDEF UNICODE}
-  if DriverManager.HasLoggingListener then
     FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
   {$ENDIF}
+    DriverManager.LogMessage(LoggingCategory, 'firebird', {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
+  end;
   if LoggingCategory = lcTransaction then begin
     FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
       FDialect, nil, nil, nil, nil);

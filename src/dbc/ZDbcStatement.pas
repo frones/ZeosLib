@@ -4303,6 +4303,8 @@ end;
 procedure TZAbstractPreparedStatement.Unprepare;
 var RefCountAdded: Boolean;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcUnprepStmt,Self);
   RefCountAdded := (RefCount = 1) and (Assigned(FOpenResultSet) or Assigned(FLastResultSet));
   if RefCountAdded then
     _AddRef;

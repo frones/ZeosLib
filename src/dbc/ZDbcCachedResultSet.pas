@@ -54,6 +54,7 @@
   FOS
   Michael Seeger
   Mark Ford
+  Soner
 }
 unit ZDbcCachedResultSet;
 
@@ -393,9 +394,9 @@ type
     procedure RefreshRow; override;// FOS+ 071106
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer; override;
+      const CompareFuncs: TZCompareFuncs; NullsFirst: Boolean = false): Integer; override;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs; override;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs; override;
 
     //---------------------------------------------------------------------
     // Cached Updates
@@ -2499,7 +2500,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractCachedResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs; NullsFirst: Boolean = false): Integer;
 var
   RowBuffer1, RowBuffer2: PZRowBuffer;
 begin
@@ -2519,7 +2520,7 @@ begin
 end;
 
 function TZAbstractCachedResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-  const CompareKinds: TComparisonKindArray): TCompareFuncs;
+  const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 begin
   Result := FRowAccessor.GetCompareFuncs(ColumnIndices, CompareKinds);
 end;
@@ -2925,7 +2926,7 @@ end;
 function TZVirtualResultSet.ColumnSort(Item1, Item2: Pointer): Integer;
 begin
   Result := RowAccessor.CompareBuffers(Item1, Item2,
-    TIntegerDynArray(FColumnIndices), TCompareFuncs(FCompareFuncs));
+    TIntegerDynArray(FColumnIndices), TZCompareFuncs(FCompareFuncs));
 end;
 
 {$IFDEF FPC} {$PUSH}
@@ -3059,15 +3060,15 @@ procedure TZVirtualResultSet.SortRows(const ColumnIndices: TIntegerDynArray;
 var I: Integer;
     ComparisonKind: TComparisonKind;
 begin
-  SetLength(TCompareFuncs(FCompareFuncs), Length(ColumnIndices));
+  SetLength(TZCompareFuncs(FCompareFuncs), Length(ColumnIndices));
   if Descending
   then ComparisonKind := ckDescending
   else ComparisonKind := ckAscending;
   for i := low(ColumnIndices) to high(ColumnIndices) do
-    TCompareFuncs(FCompareFuncs)[i] := RowAccessor.GetCompareFunc(ColumnIndices[I], ComparisonKind);
+    TZCompareFuncs(FCompareFuncs)[i] := RowAccessor.GetCompareFunc(ColumnIndices[I], ComparisonKind);
   fColumnIndices := Pointer(ColumnIndices);
   RowsList.Sort(ColumnSort);
-  SetLength(TCompareFuncs(FCompareFuncs), 0);
+  SetLength(TZCompareFuncs(FCompareFuncs), 0);
 end;
 
 { TZVirtualResultSetRowAccessor }
@@ -3092,3 +3093,4 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 end.
+

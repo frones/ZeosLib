@@ -175,11 +175,11 @@ procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline
 function PG2Int64(P: Pointer): Int64; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
-{** written by EgonHugeist
-  converts a postgres numeric into a native currency value
-   @param P is a pointer to a valid numeric value
-   @return a converted currency value
-}
+/// <summary>converts a postgres "external" numeric value into a native pascal
+///  currency value.
+///  written by EgonHugeist</summary>
+/// <param>"P" is a pointer to a valid numeric value</param>
+/// <returns>a converted currency value</returns>
 function PGNumeric2Currency(P: Pointer): Currency;
 
 {** written by EgonHugeist
@@ -1589,7 +1589,7 @@ procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
   i, NBASEDigitsCount, Precision, Scale, Digits: Integer;
   NBASEDigit, FirstNibbleDigit: Word;
-  Weight: SmallInt;
+  Weight, PosWeight: SmallInt;
   pNibble, pLastNibble: PAnsiChar;
   HalfNibbles: Boolean; //fpc compare fails in all areas if not strict left padded
 label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3, jmpScale;
@@ -1621,18 +1621,22 @@ ZeroBCD:
   pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
 
   if Weight < 0 then begin {save absolute Weight value to I }
-    I := -Weight;
-    Inc(pNibble, (I - 1) shl 1); //set new bcd nibble offset
+    PosWeight := -Weight;
+    Inc(pNibble, (PosWeight - 1) shl 1); //set new bcd nibble offset
     if pNibble > pLastNibble then //overflow -> raise AV ?
       goto ZeroBCD;
   end else
-    I := Weight;
+    PosWeight := Weight;
 
-  if NBASEDigitsCount <= I then begin
-    Precision := (I + NBASEDigitsCount -Ord(NBASEDigitsCount = Weight)) * BASE1000Digits;
+  if NBASEDigitsCount <= PosWeight then begin
+    Precision := ((PosWeight - NBASEDigitsCount +1)) * BASE1000Digits;
     Scale := Precision * Ord(Weight < 0);
+    Precision := Precision + (NBASEDigitsCount * BASE1000Digits);
+    for i := 0 to NBASEDigitsCount - 1 do
+      if i > Weight then
+        Scale := Scale + BASE1000Digits;
   end else if Weight < -1 then begin //scale starts with weight -1 nbase digits
-    Precision := (I - 1) * BASE1000Digits;
+    Precision := (PosWeight - 1) * BASE1000Digits;
     Scale := Precision;
   end else begin
     // determine precision as a multiple of 4 (because a Base1000-Digit always contains 4 Base10-Digits)

@@ -2680,9 +2680,9 @@ type
   end;
 
   /// <summary>Defines a compare method</summary>
-  TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
+  //TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
   /// <summary>Defines an array of compare methods.</summary>
-  TCompareFuncs = Array of TCompareFunc;
+  TZCompareFuncs = Array of TZCompareFunc;
 
   /// <summary>Defines Column-Comparison kinds</summary>
   TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
@@ -4022,9 +4022,9 @@ type
     procedure MoveToCurrentRow;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer;
+      const CompareFuncs: TZCompareFuncs; NullsFirst: Boolean = false): Integer;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 
     function GetStatement: IZStatement;
 

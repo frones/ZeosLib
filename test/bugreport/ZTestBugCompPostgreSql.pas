@@ -1655,7 +1655,19 @@ begin
   try
     Query.SQL.Text := 'select * from sf611 order by 1';
     Query.Open;
-    CheckEquals(4, Query.RecordCount);
+    CheckEquals(10, Query.RecordCount);
+    CheckEquals(0.9, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
+    Query.Next;
+    CheckEquals(9, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(20000, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(20001, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(31000000, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(31000000.1, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
+    Query.Next;
     CheckEquals(310000000, Query.FieldByName('num').AsFloat);
     Query.Next;
     CheckEquals(310000000.9, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
@@ -1674,10 +1686,20 @@ var
 begin
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'select * from sf611';
+    Query.SQL.Text := 'select * from sf611 order by 1';
     Query.Open;
-    CheckEquals(4, Query.RecordCount);
-    CheckEquals(310000000, Query.FieldByName('num').AsInteger);
+    CheckEquals(10, Query.RecordCount);
+    Query.Next;
+    CheckEquals(9, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    CheckEquals(20000, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    CheckEquals(20001, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    CheckEquals( 31000000, Query.FieldByName('num').AsInteger);
+    Query.Next;//31000000.1
+    Query.Next;
+    CheckEquals( 310000000, Query.FieldByName('num').AsInteger);
     Query.Next;
     Query.Next;
     CheckEquals(310000000000, TZFmtBCDField(Query.FieldByName('num')).AsLargeInt);

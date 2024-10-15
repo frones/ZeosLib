@@ -451,7 +451,7 @@ var
   isc_info: Byte;
   P: PChar;
   PA: PAnsiChar absolute P;
-  L: NativeUInt;
+  //L: NativeUInt;
   FbPos: Integer;
 begin
   {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}

@@ -750,7 +750,7 @@ begin
   Connection.StartTransaction;
   Succeeded := False;
   //create the helper instance and hook all fields
-  BatchStatement := TZFirebirdPreparedStatement.Create(FFBConnection, '', Info);
+  BatchStatement := TZFirebirdPreparedStatement.Create(FFBConnection, SQL, Info);
   BatchStatement._AddRef;
   BatchStatement.FPrepared := True; //skip second prepare on binding the vals
   BatchStatement.FInParamDescripors := FInParamDescripors; //use current offsets

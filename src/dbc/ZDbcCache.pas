@@ -175,13 +175,13 @@ type
     procedure DisposeBuffer(Buffer: PZRowBuffer);
 
     function CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
-      const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs;
+      const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs;
       NullsFirst: Boolean = false): Integer;
     function CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
-      ColumnIndex: Integer; CompareFunc: TCompareFunc; NullsFirst: Boolean = false): Integer;
-    function GetCompareFunc(ColumnIndex: Integer; const CompareKind: TComparisonKind): TCompareFunc;
+      ColumnIndex: Integer; CompareFunc: TZCompareFunc; NullsFirst: Boolean = false): Integer;
+    function GetCompareFunc(ColumnIndex: Integer; const CompareKind: TComparisonKind): TZCompareFunc;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 
     procedure Alloc;
     procedure Init;
@@ -367,519 +367,414 @@ const
     );
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
-function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, ResultSet ...
+function CompareNothing(V1, V2: Pointer): Integer; //emergency exit for types we can't sort like arrays, ResultSet ...
 begin
   Result := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
+  Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
 end;
 
-function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBoolean_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBoolean_Asc(V1, V2);
 end;
 
-function CompareBoolean_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
+  Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
 end;
 
-function CompareByte_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareByte_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PByte(V1)^ - PByte(V2)^; //overflow safe
+  Result := PByte(V1)^ - PByte(V2)^; //overflow safe
 end;
 
-function CompareByte_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareByte_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareByte_Asc(Null1, Null2, V1, V2);
+  Result := -CompareByte_Asc(V1, V2);
 end;
 
-function CompareByte_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareByte_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PByte(V1)^ <> PByte(V2)^);
+  Result := Ord(PByte(V1)^ <> PByte(V2)^);
 end;
 
-function CompareShort_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareShort_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
+  Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
 end;
 
-function CompareShort_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareShort_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareShort_Asc(Null1, Null2, V1, V2);
+  Result := -CompareShort_Asc(V1, V2);
 end;
 
-function CompareShort_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareShort_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
+  Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
 end;
 
-function CompareWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareWord_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PWord(V1)^ - PWord(V2)^; //overflow safe
+  Result := PWord(V1)^ - PWord(V2)^; //overflow safe
 end;
 
-function CompareWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareWord_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareWord_Asc(Null1, Null2, V1, V2);
+  Result := -CompareWord_Asc(V1, V2);
 end;
 
-function CompareWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareWord_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PWord(V1)^ <> PWord(V2)^);
+  Result := Ord(PWord(V1)^ <> PWord(V2)^);
 end;
 
-function CompareSmallInt_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareSmallInt_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
+  Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
 end;
 
-function CompareSmallInt_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareSmallInt_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareSmallInt_Asc(Null1, Null2, V1, V2);
+  Result := -CompareSmallInt_Asc(V1, V2);
 end;
 
-function CompareSmallInt_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareSmallInt_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
+  Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
 end;
 
-function CompareLongWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareLongWord_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
+  Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
+end;
+
+function CompareLongWord_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareLongWord_Asc(V1, V2);
+end;
+
+function CompareLongWord_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
+end;
+
+function CompareInteger_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := PInteger(V1)^;
+  if Result xor PInteger(V2)^>=0
+    then Result:=Result-PInteger(V2)^
+    else Result:=Result or 1;
+end;
+
+function CompareInteger_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareInteger_Asc(V1, V2);
+end;
+
+function CompareInteger_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
+end;
+
+function CompareInt64_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
+end;
+
+function CompareInt64_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareInt64_Asc(V1, V2);
+end;
+
+function CompareInt64_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+end;
+
+function CompareUInt64_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
+end;
+
+function CompareUInt64_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareUInt64_Asc(V1, V2);
+end;
+
+function CompareUInt64_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
+end;
+
+function CompareSingle_Asc(V1, V2: Pointer): Integer;
+var aDiv: Single;
+begin
+  if PSingle(V1)^ > PSingle(V2)^ then begin
+    aDiv := PSingle(V1)^ - PSingle(V2)^;
+    Result := Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+  end else begin
+    aDiv := PSingle(V2)^ - PSingle(V1)^;
+    Result := -Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+  end;
+  //commented! fails see: https://sourceforge.net/p/zeoslib/tickets/435/
+  //Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
+end;
+
+function CompareSingle_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareSingle_Asc(V1, V2);
+end;
+
+function CompareDouble_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(CompareValue(PDouble(V1)^, PDouble(V2)^));
+end;
+
+function CompareDouble_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareDouble_Asc(V1, V2);
+end;
+
+function CompareCurrency_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
+end;
+
+function CompareCurrency_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareCurrency_Asc(V1, V2);
+end;
+
+function CompareCurrency_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
+end;
+
+function CompareBigDecimal_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
+end;
+
+function CompareBigDecimal_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareBigDecimal_Asc(V1, V2);
+end;
+
+function CompareZDate_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ <> PInt64(V2)^)
+end;
+
+function CompareZDate_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+end;
+
+function CompareZDate_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareZDate_Asc(V1, V2);
+end;
+
+function CompareZTime_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
+  if Result = 0 then
+      Result := Ord(PInt64(PAnsiChar(V1)+2)^ <> PInt64(PAnsiChar(V2)+2)^);
+end;
+
+function CompareZTime_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTime_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTimeStamp_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+  if Result = 0 then begin
+    Result := Ord(PInt64(PAnsiChar(V1)+8)^ <> PInt64(PAnsiChar(V2)+8)^);
+    if Result = 0 then
+      Result := Ord(PInt64(PAnsiChar(V1)+14)^ <> PInt64(PAnsiChar(V2)+14)^);
+  end;
+end;
+
+function CompareZTimeStamp_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
+end;
+
+function CompareZTimeStamp_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareZTimeStamp_Asc(V1, V2);
+end;
+
+function CompareGUID_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
+end;
+
+function CompareGUID_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareGUID_Asc(V1, V2);
+end;
+
+function CompareGUID_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
+end;
+
+function CompareRaw_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  if PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^ then Result := 1//length different?
+  else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                       PAnsiChar(Pointer(V2)^)+PAnsiInc,
+                       PCardinal(Pointer(V1)^)^);
+end;
+
+function CompareBytes_Asc(V1, V2: Pointer): Integer;
+var L: Cardinal;
+begin
+  Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  if PCardinal(V1)^ > PCardinal(V2)^
+  then L := PCardinal(V2)^
+  else L := PCardinal(V1)^;
+  Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                       PAnsiChar(Pointer(V2)^)+PAnsiInc, L);
+  if Result = 0 then
     Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
 end;
 
-function CompareLongWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBytes_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareLongWord_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareLongWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
-end;
-
-function CompareInteger_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  //function ShaCompareInt(Item1, Item2: Pointer): Integer;
-  begin //on 100 mio execs 200ms faster
-    Result := PInteger(V1)^;
-    if Result xor PInteger(V2)^>=0
-      then Result:=Result-PInteger(V2)^
-      else Result:=Result or 1;
-  end; //Than My (EH) overflow save idea
-  //Result := Ord(PInteger(V1)^ > PInteger(V2)^)-Ord(PInteger(V1)^ < PInteger(V2)^);
-end;
-
-function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareInteger_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
-end;
-
-function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
-end;
-
-function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareInt64_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
-end;
-
-function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
-end;
-
-function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareUInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
-end;
-
-function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-var aDiv: Single;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    if PSingle(V1)^ > PSingle(V2)^ then begin
-      aDiv := PSingle(V1)^ - PSingle(V2)^;
-      Result := Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
-    end else begin
-      aDiv := PSingle(V2)^ - PSingle(V1)^;
-      Result := -Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
-    end;
-    //commented! fails see: https://sourceforge.net/p/zeoslib/tickets/435/
-    //Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
-end;
-
-function CompareSingle_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareSingle_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(CompareValue(PDouble(V1)^, PDouble(V2)^));
-end;
-
-function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
-end;
-
-function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
-end;
-
-function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
-end;
-
-function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareZDate_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInt64(V1)^ <> PInt64(V2)^)
-end;
-
-function CompareZDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZCompareDate(PZDate(V1)^, PZDate(V2)^)
-end;
-
-function CompareZDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareZDate_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareZTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then begin
-    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
-    if Result = 0 then
-        Result := Ord(PInt64(PAnsiChar(V1)+2)^ <> PInt64(PAnsiChar(V2)+2)^);
-  end;
-end;
-
-function CompareZTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZCompareTime(PZTime(V1)^, PZTime(V2)^)
-end;
-
-function CompareZTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := -ZCompareTime(PZTime(V1)^, PZTime(V2)^)
-end;
-
-function CompareZTimeStamp_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then begin
-    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
-    if Result = 0 then begin
-      Result := Ord(PInt64(PAnsiChar(V1)+8)^ <> PInt64(PAnsiChar(V2)+8)^);
-      if Result = 0 then
-        Result := Ord(PInt64(PAnsiChar(V1)+14)^ <> PInt64(PAnsiChar(V2)+14)^);
-    end;
-  end;
-end;
-
-function CompareZTimeStamp_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
-end;
-
-function CompareZTimeStamp_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareZTimeStamp_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
-end;
-
-function CompareGUID_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareGUID_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareGUID_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
-end;
-
-function CompareRaw_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    if PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^ then Result := 1//length different?
-    else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
-                         PAnsiChar(Pointer(V2)^)+PAnsiInc,
-                         PCardinal(Pointer(V1)^)^);
-  end;
-end;
-
-function CompareBytes_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-var L: Cardinal;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    if PCardinal(V1)^ > PCardinal(V2)^
-    then L := PCardinal(V2)^
-    else L := PCardinal(V1)^;
-    Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
-                         PAnsiChar(Pointer(V2)^)+PAnsiInc, L);
-    if Result = 0 then
-      Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
-  end;
-end;
-
-function CompareBytes_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareBytes_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBytes_Asc(V1, V2);
 end;
 
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-function CompareNativeRaw_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeRaw_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF MSWINDOWS}
-    Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
-      PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^,
-      PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
-    {$ELSE}
-    Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-      AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
-    {$ENDIF}
-  end;
+  Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF MSWINDOWS}
+  Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
+    PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^,
+    PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
+  {$ELSE}
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+    AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
+  {$ENDIF}
 end;
 
-function CompareNativeRaw_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeRaw_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareNativeRaw_Asc(Null1, Null2, V1, V2);
+  Result := -CompareNativeRaw_Asc(V1, V2);
 end;
 {$ENDIF}
 
-function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeFromUTF8_Asc(V1, V2: Pointer): Integer;
 var
   S1, S2: UnicodeString;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^, zCP_UTF8);
-    S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^, zCP_UTF8);
-    {$IFDEF UNICODE}
-    Result := AnsiCompareStr(S1, S2);
-    {$ELSE}
-    Result := WideCompareStr(S1, S2);
-    {$ENDIF}
-  end;
+  Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^, zCP_UTF8);
+  S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^, zCP_UTF8);
+  {$IFDEF UNICODE}
+  Result := AnsiCompareStr(S1, S2);
+  {$ELSE}
+  Result := WideCompareStr(S1, S2);
+  {$ENDIF}
 end;
 
-function CompareUnicodeFromUTF8_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeFromUTF8_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicodeFromUTF8_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUnicodeFromUTF8_Asc(V1, V2);
 end;
 
-function CompareUnicode_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicode_Asc(V1, V2: Pointer): Integer;
 {$IFNDEF MSWINDOWS}
 var S1, S2: UnicodeString;
 {$ENDIF}
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF MSWINDOWS}
-    SetLastError(0);
-    Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-      PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1,
-      PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1) - 2{CSTR_EQUAL};
-    if GetLastError <> 0 then
-      RaiseLastOSError;
-    {$ELSE}
-    System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1);
-    System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1);
-    {$IFDEF UNICODE}
-    Result := AnsiCompareStr(S1, S2);
-    {$ELSE}
-    Result := WideCompareStr(S1, S2);
-    {$ENDIF}
-    {$ENDIF}
-  end;
+  Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF MSWINDOWS}
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+    PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1,
+    PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1) - 2{CSTR_EQUAL};
+  if GetLastError <> 0 then
+    RaiseLastOSError;
+  {$ELSE}
+  System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1);
+  System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1);
+  {$IFDEF UNICODE}
+  Result := AnsiCompareStr(S1, S2);
+  {$ELSE}
+  Result := WideCompareStr(S1, S2);
+  {$ENDIF}
+  {$ENDIF}
 end;
 
-function CompareUnicode_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicode_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicode_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUnicode_Asc(V1, V2);
 end;
 
-function CompareUnicode_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicode_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    Result := Ord(PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^);
-    if Result = 0 then
-       Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
-                           Pointer(PWideChar(Pointer(V2)^)+PWideInc),
-                           PCardinal(Pointer(V1)^)^);
-  end;
+  Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  Result := Ord(PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^);
+  if Result = 0 then
+     Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
+                         Pointer(PWideChar(Pointer(V2)^)+PWideInc),
+                         PCardinal(Pointer(V1)^)^);
 end;
 
-function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeCLob_Asc(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-    {$ELSE}
-    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
-    {$ENDIF}
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+  Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+  {$ELSE}
+  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
+  {$ENDIF}
 end;
 
-function CompareNativeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeCLob_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareNativeCLob_Asc(Null1, Null2, V1, V2);
+  Result := -CompareNativeCLob_Asc(V1, V2);
 end;
 
-function CompareNativeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeCLob_Equals(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    Result := Ord(Blob1.IsUpdated or Blob2.IsUpdated);
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  Result := Ord(Blob1.IsUpdated or Blob2.IsUpdated);
 end;
 
-function CompareUnicodeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Asc(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
   {$IFDEF MSWINDOWS}
@@ -888,81 +783,66 @@ var
   Buf1, Buf2: UnicodeString;
   {$ENDIF}
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF MSWINDOWS}
-    Buf1 := '';
-    Buf2 := '';
-    ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
-    ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
-    SetLastError(0);
-    Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-      ValuePtr1, Len1, ValuePtr2, Len2) - 2{CSTR_EQUAL};
-    if GetLastError <> 0 then RaiseLastOSError;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF MSWINDOWS}
+  Buf1 := '';
+  Buf2 := '';
+  ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
+  ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+    ValuePtr1, Len1, ValuePtr2, Len2) - 2{CSTR_EQUAL};
+  if GetLastError <> 0 then RaiseLastOSError;
+  {$ELSE}
+    {$IFDEF UNICODE}
+    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
     {$ELSE}
-      {$IFDEF UNICODE}
-      Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-      {$ELSE}
-      Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-      {$ENDIF}
+    Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
     {$ENDIF}
-  end;
+  {$ENDIF}
 end;
 
-function CompareUnicodeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
+  Result := -CompareUnicodeClob_Asc(V1,V2);
 end;
 
-function CompareUnicodeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Equals(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
   ValuePtr1, ValuePtr2: Pointer;
   Len1, Len2: NativeUInt;
   Buf1, Buf2: UnicodeString;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    if Blob1.IsUpdated or Blob2.IsUpdated then begin
-      Buf1 := '';
-      Buf2 := '';
-      ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
-      ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
-      if Len1 <> Len2 then
-        Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Len1  shl 1);
-    end else Result := 0;
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  if Blob1.IsUpdated or Blob2.IsUpdated then begin
+    Buf1 := '';
+    Buf2 := '';
+    ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
+    ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
+    if Len1 <> Len2 then
+      Result := 1 else
+      Result := ZMemLComp(ValuePtr1, ValuePtr2, Len1  shl 1);
+  end else Result := 0;
 end;
 
-function CompareBlob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBlob_Equals(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    if Blob1.IsUpdated or Blob2.IsUpdated
-    then Result := 1
-    else Result := 0;
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  if Blob1.IsUpdated or Blob2.IsUpdated
+  then Result := 1
+  else Result := 0;
 end;
 
 { TZRowAccessor }
@@ -1761,7 +1641,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZRowAccessor.CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
-  ColumnIndex: Integer; CompareFunc: TCompareFunc; NullsFirst: Boolean = false): Integer;
+  ColumnIndex: Integer; CompareFunc: TZCompareFunc; NullsFirst: Boolean = false): Integer;
 var
   ValuePtr1, ValuePtr2: Pointer;
   isNull1, isNull2: Boolean;
@@ -1784,12 +1664,12 @@ begin
     end else if isNull1 and isNull2 then
       Result := 0
     else
-      Result := CompareFunc(isNull1, isNull2, ValuePtr1, ValuePtr2);
+      Result := CompareFunc(ValuePtr1, ValuePtr2);
   end;
 end;
 
 function TZRowAccessor.CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs;
   NullsFirst: Boolean = false): Integer;
 var I: Integer;
 begin
@@ -1809,7 +1689,7 @@ end;
   returns the array of "best fit" compare functions
 }
 function TZRowAccessor.GetCompareFunc(ColumnIndex: Integer;
-  const CompareKind: TComparisonKind): TCompareFunc;
+  const CompareKind: TComparisonKind): TZCompareFunc;
 label jmpLongW;
 begin
   Result := CompareNothing;
@@ -1959,7 +1839,7 @@ jmpLongW:case CompareKind of
 end;
 
 function TZRowAccessor.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-  const CompareKinds: TComparisonKindArray): TCompareFuncs;
+  const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 var I: Integer;
 begin
   {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}

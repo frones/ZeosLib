@@ -66,7 +66,7 @@ uses
     {$ELSE}
     DBCtrls,
     {$ENDIF}
-  {$ENDIF}
+  {$ENDIF} DB,
   ZCompatibility, ZEncoding, ZDbcProperties;
 type
 
@@ -74,6 +74,7 @@ type
   ZTestCompSQLiteBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
+    procedure Test_SF_Ticket610_ZQueryCalcFields(DataSet : TDataSet);
   published
     procedure TestUndefined_Varchar_AsString_Length;
     procedure TestCompTicket386;
@@ -84,6 +85,7 @@ type
     procedure TestTicket503;
     procedure TestTicket520_1;
     procedure TestTicket520_2;
+    procedure Test_SF_Ticket610;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -99,7 +101,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE}
 
 uses
-  Variants, DB, ZDatasetUtils, ZSqlProcessor;
+  Variants, DateUtils,
+  ZDatasetUtils, ZSqlProcessor, ZAbstractRODataset, ZSysUtils;
 
 { ZTestCompSQLiteBugReport }
 
@@ -414,6 +417,55 @@ begin
   finally
     Query.Free;
   end;
+end;
+
+procedure ZTestCompSQLiteBugReport.Test_SF_Ticket610;
+var Query: TZQuery;
+  FieldDefs: TFieldDefs;
+  CalcField: TField;
+  I: Integer;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.OnCalcFields := Test_SF_Ticket610_ZQueryCalcFields;
+    Query.SQL.Text := 'SELECT * FROM TBL_SF610 ORDER BY id';
+    FieldDefs := Query.FieldDefs;
+    FieldDefs.Update;
+
+    for I := 0 to FieldDefs.Count - 1 do
+      FieldDefs[I].CreateField(Query).DataSet := Query;
+
+    CalcField := TTimeField.Create(nil);
+    CalcField.FieldName := 'calc_Zeit_pro_km';
+    CalcField.FieldKind := fkCalculated;
+    CalcField.Visible := True;
+    CalcField.DataSet := Query;
+    Query.Open;
+    Query.Filter := 'calc_Zeit_pro_km=''00:06:20''';
+    Query.Filtered := True;
+    Check(Query.RecordCount > 0);
+    Query.Filter := 'calc_Zeit_pro_km=''00:06:21''';
+    Query.Filtered := True;
+    Check(Query.RecordCount > 0);
+  finally
+    FreeAndNil(Query);
+  end;
+
+end;
+
+procedure ZTestCompSQLiteBugReport.Test_SF_Ticket610_ZQueryCalcFields(
+  DataSet: TDataSet);
+var tt: TZTime;
+    t: TDateTime;
+begin
+  t := (TZTimeField(DataSet.FieldByName('Zeit_gelaufen')).AsDateTime / DataSet.FieldByName('km_gelaufen').AsFloat);
+  ZSysUtils.DecodeDateTimeToTime(t, tt);
+  t := EncodeTime(tt.Hour, tt.Minute, tt.Second, 0);
+  if tt.Fractions >= (500 * NanoSecsPerMSec) then
+    TTimeField(DataSet.FieldByName('calc_Zeit_pro_km')).Value := DateUtils.IncSecond(t,1)
+  else
+    TTimeField(DataSet.FieldByName('calc_Zeit_pro_km')).Value := t;
 end;
 
 { ZTestCompSQLiteBugReportMBCs }

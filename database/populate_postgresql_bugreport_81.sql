@@ -57,10 +57,26 @@ DD_131733 Ref: 20140117-B17 PRS-41659-108-Oatley.xlsx',NULL,NULL,NULL,NULL,NULL,
 (37677,36286,401,'2013-04-09 16:35:52.987','None',2,4,1,45,10,17,89,10,20,NULL,NULL,NULL,NULL,NULL,'2013-06-27 10:01:31.505','2014-02-13 08:20:06.386','No Attenuator
 Clock Failed
 DD_131753 Ref: 20140220-B06 PRS-41722-216-Hornsby.xlsx',NULL,NULL,NULL,NULL,NULL,NULL,'2014-02-21 00:00:00',4,True,NULL,NULL,NULL,NULL,NULL,'None','Attenuator',1,'S200067',NULL,NULL,NULL),
-(54571,52129,562,NULL,'Error 02 displayed upon power-up',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Return Detail: TNT Connote # 9801 1064 4647',NULL,NULL,NULL,NULL,NULL,NULL,'2014-02-06 00:00:00',4,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Error 02 displayed upon power-up',NULL,NULL,NULL,NULL,NULL)
-;
+(54571,52129,562,NULL,'Error 02 displayed upon power-up',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Return Detail: TNT Connote # 9801 1064 4647',NULL,NULL,NULL,NULL,NULL,NULL,'2014-02-06 00:00:00',4,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Error 02 displayed upon power-up',NULL,NULL,NULL,NULL,NULL);
 
-insert into sf611 (num) values (310000000);
-insert into sf611 (num) values (310000000.9);
-insert into sf611 (num) values (310000000000);
-insert into sf611 (num) values (310000000000.9);
+insert into sf611 (num) values (           0.9);-- weight:-1 basedigits: 1  Prec: 8            oooo,9000
+insert into sf611 (num) values (           9);  -- weight:-1 basedigits: 1  Prec: 8            0009
+insert into sf611 (num) values (       20000);  -- weight: 1 basedigits: 1  Prec: 8       0002.oooo
+insert into sf611 (num) values (       20001);  -- weigth: 1 basedigits: 2  Prec: 8       0002.0001
+insert into sf611 (num) values (    31000000);  -- weigth: 1 basedigits: 1  Prec: 8       3100.oooo
+insert into sf611 (num) values (    31000000.1);-- weigth: 1 basedigits: 3  Prec: 12       3100.0000,1000
+insert into sf611 (num) values (   310000000);  -- weigth: 2 basedigits: 2  Prec: 16 0003.1000.oooo
+insert into sf611 (num) values (   310000000.9);-- weigth: 2 basedigits: 4  Prec: 16 0003.1000.0000,9000
+insert into sf611 (num) values (310000000000);  -- weigth: 2 basedigits: 1  Prec: 12 3100.oooo.oooo
+insert into sf611 (num) values (310000000000.9);-- weigth: 2 basedigits: 4  Prec: 16 3100.0000.0000,9000
+
+/*
+insert into sf611 (num) values (           0.9);-- weight:-1 basedigits: 1  Prec: 8            oooo,9000
+insert into sf611 (num) values (       20000);  -- weight: 1 basedigits: 1  Prec: 8       0002.oooo
+insert into sf611 (num) values (       20001);  -- weigth: 1 basedigits: 2  Prec: 8       0002.0001
+insert into sf611 (num) values (    31000000);  -- weigth: 2 basedigits: 2  Prec: 8       3100.oooo
+insert into sf611 (num) values (   310000000);  -- weigth: 2 basedigits: 2  Prec: 16 0003.1000.oooo
+insert into sf611 (num) values (   310000000.9);-- weigth: 2 basedigits: 4  Prec: 16 0003.1000.0000,9000
+insert into sf611 (num) values (310000000000);  -- weigth: 2 basedigits: 1  Prec: 12 3100.oooo.oooo
+insert into sf611 (num) values (310000000000.9);-- weigth: 2 basedigits: 4  Prec: 16 3100.0000.0000,9000
+*/
