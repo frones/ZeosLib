@@ -109,10 +109,16 @@ procedure TZeosProxyDaemon.DataModuleStart(Sender: TCustomDaemon;
   var OK: Boolean);
 var
   ConfigFile: String;
+  {$IFDEF LINUX}
+  LibcFatal: String;
+  {$ENDIF}
 begin
   {$IFDEF LINUX}
   ConfigFile := '/etc/zeosproxy.ini';
   zeosproxy_imp.Logger := TDbcProxyConsoleLogger.Create;
+  LibcFatal := GetEnvironmentVariable('LIBC_FATAL_STDERR_');
+  if LibcFatal = '' then
+    zeosproxy_imp.Logger.Info('LIBC_FATAL_STDERR_ is not set. Error messages might get lost.');
   {$ELSE}
   ConfigFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ExtractFilePath(ParamStr(0)) + 'zeosproxy.log');

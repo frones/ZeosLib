@@ -391,9 +391,12 @@ begin
 
         Section := FIniFile.ReadString(Section, 'Security Module', '');
         if Section <> '' then begin
-          Section := SecurityPrefix + Section;
+          Section := SecurityPrefix + '.' + Section;
           ModuleType := FIniFile.ReadString(Section, 'Type', '');
+          Logger.Debug(Format('Creating submodule %s of type %s', [Section, ModuleType]));
           ConfigInfo.SecurityModule := GetSecurityModule(ModuleType);
+          if not Assigned(ConfigInfo.SecurityModule) then
+            raise EZSQLException.Create(Format('Could not load security module for connection %s', [ConfigInfo.ConfigName]));
           ConfigInfo.SecurityModule.LoadConfig(TDbcProxyIniKeyValueProvider.Create(Self, FIniFile, Section) as IZDbcProxyKeyValueStore);
         end else begin
           ConfigInfo.SecurityModule := nil;
@@ -412,13 +415,23 @@ begin
 end;
 
 function TDbcProxyIniConfigManager.GetSecurityConfig(const Name: String): IZDbcProxyKeyValueStore;
+var
+  CfgName: String;
 begin
-  Result := TDbcProxyIniKeyValueProvider.Create(self, FIniFile, FSecurityPrefix + '.' + Name) as IZDbcProxyKeyValueStore;
+  CfgName := FSecurityPrefix + '.' + Name;
+  if not FIniFile.SectionExists(CfgName) then raise
+    EZSQLException.Create(Format('Could not find section %s', [CfgName]));
+  Result := TDbcProxyIniKeyValueProvider.Create(self, FIniFile, CfgName) as IZDbcProxyKeyValueStore;
 end;
 
 function TDbcProxyIniConfigManager.GetDatbaseConfig(const Name: String): IZDbcProxyKeyValueStore;
+var
+  CfgName: String;
 begin
-  Result := TDbcProxyIniKeyValueProvider.Create(self, FIniFile, FDbPrefix + '.' + Name) as IZDbcProxyKeyValueStore;
+  CfgName := FDbPrefix + '.' + Name;
+  if not FIniFile.SectionExists(CfgName) then raise
+    EZSQLException.Create(Format('Could not find section %s', [CfgName]));
+  Result := TDbcProxyIniKeyValueProvider.Create(self, FIniFile, CfgName) as IZDbcProxyKeyValueStore;
 end;
 
 end.

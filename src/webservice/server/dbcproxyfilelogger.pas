@@ -148,8 +148,8 @@ begin
     FLock.Enter;
     try
       MessageStr := DateTimeToStr(Now, True) + ' ' +  MessageStr;
-      WriteLn(MessageStr);
-      Flush(StdOut);
+      WriteLn(StdErr, MessageStr);
+      Flush(StdErr);
     finally
       FLock.Leave;
     end;

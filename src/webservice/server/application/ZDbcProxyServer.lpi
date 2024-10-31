@@ -109,6 +109,7 @@
       <Unit16>
         <Filename Value="..\dbcproxyconfigstore.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyConfigStore"/>
       </Unit16>
     </Units>
   </ProjectOptions>

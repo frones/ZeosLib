@@ -174,7 +174,8 @@ begin
     Result := TZLdapSecurityModule.Create
   {$ENDIF}
   else
-    raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
+    //raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
+    Result := nil;
 end;
 
 procedure TZAbstractSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
@@ -494,26 +495,34 @@ var
   Modules: String;
   ModuleList: TStringDynArray;
   x: Integer;
-  SectionName: String;
+  SubModuleName: String;
+  SubModuleType: String;
   SubmoduleInfos: IZDbcProxyKeyValueStore;
 begin
   inherited;
   Logger.Debug('Initializing Security module ' + Values.GetName);
   Modules := Values.ReadString('Module List', '');
+  Logger.Debug(Format('Modules: %s', [Modules]));
   ModuleList := SplitString(Modules, ',');
   for x := Length(ModuleList) - 1 downto 0 do
     ModuleList[x] := Trim(ModuleList[x]);
   for x := Length(ModuleList) - 1 downto 0 do
     if ModuleList[x] = '' then
-      Delete(ModuleList, x, 1);
+      Delete(ModuleList, x, 1)
+    else
+      Logger.Debug(Format('Module %d = %s', [x, ModuleList[x]]));
   if Length(ModuleList) = 0 then
     raise EZSQLException.Create('A chained security module may not have an empty Module List');
 
   SetLength(FModuleChain, Length(ModuleList));
   for x := 0 to Length(ModuleList) - 1 do begin
-    SectionName := ModuleList[x];
-    SubmoduleInfos := Values.GetConfigStore.GetSecurityConfig(SectionName);
-    FModuleChain[x] := GetSecurityModule(SubmoduleInfos.ReadString('type', ''));
+    SubModuleName := ModuleList[x];
+    SubmoduleInfos := Values.GetConfigStore.GetSecurityConfig(SubModuleName);
+    SubModuleType := SubmoduleInfos.ReadString('type', '');
+    Logger.Debug(Format('Creating submodule %s of type %s', [SubModuleName, SubModuleType]));
+    FModuleChain[x] := GetSecurityModule(SubModuleType);
+    if not Assigned(FModuleChain[x]) then
+      raise Exception.Create(Format('Could not create a security module for %s', [SubModuleName]));
     FModuleChain[x].LoadConfig(SubmoduleInfos);
   end;
 end;
@@ -577,9 +586,11 @@ begin
     ModuleType := SubmoduleInfos.ReadString('type', '');
     Logger.Debug('Initializing submodule ' + SectionName + ' of type ' + ModuleType);
     FModuleChain[x] := GetSecurityModule(ModuleType);
+    if not assigned(FModuleChain[x]) then
+      raise Exception.Create(Format('Could not create submodule %s of type %s', [SectionName, ModuleType]));
     FModuleChain[x].LoadConfig(SubmoduleInfos);
   end;
-  Logger.Debug('Initialization od alternate module finished.');
+  Logger.Debug('Initialization of alternate module finished.');
 end;
 
 destructor TZAlternateSecurityModule.Destroy;

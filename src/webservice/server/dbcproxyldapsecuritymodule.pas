@@ -65,7 +65,7 @@ interface
 {*********************************************************}
 
 uses
-  Classes, SysUtils, DbcProxySecurityModule, IniFiles, ldapsend;
+  Classes, SysUtils, DbcProxySecurityModule, dbcproxyconfigstore, IniFiles, ldapsend;
 
 type
   TZLdapSecurityModule = class(TZAbstractSecurityModule)
@@ -78,7 +78,7 @@ type
     FReplacementPassword: String;
   public
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
   end;
 
 {$ENDIF}
@@ -131,15 +131,14 @@ begin
   end;
 end;
 
-procedure TZLdapSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZLdapSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 begin
-  inherited;
-  FHostName := IniFile.ReadString(Section, 'Host Name', '');
-  FUserNameMask := IniFile.ReadString(Section, 'User Name Mask', '%s');
-  FUserLookupExpression := IniFile.ReadString(Section, 'User Lookup Expression', '(sAMAccountName=%s)');
-  FBaseDN := IniFile.ReadString(Section, 'Base DN', '');
-  FReplacementUser := IniFile.ReadString(Section, 'Replacement User', '');
-  FReplacementPassword := IniFile.ReadString(Section, 'Replacement Password', '');
+  FHostName := Values.ReadString('Host Name', '');
+  FUserNameMask := Values.ReadString('User Name Mask', '%s');
+  FUserLookupExpression := Values.ReadString('User Lookup Expression', '(sAMAccountName=%s)');
+  FBaseDN := Values.ReadString('Base DN', '');
+  FReplacementUser := Values.ReadString('Replacement User', '');
+  FReplacementPassword := Values.ReadString('Replacement Password', '');
 end;
 
 {$ENDIF}
