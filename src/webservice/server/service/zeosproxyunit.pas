@@ -55,7 +55,7 @@ unit zeosproxyunit;
 interface
 
 uses
-  Classes, SysUtils, DaemonApp, server_listener, {$IFDEF WITH_DNSSD}mdnsService, {$ENDIF}
+  Classes, SysUtils, DaemonApp, server_listener, dbcproxyconfigstore, {$IFDEF WITH_DNSSD}mdnsService, {$ENDIF}
   // for including the Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver,
@@ -108,13 +108,13 @@ end;
 procedure TZeosProxyDaemon.DataModuleStart(Sender: TCustomDaemon;
   var OK: Boolean);
 var
-  configFile: String;
+  ConfigFile: String;
 begin
   {$IFDEF LINUX}
-  configFile := '/etc/zeosproxy.ini';
+  ConfigFile := '/etc/zeosproxy.ini';
   zeosproxy_imp.Logger := TDbcProxyConsoleLogger.Create;
   {$ELSE}
-  configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
+  ConfigFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ExtractFilePath(ParamStr(0)) + 'zeosproxy.log');
   {$ENDIF}
 
@@ -130,13 +130,13 @@ begin
   InitializeSSLLibs;
 
 
-  ConfigManager := TDbcProxyConfigManager.Create;
-  ConfigManager.LoadBaseConfig(configFile);
+  ConfigManager := TDbcProxyIniConfigManager.Create(ConfigFile) as IZDbcProxyConfigStore;
+  ConfigManager.LoadBaseConfig;
   if ConfigManager.LogFile <> '' then begin
     FreeAndNil(zeosproxy_imp.Logger);
     zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   end;
-  ConfigManager.LoadConnectionConfig(configFile);
+  ConfigManager.LoadConnectionConfig;
 
   try
     InitTofuCerts;
