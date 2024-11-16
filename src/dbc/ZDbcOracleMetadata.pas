@@ -2445,15 +2445,15 @@ begin
     begin
       Result.MoveToInsertRow;
       if FConSettings.ClientCodePage.Encoding = ceUTF16 then begin
-        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), Len);
-        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), Len);
-        Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(INDEX_NAME_Index, Len), Len);
-        Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), Len);
-      end else begin
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(OWNER_Index, Len), Len);
         Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TABLE_NAME_Index, Len), Len);
         Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideChar(INDEX_NAME_Index, Len), Len);
         Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideChar(COLUMN_NAME_Index, Len), Len);
+      end else begin
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), Len);
+        Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(INDEX_NAME_Index, Len), Len);
+        Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), Len);
       end;
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex,
         UpperCase(GetString(UNIQUENESS_Index)) <> 'UNIQUE');
@@ -2476,14 +2476,15 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
   const SequenceNamePattern: string): IZResultSet;
 const
-  SEQ_NAME_INDEX = FirstDbcIndex + 0;
+  SEQ_OWNER_INDEX= FirstDbcIndex + 0;
+  SEQ_NAME_INDEX = FirstDbcIndex + 1;
 Var
   sql: String;
   len: NativeUInt;
 Begin
   Result := inherited;
 
-  sql := 'SELECT SEQUENCE_NAME FROM ALL_SEQUENCES';
+  sql := 'SELECT SEQUENCE_OWNER, SEQUENCE_NAME FROM ALL_SEQUENCES';
 
   {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
@@ -2493,9 +2494,11 @@ Begin
       Result.MoveToInsertRow;
 
       if FConSettings.ClientCodePage.Encoding = ceUTF16 then begin
-        Result.UpdatePAnsiChar(SequenceNameIndex, GetPAnsiChar(SEQ_NAME_INDEX, Len), Len);
-      end else begin
+        Result.UpdatePWideChar(SequenceSchemaIndex, GetPWideChar(SEQ_OWNER_INDEX, Len), Len);
         Result.UpdatePWideChar(SequenceNameIndex, GetPWideChar(SEQ_NAME_INDEX, Len), Len);
+      end else begin
+        Result.UpdatePAnsiChar(SequenceSchemaIndex, GetPAnsiChar(SEQ_OWNER_INDEX, Len), Len);
+        Result.UpdatePAnsiChar(SequenceNameIndex, GetPAnsiChar(SEQ_NAME_INDEX, Len), Len);
       end;
 
       Result.InsertRow;
