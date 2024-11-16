@@ -363,8 +363,8 @@ type
       const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; Approximate: Boolean): IZResultSet; override;
-//     function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-//      const SequenceNamePattern: string): IZResultSet; virtual; -> Not implemented
+    function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+      const SequenceNamePattern: string): IZResultSet; override;
     /// <summary>Gets a description of the stored procedures available in a
     ///  catalog. This method needs to be implemented per driver.
     ///  Only procedure descriptions matching the schema and procedure name
@@ -2472,6 +2472,37 @@ begin
     Close;
   end;
 end;
+
+function TZOracleDatabaseMetadata.UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
+  const SequenceNamePattern: string): IZResultSet;
+const
+  SEQ_NAME_INDEX = FirstDbcIndex + 0;
+Var
+  sql: String;
+  len: NativeUInt;
+Begin
+  Result := inherited;
+
+  sql := 'SELECT SEQUENCE_NAME FROM ALL_SEQUENCES';
+
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
+    begin
+      Result.MoveToInsertRow;
+
+      if FConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+        Result.UpdatePAnsiChar(SequenceNameIndex, GetPAnsiChar(SEQ_NAME_INDEX, Len), Len);
+      end else begin
+        Result.UpdatePWideChar(SequenceNameIndex, GetPWideChar(SEQ_NAME_INDEX, Len), Len);
+      end;
+
+      Result.InsertRow;
+    end;
+    Close;
+  end;
+End;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
 
