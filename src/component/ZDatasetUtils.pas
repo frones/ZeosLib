@@ -1107,7 +1107,7 @@ begin
       if (CurrentType in [stUnicodeString, stUnicodeStream]) or
          ((CurrentType in [stString, stAsciiStream]) and (VariantManager.UseWComparsions)) then begin
       {$ENDIF}
-        {$IFDEF NEXGEN}
+        {$IFDEF NEXTGEN}
         WValue1 := VariantManager.GetAsUnicodeString(KeyValues[I]);
         {$ELSE}
         WValue1 := KeyValues[I].VUnicodeString;
@@ -1117,14 +1117,14 @@ begin
           WValue2 := {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(WValue2);
 
         P1 := Pointer(WValue1);
-        if P1 = nil then //if partial value is '' then the evaluatin is always true
+        if P1 = nil then //if partial value is '' then the evaluation is always true
           Exit;
         {$IF not (defined(FPC) and not defined(MSWINDOWS))}
         P2 := Pointer(WValue2);
         {$IFEND}
         L1 := Length(WValue1);
         L2 := Length(WValue2);
-        if L2 < L1 then begin //if resultset value is shorter than keyvalue the evaluatin is always false
+        if L2 < L1 then begin //if resultset value is shorter than keyvalue the evaluation is always false
           Result := False;
           Exit;
         end;
@@ -1135,7 +1135,7 @@ begin
           Result := SysUtils.AnsiStrLComp(PWideChar(P2), PWideChar(P1), L1) = 0;
           {$ELSE} //https://www.freepascal.org/docs-html/rtl/sysutils/widecomparestr.html
             if L2 > L1 then
-              WValue2 := Copy(WValue2, 1, L2);
+              WValue2 := Copy(WValue2, 1, L1);
             Result := WideCompareStr(WValue1, WValue2) = 0;
           {$ENDIF}
         {$ENDIF}

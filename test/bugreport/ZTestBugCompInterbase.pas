@@ -110,6 +110,7 @@ type
     procedure Test_SF_Ticket512;
     procedure TestTransactionMonitoring;
     procedure TestFilter;
+    procedure TestForum225651;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1911,6 +1912,70 @@ begin
     Query.Open;
   finally
     FreeAndNil(Query)
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestForum225651;
+var
+  T1, T2: TZTransaction;
+  Q1, Q2: TZQuery;
+
+  function CreateTransaction: TZTransaction;
+  begin
+    Result := TZTransaction.Create(nil);
+    Result.Connection := Connection;
+    Result.TransactIsolationLevel := tiReadCommitted;
+    Result.AutoCommit := false;
+  end;
+const
+  SQL = 'select * from equipment where eq_id = 20241109';
+begin
+  Connection.Connect;
+  try
+    T1 := CreateTransaction;
+    T2 := CreateTransaction;
+    Q1 := CreateQuery;
+    Q1.Transaction := T1;
+    Q2 := CreateQuery;
+    Q2.Transaction := T2;
+
+    Connection.ExecuteDirect('delete from equipment where eq_id = 20241109');
+    Connection.ExecuteDirect('insert into equipment (eq_id, eq_name) values (20241109, ''Equipment1'')');
+
+    Q1.SQL.Text := SQL;
+    Q2.SQL.Text := SQL;
+
+    Q1.Open;
+    Q2.Open;
+
+    CheckEquals(1, Q1.RecordCount, 'Q1.RecordCount = 1? V1');
+    CheckEquals(1, Q2.RecordCount, 'Q2.RecordCount = 1? V1');
+    CheckEquals('Equipment1', Q1.FieldByName('eq_name').AsString, 'Q1->eq_id = Equipment1? V1');
+    CheckEquals('Equipment1', Q2.FieldByName('eq_name').AsString, 'Q2->eq_id = Equipment1? V1');
+
+    Q1.Edit;
+    Q1.FieldByName('eq_name').AsString := 'Equipment2';
+    Q1.Post;
+
+    Q1.Close;
+    Q2.Close;
+
+    Q1.Open;
+    Q2.Open;
+
+    CheckEquals(1, Q1.RecordCount, 'Q1.RecordCount = 1? V2');
+    CheckEquals(1, Q2.RecordCount, 'Q2.RecordCount = 1? V2');
+    CheckEquals('Equipment2', Q1.FieldByName('eq_name').AsString, 'Q1->eq_name = Equipment2? V2');
+    CheckEquals('Equipment1', Q2.FieldByName('eq_name').AsString, 'Q2->eq_name = Equipment1? V2');
+  finally
+    if Assigned(Q1) then
+      FreeAndNil(Q1);
+    if Assigned(Q2) then
+      FreeAndNil(Q2);
+    if Assigned(T1) then
+      FreeAndNil(T1);
+    if Assigned(T2) then
+      FreeAndNil(T2);
   end;
 end;
 
