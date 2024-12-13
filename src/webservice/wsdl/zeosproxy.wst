@@ -1,5 +1,5 @@
   GetWSTResourceManager().AddResource('ZEOSPROXY',
-    #0#0#0#16'WST_METADATA_0.6'#0#0#0#9'zeosproxy'#0#1#0#0#0#10'IZeosProxy'#0#26
+    #0#0#0#16'WST_METADATA_0.6'#0#0#0#9'zeosproxy'#0#1#0#0#0#10'IZeosProxy'#0#27
     +#0#0#0#7'Connect'#7#0#0#0#8'UserName'#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1
     +#0#0#0#8'Password'#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'DbName'#0
     +#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#12'InProperties'#0#0#0#13'Unico'
@@ -91,6 +91,9 @@
     +#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#13'UnicodeStr'
     +'ing'#0#0#0#0#0#0#0#3#0#0#0#16'StartTransaction'#2#0#0#0#12'ConnectionID'#0#0
     +#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#7'integer'#0#0#0#0
-    +#0#0#0#3#0#0#0#13'GetPublicKeys'#1#0#0#0#6'Result'#0#0#0#6'string'#0#0#0#0#0
-    +#0#0#3''
+    +#0#0#0#3#0#0#0#13'GetPublicKeys'#1#0#0#0#6'Result'#0#0#0#13'UnicodeString'#0
+    +#0#0#0#0#0#0#3#0#0#0#20'ExecuteMultipleStmts'#3#0#0#0#12'ConnectionID'#0#0#0
+    +#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#10'Statements'#0#0#0#22'TStatementD'
+    +'escriptions'#0#0#0#0#0#0#0#0#0#0#0#6'Result'#0#0#0#12'TStringArray'#0#0#0#0
+    +#0#0#0#3''
   );

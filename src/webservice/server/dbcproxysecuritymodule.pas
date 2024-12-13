@@ -114,6 +114,21 @@ type
     procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
   end;
 
+  {
+  TZIntegratedSecurityModule = class(TZAbstractSecurityModule)
+  protected
+    FDBUser: String;
+    FDBPassword: String;
+    FPasswordSQL: String;
+    FReplacementUser: String;
+    FReplacementPassword: String;
+    FAddDatabaseToUserName: Boolean;
+    FAuthDbName: String;
+  public
+    function CheckPassword(var XUserName, Password: String; const ConnectionName: String): Boolean; override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
+  end;
+  }
   TZChainedSecurityModule = class(TZAbstractSecurityModule)
   protected
     FModuleChain: Array of TZAbstractSecurityModule;
@@ -137,6 +152,7 @@ function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 implementation
 
 uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types, ZExceptions
+     {$IFDEF ENABLE_BCRYPT}, BCrypt{$ENDIF}
      {$IFDEF ENABLE_LDAP_SECURITY},DbcProxyLdapSecurityModule{$ENDIF}
      ;
 
@@ -158,7 +174,8 @@ begin
     Result := TZLdapSecurityModule.Create
   {$ENDIF}
   else
-    raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
+    //raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
+    Result := nil;
 end;
 
 procedure TZAbstractSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
@@ -206,6 +223,7 @@ var
   YubikeysUser: String;
 begin
   Result := False;
+  YubikeysUser := '';
 
   if FAddDatabase then
     YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName
@@ -348,6 +366,9 @@ var
   DBUserName: String;
   PWUserName: String;
   Position: Integer;
+  {$IFDEF ENABLE_BCRYPT}
+  BCrypt: TBCryptHash;
+  {$ENDIF}
 begin
   Result := False;
 
@@ -410,10 +431,23 @@ begin
     CryptPwdUser := crypt_md5(Password, CryptPwdDB)
   else if pwdStart = 'md5' then //md5 by PpostgreSQL
     CryptPwdUser := crypt_md5pg(Password, PWUserName)
+  {$IFDEF ENABLE_BCRYPT}
+  else if copy(CryptPwdDB, 1, 4) = '$2y$' then begin
+    BCrypt := TBCryptHash.Create;
+    try
+      Result := BCrypt.VerifyHash(Password, CryptPwdDB);
+    finally
+      FreeAndNil(BCrypt);
+    end;
+  end
+  {$ENDIF}
   else
     CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
-  Result := CryptPwdDB = CryptPwdUser;
-  Logger.Debug('Integrated security module: CryptPwdUser:' + CryptPwdUser + ' CryptPwdDB: ' + CryptPwdDB);
+
+  if not Result then begin
+    Result := CryptPwdDB = CryptPwdUser;
+    Logger.Debug('Integrated security module: CryptPwdUser:' + CryptPwdUser + ' CryptPwdDB: ' + CryptPwdDB);
+  end;
 
   if FReplacementUser <> '' then begin
     XUserName := FReplacementUser;
@@ -461,26 +495,34 @@ var
   Modules: String;
   ModuleList: TStringDynArray;
   x: Integer;
-  SectionName: String;
+  SubModuleName: String;
+  SubModuleType: String;
   SubmoduleInfos: IZDbcProxyKeyValueStore;
 begin
   inherited;
   Logger.Debug('Initializing Security module ' + Values.GetName);
   Modules := Values.ReadString('Module List', '');
+  Logger.Debug(Format('Modules: %s', [Modules]));
   ModuleList := SplitString(Modules, ',');
   for x := Length(ModuleList) - 1 downto 0 do
     ModuleList[x] := Trim(ModuleList[x]);
   for x := Length(ModuleList) - 1 downto 0 do
     if ModuleList[x] = '' then
-      Delete(ModuleList, x, 1);
+      Delete(ModuleList, x, 1)
+    else
+      Logger.Debug(Format('Module %d = %s', [x, ModuleList[x]]));
   if Length(ModuleList) = 0 then
     raise EZSQLException.Create('A chained security module may not have an empty Module List');
 
   SetLength(FModuleChain, Length(ModuleList));
   for x := 0 to Length(ModuleList) - 1 do begin
-    SectionName := ModuleList[x];
-    SubmoduleInfos := Values.GetConfigStore.GetSecurityConfig(SectionName);
-    FModuleChain[x] := GetSecurityModule(SubmoduleInfos.ReadString('type', ''));
+    SubModuleName := ModuleList[x];
+    SubmoduleInfos := Values.GetConfigStore.GetSecurityConfig(SubModuleName);
+    SubModuleType := SubmoduleInfos.ReadString('type', '');
+    Logger.Debug(Format('Creating submodule %s of type %s', [SubModuleName, SubModuleType]));
+    FModuleChain[x] := GetSecurityModule(SubModuleType);
+    if not Assigned(FModuleChain[x]) then
+      raise Exception.Create(Format('Could not create a security module for %s', [SubModuleName]));
     FModuleChain[x].LoadConfig(SubmoduleInfos);
   end;
 end;
@@ -544,9 +586,11 @@ begin
     ModuleType := SubmoduleInfos.ReadString('type', '');
     Logger.Debug('Initializing submodule ' + SectionName + ' of type ' + ModuleType);
     FModuleChain[x] := GetSecurityModule(ModuleType);
+    if not assigned(FModuleChain[x]) then
+      raise Exception.Create(Format('Could not create submodule %s of type %s', [SectionName, ModuleType]));
     FModuleChain[x].LoadConfig(SubmoduleInfos);
   end;
-  Logger.Debug('Initialization od alternate module finished.');
+  Logger.Debug('Initialization of alternate module finished.');
 end;
 
 destructor TZAlternateSecurityModule.Destroy;

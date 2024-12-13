@@ -389,6 +389,7 @@ function TZDbcProxyMgmtConnection.StartTransaction: Integer;
 begin
   inc(FTransactionLevel);
   AutoCommit := False;
+  Result := FTransactionLevel;
 end;
 
 function TZDbcProxyMgmtConnection.GetTransactionLevel: Integer;

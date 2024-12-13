@@ -55,7 +55,7 @@ uses
     IZDbcProxyKeyValueStore = interface(IUnknown)
       ['{06C13806-CF23-4BA5-B3E3-93BDDFE955B1}']
       function ReadString(const Key, DefaultValue: String): String;
-      function ReadInteger(const Key: String; DefaultVaue: Integer): Integer;
+      function ReadInteger(const Key: String; DefaultValue: Integer): Integer;
       function ReadBool(const Key: String; DefaultValue: Boolean): Boolean;
       function GetName: String;
       function GetConfigStore: IZDbcProxyConfigStore;

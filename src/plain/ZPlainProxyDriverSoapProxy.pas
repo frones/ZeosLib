@@ -57,7 +57,7 @@
 //  >Import : C:\Komponenten\Zeos 8\src\webservice\wsdl\zeosproxy.WSDL>0
 // Codierung : utf-8
 // Version: 1.0
-// (15.12.2023 18:06:55 - - $Rev: 113440 $)
+// (21.09.2024 20:54:14 - - $Rev: 116709 $)
 // ************************************************************************ //
 
 unit ZPlainProxyDriverSoapProxy;
@@ -85,11 +85,32 @@ type
   // sind in der Regel vordefinierten/bekannten XML- oder Embarcadero-Typen zugeordnet; sie könnten aber auf 
   // ein inkorrektes WSDL-Dokument hinweisen, das einen Schematyp nicht deklariert oder importiert hat.
   // ************************************************************************ //
-  // !:unsignedInt     - "http://www.w3.org/2001/XMLSchema"[]
-  // !:int             - "http://www.w3.org/2001/XMLSchema"[Lit][]
+  // !:unsignedInt     - "http://www.w3.org/2001/XMLSchema"[Gbl]
   // !:boolean         - "http://www.w3.org/2001/XMLSchema"[]
+  // !:int             - "http://www.w3.org/2001/XMLSchema"[Lit][]
   // !:string          - "http://www.w3.org/2001/XMLSchema"[Lit][Gbl]
 
+  TStatementDescription = class;                { "zproxy"[GblCplx] }
+
+  TStatementDescriptions = array of TStatementDescription;   { "zproxy"[GblCplx] }
+
+
+  // ************************************************************************ //
+  // XML       : TStatementDescription, global, <complexType>
+  // Namespace : zproxy
+  // ************************************************************************ //
+  TStatementDescription = class(TRemotable)
+  private
+    FSQL: string;
+    FParameters: string;
+    FMaxRows: Cardinal;
+  published
+    property SQL:        string    Index (IS_UNQL) read FSQL write FSQL;
+    property Parameters: string    Index (IS_UNQL) read FParameters write FParameters;
+    property MaxRows:    Cardinal  Index (IS_UNQL) read FMaxRows write FMaxRows;
+  end;
+
+  TStringArray = array of string;               { "zproxy"[Lit][GblCplx] }
 
   // ************************************************************************ //
   // Namespace : zproxy
@@ -231,6 +252,11 @@ type
     // Entpacken nicht möglich: 
     //     - Ausgabe-Part verweist auf kein Element
     function  GetPublicKeys: string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  ExecuteMultipleStmts(const ConnectionID: string; const Statements: TStatementDescriptions): TStringArray; stdcall;
   end;
 
 function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: THTTPRIO = nil): IZeosProxy;
@@ -284,6 +310,15 @@ initialization
   InvRegistry.RegisterInterface(TypeInfo(IZeosProxy), 'zproxy', 'utf-8');
   InvRegistry.RegisterDefaultSOAPAction(TypeInfo(IZeosProxy), '');
   InvRegistry.RegisterInvokeOptions(TypeInfo(IZeosProxy), ioLiteral);
+  { IZeosProxy.ExecuteMultipleStmts }
+  InvRegistry.RegisterParamInfo(TypeInfo(IZeosProxy), 'ExecuteMultipleStmts', 'Statements', '',
+                                '[Namespace="zproxy", ArrayItemName="item"]');
+  InvRegistry.RegisterParamInfo(TypeInfo(IZeosProxy), 'ExecuteMultipleStmts', 'result', '',
+                                '[Namespace="zproxy", ArrayItemName="item"]');
+  RemClassRegistry.RegisterXSInfo(TypeInfo(TStatementDescriptions), 'zproxy', 'TStatementDescriptions');
+  RemClassRegistry.RegisterXSClass(TStatementDescription, 'zproxy', 'TStatementDescription');
+  RemClassRegistry.RegisterXSInfo(TypeInfo(TStringArray), 'zproxy', 'TStringArray');
+  RemClassRegistry.RegisterSerializeOptions(TypeInfo(TStringArray), [xoLiteralParam]);
 
 {$IFEND}
 end.

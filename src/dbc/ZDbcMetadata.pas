@@ -1411,6 +1411,7 @@ type
 var
   IndexInfoColumnsDynArray: TZMetadataColumnDefs;
 const
+  SequenceSchemaIndex = FirstDbcIndex + 1;
   SequenceNameIndex = FirstDbcIndex + 2;
 var
   SequenceColumnsDynArray: TZMetadataColumnDefs;

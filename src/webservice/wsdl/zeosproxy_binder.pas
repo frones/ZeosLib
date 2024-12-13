@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_binder".
-  Date            : "15.12.2023 17:53:32".
+  Date            : "21.09.2024 17:27:26".
 }
 unit zeosproxy_binder;
 {$IFDEF FPC} {$mode objfpc}{$H+} {$ENDIF}
@@ -40,6 +40,7 @@ type
     procedure GetCharacterSetsHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
     procedure StartTransactionHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
     procedure GetPublicKeysHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
+    procedure ExecuteMultipleStmtsHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
   public
     constructor Create();
   end;
@@ -1182,7 +1183,7 @@ var
   callCtx : ICallContext;
   locStrPrmName : string;
   procName,trgName : string;
-  returnVal : string;
+  returnVal : UnicodeString;
 begin
   callCtx := AContext;
   
@@ -1200,7 +1201,55 @@ begin
     trgName := AFormatter.GetCallTarget();
     AFormatter.Clear();
     AFormatter.BeginCallResponse(procName,trgName);
-      AFormatter.Put('result',TypeInfo(string),returnVal);
+      AFormatter.Put('result',TypeInfo(UnicodeString),returnVal);
+    AFormatter.EndCallResponse();
+    
+    callCtx := nil;
+  finally
+    if hasObjCntrl then
+      objCntrl.Deactivate();
+    Self.GetFactory().ReleaseInstance(tmpObj);
+  end;
+end;
+
+procedure TZeosProxy_ServiceBinder.ExecuteMultipleStmtsHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
+var
+  cllCntrl : ICallControl;
+  objCntrl : IObjectControl;
+  hasObjCntrl : Boolean;
+  tmpObj : IZeosProxy;
+  callCtx : ICallContext;
+  locStrPrmName : string;
+  procName,trgName : string;
+  ConnectionID : UnicodeString;
+  Statements : TStatementDescriptions;
+  returnVal : TStringArray;
+begin
+  callCtx := AContext;
+  returnVal := nil;
+  Statements := nil;
+  
+  locStrPrmName := 'ConnectionID';  AFormatter.Get(TypeInfo(UnicodeString),locStrPrmName,ConnectionID);
+  locStrPrmName := 'Statements';  AFormatter.Get(TypeInfo(TStatementDescriptions),locStrPrmName,Statements);
+  if (Statements <> nil) then
+    callCtx.AddObjectToFree(Statements);
+  
+  tmpObj := Self.GetFactory().CreateInstance() as IZeosProxy;
+  if Supports(tmpObj,ICallControl,cllCntrl) then
+    cllCntrl.SetCallContext(callCtx);
+  hasObjCntrl := Supports(tmpObj,IObjectControl,objCntrl);
+  if hasObjCntrl then
+    objCntrl.Activate();
+  try
+    returnVal := tmpObj.ExecuteMultipleStmts(ConnectionID,Statements);
+    if (returnVal <> nil) then
+      callCtx.AddObjectToFree(returnVal);
+    
+    procName := AFormatter.GetCallProcedureName();
+    trgName := AFormatter.GetCallTarget();
+    AFormatter.Clear();
+    AFormatter.BeginCallResponse(procName,trgName);
+      AFormatter.Put('result',TypeInfo(TStringArray),returnVal);
     AFormatter.EndCallResponse();
     
     callCtx := nil;
@@ -1241,6 +1290,7 @@ begin
   RegisterVerbHandler('GetCharacterSets',{$IFDEF FPC}@{$ENDIF}GetCharacterSetsHandler);
   RegisterVerbHandler('StartTransaction',{$IFDEF FPC}@{$ENDIF}StartTransactionHandler);
   RegisterVerbHandler('GetPublicKeys',{$IFDEF FPC}@{$ENDIF}GetPublicKeysHandler);
+  RegisterVerbHandler('ExecuteMultipleStmts',{$IFDEF FPC}@{$ENDIF}ExecuteMultipleStmtsHandler);
 end;
 
 

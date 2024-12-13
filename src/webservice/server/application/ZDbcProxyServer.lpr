@@ -55,10 +55,10 @@ program ZDbcProxyServer;
 
 uses
   {$IFDEF UNIX}
-  cwstring,
     {$IFDEF UseCThreads}
     cthreads,
     {$ENDIF}
+    cwstring,
   {$ENDIF}
   Classes, SysUtils, CustApp,
   { you can add units after this }

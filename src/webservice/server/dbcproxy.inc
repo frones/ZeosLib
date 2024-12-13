@@ -19,6 +19,10 @@
 // https://github.com/marsupilami79/mdns4Delphi
 {.$DEFINE ENABLE_DNSSD}
 
+// If enabled, will support the BCrypt algorithm using the BCrypt unit from:
+// https://github.com/hiraethbbs/pascal_bcrypt
+{.$DEFINE ENABLE_BCRYPT}
+
 
 {$I ../../Zeos.inc}
 

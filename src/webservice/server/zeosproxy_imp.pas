@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_imp".
-  Date            : "29.03.2023 20:49:32".
+  Date            : "21.09.2024 17:27:26".
 }
 Unit zeosproxy_imp;
 
@@ -13,10 +13,17 @@ Interface
 Uses SysUtils, Classes, 
      base_service_intf, server_service_intf, zeosproxy,
      ZDbcProxyManagement, DbcProxyConnectionManager, DbcProxyConfigManager,
-     DbcProxyFileLogger, DbcProxyConfigStore;
+     DbcProxyFileLogger, DbcProxyConfigStore, ZDbcIntfs;
 
 type
   TZeosProxy_ServiceImp=class(TBaseServiceImplementation,IZeosProxy)
+  Private
+    function ExecuteSingleStmt(
+      Connection: IZConnection;
+      const  SQL : UnicodeString;
+      const  Parameters : UnicodeString;
+      const  MaxRows : LongWord
+    ): UnicodeString;
   Protected
     function Connect(
       const  UserName : UnicodeString; 
@@ -152,7 +159,11 @@ type
     function StartTransaction(
       const  ConnectionID : UnicodeString
     ):integer;
-    function GetPublicKeys():string;
+    function GetPublicKeys():UnicodeString;
+    function ExecuteMultipleStmts(
+      const  ConnectionID : UnicodeString;
+       Statements : TStatementDescriptions
+    ):TStringArray;
   End;
 
 
@@ -162,10 +173,11 @@ var
   ConnectionManager: TDbcProxyConnectionManager;
   ConfigManager: IZDbcProxyConfigStore;
   Logger: TDbcProxyLogger;
+  AuditLogger: TDbcProxyFileLogger;
 
 Implementation
 
-uses config_objects, ZDbcIntfs, DbcProxyUtils, ZDbcXmlUtils{$IFDEF ENABLE_TOFU_CERTIFICATES}, dbcproxycertstore, types{$ENDIF};
+uses config_objects, DbcProxyUtils, ZDbcXmlUtils{$IFDEF ENABLE_TOFU_CERTIFICATES}, dbcproxycertstore, types{$ENDIF};
 
 { TZeosProxy_ServiceImp implementation }
 function TZeosProxy_ServiceImp.Connect(
@@ -181,9 +193,13 @@ var
   Url: String;
   PropertiesList: TStringList;
 Begin
+  if not Assigned(ConfigManager) then raise
+    Exception.Create('Config Manager is not assigned...');
+  Logger.Debug('Constructing URL');
   Url := ConfigManager.ConstructUrl(UTF8Encode(DbName), UTF8Encode(UserName), UTF8Encode(Password));
   PropertiesList := TStringList.Create;
   try
+    Logger.Debug('Getting Zeos connection...');
     Connection := DriverManager.GetConnectionWithParams(UTF8Encode(Url), PropertiesList);
   finally
     FreeAndNil(PropertiesList);
@@ -194,6 +210,9 @@ Begin
   Connection.Open;
   DbInfo := UnicodeString(encodeDatabaseInfo(Connection));
   Result := UnicodeString(ConnectionManager.AddConnection(Connection, DbName, UserName));
+  if not Assigned(AuditLogger) then
+    raise Exception.Create('Audit logger is not assigned.');
+  AuditLogger.LogLine('Connect');
 End;
 
 procedure TZeosProxy_ServiceImp.Disconnect(
@@ -207,6 +226,7 @@ Begin
     Unlock;
   end;
   ConnectionManager.RemoveConnection(UTF8Encode(ConnectionID));
+  AuditLogger.LogLine('Disconnect');
 End;
 
 procedure TZeosProxy_ServiceImp.SetAutoCommit(
@@ -220,6 +240,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('SetAutoCommit ' + BoolToStr(Value, True));
 End;
 
 procedure TZeosProxy_ServiceImp.Commit(
@@ -232,6 +253,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('Commit');
 End;
 
 procedure TZeosProxy_ServiceImp.Rollback(
@@ -244,6 +266,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('Rollback');
 End;
 
 function TZeosProxy_ServiceImp.SetProperties(
@@ -258,22 +281,22 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('SetProperties');
 End;
 
-function TZeosProxy_ServiceImp.ExecuteStatement(
-  const  ConnectionID : UnicodeString; 
-  const  SQL : UnicodeString; 
-  const  Parameters : UnicodeString; 
+function TZeosProxy_ServiceImp.ExecuteSingleStmt(
+  Connection: IZConnection;
+  const  SQL : UnicodeString;
+  const  Parameters : UnicodeString;
   const  MaxRows : LongWord
-):UnicodeString;
+): UnicodeString;
 var
   Statement: IZPreparedStatement;
   ResultSet: IZResultSet;
-  ResultStr: UTF8String;
-Begin
-  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  ResultStr: String;
+begin
   try
-    Statement := ZeosConnection.PrepareStatementWithParams(UTF8Encode(SQL), nil);
+    Statement := Connection.PrepareStatementWithParams(UTF8Encode(SQL), nil);
     if Parameters <> '' then
       DecodeParameters(UTF8Encode(Parameters), Statement);
     Statement.SetResultSetConcurrency(rcReadOnly);
@@ -288,10 +311,28 @@ Begin
     end else
       Result := UnicodeString(IntToStr(Statement.GetUpdateCount));
   finally
-    Unlock;
-    Statement := nil;
     ResultSet := nil;
+    Statement := nil;
   end;
+end;
+
+function TZeosProxy_ServiceImp.ExecuteStatement(
+  const  ConnectionID : UnicodeString; 
+  const  SQL : UnicodeString; 
+  const  Parameters : UnicodeString; 
+  const  MaxRows : LongWord
+):UnicodeString;
+var
+  ResultStr: UTF8String;
+Begin
+  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  try
+    Result := ExecuteSingleStmt(ZeosConnection, SQL, Parameters, MaxRows);
+  finally
+    Unlock;
+  end;
+  AuditLogger.LogLine('ExecuteStatement');
+  AuditLogger.LogLine(String(SQL));
 End;
 
 function TZeosProxy_ServiceImp.GetTables(
@@ -314,6 +355,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetTables');
 End;
 
 function TZeosProxy_ServiceImp.GetSchemas(
@@ -329,6 +371,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetSchemas');
 End;
 
 function TZeosProxy_ServiceImp.GetCatalogs(
@@ -344,6 +387,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetCatalogs');
 End;
 
 function TZeosProxy_ServiceImp.GetTableTypes(
@@ -359,6 +403,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetTableTypes');
 End;
 
 function TZeosProxy_ServiceImp.GetColumns(
@@ -378,6 +423,7 @@ Begin
   finally
     Unlock;;
   end;
+  AuditLogger.LogLine('GetColumns');
 End;
 
 function TZeosProxy_ServiceImp.GetTablePrivileges(
@@ -396,6 +442,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetTablePrivileges');
 End;
 
 function TZeosProxy_ServiceImp.GetColumnPrivileges(
@@ -415,6 +462,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetColumnPrivileges');
 End;
 
 function TZeosProxy_ServiceImp.GetPrimaryKeys(
@@ -433,6 +481,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetPrimaryKeys');
 End;
 
 function TZeosProxy_ServiceImp.GetImportedKeys(
@@ -451,6 +500,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetImportedKeys');
 End;
 
 function TZeosProxy_ServiceImp.GetExportedKeys(
@@ -469,6 +519,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetExportedKeys');
 End;
 
 function TZeosProxy_ServiceImp.GetCrossReference(
@@ -490,6 +541,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetCrossReference');
 End;
 
 function TZeosProxy_ServiceImp.GetIndexInfo(
@@ -510,6 +562,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetIndexInfo');
 End;
 
 function TZeosProxy_ServiceImp.GetSequences(
@@ -528,6 +581,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetSequences');
 End;
 
 function TZeosProxy_ServiceImp.GetTriggers(
@@ -547,6 +601,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetTriggers');
 End;
 
 function TZeosProxy_ServiceImp.GetProcedures(
@@ -565,6 +620,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetProcedures');
 End;
 
 function TZeosProxy_ServiceImp.GetProcedureColumns(
@@ -584,6 +640,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetProcedureColumns');
 End;
 
 function TZeosProxy_ServiceImp.GetCharacterSets(
@@ -599,6 +656,7 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('GetCharacterSets');
 End;
 
 function TZeosProxy_ServiceImp.StartTransaction(
@@ -611,15 +669,17 @@ Begin
   finally
     Unlock;
   end;
+  AuditLogger.LogLine('StartTransaction');
 End;
 
-function TZeosProxy_ServiceImp.GetPublicKeys():string;
+function TZeosProxy_ServiceImp.GetPublicKeys():UnicodeString;
 {$IFDEF ENABLE_TOFU_CERTIFICATES}
 var
   X: Integer;
   ValidKeys: TStringDynArray;
 {$ENDIF}
 Begin
+  Result := '';
   {$IFDEF ENABLE_TOFU_CERTIFICATES}
   if Assigned(TofuCertStore) then begin
     ValidKeys := TofuCertStore.GetValidPublicKeys;
@@ -633,6 +693,28 @@ Begin
   {$ENDIF}
 End;
 
+function TZeosProxy_ServiceImp.ExecuteMultipleStmts(
+  const  ConnectionID : UnicodeString;
+   Statements : TStatementDescriptions
+):TStringArray;
+var
+  x: Integer;
+  Desc: TStatementDescription;
+Begin
+  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  try
+    Result := TStringArray.Create;
+    Result.SetLength(Statements.Length);
+    for x := 0 to Statements.Length - 1 do begin
+      Desc := Statements.Item[x];
+      Result.Item[x] := ExecuteSingleStmt(ZeosConnection, Desc.SQL, Desc.Parameters, Desc.MaxRows);
+    end;
+  finally
+    Unlock;
+  end;
+  AuditLogger.LogLine('ExecuteMultiple');
+End;
+
 
 
 procedure RegisterZeosProxyImplementationFactory();
@@ -640,8 +722,17 @@ Begin
   GetServiceImplementationRegistry().Register('IZeosProxy',TImplementationFactory.Create(TZeosProxy_ServiceImp,wst_GetServiceConfigText('IZeosProxy')) as IServiceImplementationFactory);
 End;
 
+initialization
+  {$IFDEF WINDOWS}
+  AuditLogger := TDbcProxyFileLogger.Create(ExtractFilePath(ParamStr(0)) + 'audit.log');
+  {$ELSE}
+  AuditLogger := TDbcProxyFileLogger.Create('/var/log/' + ExtractFileName(ParamStr(0)) + '.audit.log');
+  {$ENDIF}
+
 finalization
   if Assigned(Logger) then
     FreeAndNil(Logger);
+  if Assigned(AuditLogger) then
+    FreeAndNil(AuditLogger);
 
 End.

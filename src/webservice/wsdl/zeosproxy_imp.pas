@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_imp".
-  Date            : "15.12.2023 17:53:32".
+  Date            : "21.09.2024 17:27:26".
 }
 Unit zeosproxy_imp;
 {$IFDEF FPC} {$mode objfpc}{$H+} {$ENDIF}
@@ -149,7 +149,11 @@ type
     function StartTransaction(
       const  ConnectionID : UnicodeString
     ):integer;
-    function GetPublicKeys():string;
+    function GetPublicKeys():UnicodeString;
+    function ExecuteMultipleStmts(
+      const  ConnectionID : UnicodeString; 
+       Statements : TStatementDescriptions
+    ):TStringArray;
   End;
 
 
@@ -393,7 +397,15 @@ Begin
 // your code here
 End;
 
-function TZeosProxy_ServiceImp.GetPublicKeys():string;
+function TZeosProxy_ServiceImp.GetPublicKeys():UnicodeString;
+Begin
+// your code here
+End;
+
+function TZeosProxy_ServiceImp.ExecuteMultipleStmts(
+  const  ConnectionID : UnicodeString; 
+   Statements : TStatementDescriptions
+):TStringArray;
 Begin
 // your code here
 End;

@@ -98,7 +98,16 @@ uses
     ///   Retrieves public keys that are valid now and in the future. Public keys
     ///   are delimited by a colon (:).
     /// </summary>
-    function GetPublicKeys: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    function GetPublicKeys: WideString; overload; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    /// <summary>
+    ///   Retrieves public keys that are valid now and in the future. Public keys
+    ///   are delimited by a colon (:).
+    ///   This overload can be used if no connection is established yet.
+    /// </summary>
+    /// <param name="EndPoint">
+    ///   The service endpoint to use.
+    /// </param>
+    function GetPublicKeys(EndPoint: WideString): WideString; overload; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
   end;
 
 {$ENDIF ENABLE_PROXY}
