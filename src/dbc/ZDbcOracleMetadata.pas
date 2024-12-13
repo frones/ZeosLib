@@ -2482,7 +2482,7 @@ Var
   sql: String;
   len: NativeUInt;
 Begin
-  Result := inherited UncachedGetSequences(Catalog, SchemaPattern, SequencePattern);
+  Result := inherited UncachedGetSequences(Catalog, SchemaPattern, SequenceNamePattern);
 
   sql := 'SELECT SEQUENCE_OWNER, SEQUENCE_NAME FROM ALL_SEQUENCES';
 
