@@ -820,6 +820,10 @@ const
   /// <syntax>Properties.Values[ConnProps_SQLiteOpen_zVfs]=value</syntax>
   /// <summary>see: https://www.sqlite.org/c3ref/open.html</summary>
   ConnProps_SQLiteOpen_zVfs = 'SQLiteOpen_zVfs';
+  // <type>Boolean</type>
+  // <usage>Connection</usage>
+  // <summary>Have SQLite fetch all records after opening a result set</summary>
+  ConnProps_SQLiteFetchAll = 'SQLiteFetchAll';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}

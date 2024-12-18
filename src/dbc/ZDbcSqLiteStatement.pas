@@ -216,7 +216,11 @@ var
   CachedResolver: TZSQLiteCachedResolver;
   NativeResultSet: TZSQLiteResultSet;
   CachedResultSet: TZCachedResultSet;
+  FetchAll: Boolean;
 begin
+  FetchAll := StrToBoolDef(GetConnection.GetParameters.Values[ConnProps_SQLiteFetchAll], false);
+  FetchAll := FetchAll or StrToBoolDef(GetParameters.Values[ConnProps_SQLiteFetchAll], false);
+
   { Creates a native result set. }
   NativeResultSet := TZSQLiteResultSet.Create(Self, Self.SQL,
     @FStmtHandle, @FErrorCode, FUndefinedVarcharAsStringLength, ResetCallBack,
@@ -224,7 +228,7 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
 
   if (GetResultSetConcurrency = rcUpdatable)
-    or (GetResultSetType <> rtForwardOnly) then
+    or (GetResultSetType <> rtForwardOnly) or FetchAll then
   begin
     { Creates a cached result set. }
     CachedResolver := TZSQLiteCachedResolver.Create(FHandle, Self,
@@ -233,6 +237,11 @@ begin
       CachedResolver,GetConnection.GetConSettings);
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+
+    if FetchAll then begin
+      CachedResultSet.AfterLast;
+      CachedResultSet.BeforeFirst;
+    end;
 
     Result := CachedResultSet;
   end
