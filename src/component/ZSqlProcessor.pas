@@ -110,6 +110,9 @@ type
     procedure SetParamChar(Value: Char);
     procedure UpdateSQLStrings({%H-}Sender: TObject);
   protected
+    FProperties: TStringList;
+    function GetProperties: TStrings;
+    procedure SetProperties(NewStrings: TStrings);
     procedure SetConnection(Value: TZAbstractConnection); override;
     procedure CheckConnected;
     function DoOnError(StatementIndex: Integer; E: Exception):
@@ -152,6 +155,7 @@ type
     property OnError: TZProcessorErrorEvent read FOnError write FOnError;
     property AfterExecute: TZProcessorNotifyEvent read FAfterExecute write FAfterExecute;
     property BeforeExecute: TZProcessorNotifyEvent read FBeforeExecute write FBeforeExecute;
+    property Properties: TStrings read GetProperties write SetProperties;
   end;
 
 implementation
@@ -176,6 +180,7 @@ begin
   FScriptParser.DelimiterType := dtDefault;
   FScriptParser.Delimiter := ';';
   FScriptParser.CleanupStatements := False;
+  FProperties := TStringList.Create;
 end;
 
 {**
@@ -183,11 +188,23 @@ end;
 }
 destructor TZSQLProcessor.Destroy;
 begin
+  if Assigned(FProperties) then
+    FreeAndNil(FProperties);
   FreeAndNil(FParams);
   FreeAndNil(FScript);
   FreeAndNil(FScriptParser);
   FConnection := nil;
   inherited Destroy;
+end;
+
+function TZSQLProcessor.GetProperties: TStrings;
+begin
+  Result := FProperties;
+end;
+
+procedure TZSQLProcessor.SetProperties(NewStrings: TStrings);
+begin
+  FProperties.Assign(NewStrings);
 end;
 
 {**
@@ -388,7 +405,7 @@ begin
           SQL.Text := GetStatement(I);
           {https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=127636}
           if SQL.StatementCount > 0 then begin
-            Statement := CreateStatement(SQL.Statements[0].SQL, nil);
+            Statement := CreateStatement(SQL.Statements[0].SQL, FProperties);
             try
               SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
                 FParams);
