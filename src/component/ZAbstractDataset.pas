@@ -913,7 +913,7 @@ var
             try
               DestStream := DestDataset.CreateBlobStream(DestField, bmWrite);
               try
-                DestStream.Size := 0; // need to Realloc and set FUpdated = true
+                DestStream.Size := 0; // need to Realloc and set FUpdated = true when DestStream.Size >= SrcStream.Size 
                 DestStream.CopyFrom(SrcStream, 0);
               finally
                 DestStream.Free;
