@@ -4464,6 +4464,37 @@ type
     function  GetConnection: IZConnection;
   end;
 
+  TZVerboseCallback = procedure(Message: ZWideString) of object;
+
+  IZBackup = Interface(IZInterface)
+    ['{0DB11896-0005-4817-8F8F-94E555A262BE}']
+    procedure SetHostName(HostName: ZWideString);
+    function GetHostName: ZWideString;
+    procedure SetDatabase(Database: ZWideString);
+    function GetDatabase: ZWideString;
+    procedure SetPort(Port: Word);
+    function GetPort: Word;
+    procedure SetOnVerbose(Callback: TZVerboseCallback);
+    function GetOnVerbose: TZVerboseCallback;
+    procedure SetLibLocation(LibLocation: ZWideString);
+    function GetLibLocation: ZWideString;
+    procedure SetUserName(UserName: ZWideString);
+    function GetUserName: ZWideString;
+    procedure SetPassword(Password: ZWideString);
+    function GetPassword: ZWideString;
+    procedure SetBackupFileName(FileName: ZWideString);
+    function GetBackupFileName: ZWideString;
+    procedure Backup;
+    property HostName: ZWideString read GetHostName write SetHostName;
+    property Database: ZWideString read GetDatabase write SetDatabase;
+    property Port: Word read GetPort write SetPort;
+    property OnVerbose: TZVerboseCallback read GetOnVerbose write SetOnVerbose;
+    property LibLocation: ZWideString read GetLibLocation write SetLibLocation;
+    property UserName: ZWideString read GetUserName write SetUserName;
+    property Password: ZWideString read GetPassword write SetPassword;
+    property BackupFileName: ZWideString read GetBackupFileName write SetBackupFileName;
+  end;
+
 var
   /// <summary>The common driver manager object.</summary>
   DriverManager: IZDriverManager;

@@ -133,7 +133,8 @@ type
     pvtNone,     // no value
     pvtByteZ,    // 1-byte int that always = 0 (value ignored)
     pvtNum,      // 1/2/4-byte int, depending on a value
-    pvtString    // raw byte string
+    pvtString,   // raw byte string
+    pvtLongString  // a string that can be longer than 255 Bytes
   );
 
   { Paparameter string name and it's value}
@@ -537,6 +538,7 @@ var
   ParamValue: String;
   tmp: RawByteString;
   PParam: PZIbParam;
+  tmpLen: Word;
 begin
   Result := EmptyRaw;
   Writer := TZRawSQLStringWriter.Create(1024);
@@ -592,6 +594,19 @@ begin
             {$ENDIF}
             Writer.AddChar(AnsiChar(PParam.Number), Result);
             Writer.AddChar(AnsiChar(Length(tmp)), Result);
+            Writer.AddText(tmp, Result);
+          end;
+        pvtLongString:
+          begin
+            {$IFDEF UNICODE}
+            tmp := ZUnicodeToRaw(ParamValue, CP);
+            {$ELSE}
+            tmp := ParamValue;
+            {$ENDIF}
+            tmpLen := Length(tmp);
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            Writer.AddChar(PAnsiChar(@TmpLen)[0], Result);
+            Writer.AddChar(PAnsiChar(@TmpLen)[1], Result);
             Writer.AddText(tmp, Result);
           end;
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //pvtUnimpl
