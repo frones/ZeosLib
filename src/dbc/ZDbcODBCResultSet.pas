@@ -1669,6 +1669,7 @@ procedure TAbstractODBCResultSet.LoadUnBoundColumns;
 var
   ColumnIndex: Integer;
   StrLen_or_IndPtr: PSQLLEN;
+  ZeroBuffer : Byte;  
 begin
   for ColumnIndex := fFirstGetDataIndex to fLastGetDataIndex do
     with TZODBCColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1682,7 +1683,7 @@ begin
         else begin
           { check out length of lob }
           CheckStmtError(fPlainDriver.SQLGetData(fPHSTMT^, ColumnIndex+1,
-            ODBC_CType, Pointer(1){can not be nil}, 0, StrLen_or_IndPtr));
+            ODBC_CType, @ZeroBuffer, 0, StrLen_or_IndPtr));
           if StrLen_or_IndPtr^ = SQL_NULL_DATA then
             PIZlob(@ColumnBuffer)^ := nil
           else if ColumnType = stBinaryStream
