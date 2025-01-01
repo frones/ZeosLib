@@ -48,7 +48,7 @@ const
       (Name: 'isc_spb_current_version';       ValueType: pvtNone;    Number: isc_spb_current_version),
       (Name: 'isc_spb_user_name';             ValueType: pvtString;  Number: isc_spb_user_name),
       (Name: 'isc_spb_password';              ValueType: pvtString;  Number: isc_spb_password),
-      (Name: 'isc_spb_utf8_filename';         ValueType: pvtNone;    Number: isc_spb_utf8_filename),
+      (Name: 'isc_spb_utf8_filename';         ValueType: pvtString;    Number: isc_spb_utf8_filename),
 
       (Name: 'isc_spb_dbname';                ValueType: pvtLongString;  Number: isc_spb_dbname),
       (Name: 'isc_spb_expected_db';           ValueType: pvtString;      Number: isc_spb_expected_db),
@@ -257,7 +257,6 @@ begin
     Info.Add('isc_spb_bkp_file=' + UTF8Encode(FBackupFileName));
     Info.Add('isc_spb_verbose');
     TPB := BuildPB(IBPlainDriver, Info, isc_action_svc_backup, 'isc_spb_', ServiceManagerParams);
-    Delete(TPB, Length(TPB), 1);
 
     {
     TPB := '';

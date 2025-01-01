@@ -361,7 +361,7 @@ const
     (Name: ConnProps_isc_dpb_process_name;          ValueType: pvtString;  Number: isc_dpb_process_name),
     (Name: ConnProps_isc_dpb_trusted_role;          ValueType: pvtString;  Number: isc_dpb_trusted_role),
     (Name: ConnProps_isc_dpb_org_filename;          ValueType: pvtString;  Number: isc_dpb_org_filename),
-    (Name: ConnProps_isc_dpb_utf8_filename;         ValueType: pvtNone;    Number: isc_dpb_utf8_filename),
+    (Name: ConnProps_isc_dpb_utf8_filename;         ValueType: pvtString;  Number: isc_dpb_utf8_filename),
     (Name: ConnProps_isc_dpb_ext_call_depth;        ValueType: pvtNum;     Number: isc_dpb_ext_call_depth),
     (Name: ConnProps_isc_dpb_auth_block;            ValueType: pvtString;  Number: isc_dpb_auth_block), // Bytes
     (Name: ConnProps_isc_dpb_client_version;        ValueType: pvtString;  Number: isc_dpb_client_version),
@@ -555,8 +555,6 @@ begin
       case PParam.ValueType of
         pvtNone: begin
             Writer.AddChar(AnsiChar(PParam.Number), Result);
-            if VersionCode < isc_tpb_version3 then
-              Writer.AddChar(AnsiChar(#0), Result);
           end;
         pvtByteZ: begin
             Writer.AddChar(AnsiChar(PParam.Number), Result);
