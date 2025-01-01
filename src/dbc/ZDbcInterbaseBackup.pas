@@ -227,12 +227,12 @@ begin
   try
     // connect to service manager
     Info := TStringList.Create;
-    Info.Add('isc_spb_current_version');
+    //Info.Add('isc_spb_current_version');
     Info.Add('isc_spb_user_name=' + UTF8Encode(FUserName));
     Info.Add('isc_spb_password=' + UTF8Encode(FPassword));
     Info.Add('isc_spb_utf8_filename');
     Info.Add('isc_spb_expected_db=' + UTF8Encode(FDatabase));
-    SPB := BuildPB(IBPlainDriver, Info, {isc_dpb_version1} isc_dpb_version1, 'isc_spb_', ServiceManagerParams);
+    SPB := BuildPB(IBPlainDriver, Info, {isc_dpb_version1} isc_spb_version1, 'isc_spb_', ServiceManagerParams);
 
     if FHostName = '' then
       ServiceName := 'service_mgr'
