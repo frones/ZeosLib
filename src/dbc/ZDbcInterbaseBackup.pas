@@ -232,7 +232,7 @@ begin
     Info.Add('isc_spb_password=' + UTF8Encode(FPassword));
     Info.Add('isc_spb_utf8_filename');
     Info.Add('isc_spb_expected_db=' + UTF8Encode(FDatabase));
-    SPB := BuildPB(IBPlainDriver, Info, {isc_dpb_version1} isc_spb_version1, 'isc_spb_', ServiceManagerParams);
+    SPB := BuildPB(IBPlainDriver, Info, {isc_dpb_version1} isc_spb_version1, 'isc_spb_', ServiceManagerParams{$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
 
     if FHostName = '' then
       ServiceName := 'service_mgr'
