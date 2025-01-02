@@ -40,7 +40,7 @@ type
 
 implementation
 
-uses ZPlainFirebirdInterbaseDriver, ZExceptions, ZDbcInterbase6Utils, ZPlainDriver;
+uses ZPlainFirebirdInterbaseDriver, ZExceptions, ZDbcInterbase6Utils, ZPlainDriver, ZEncoding;
 
 const
   ServiceManagerParams: array [0..8] of TZIbParam =
@@ -91,7 +91,7 @@ begin
     raise EZSQLException.Create('fb_interpret is not assigned.')
   else begin
     PlainDriver.fb_interpret(@Error[1], Length(Error), @PTempStatus);
-    SetLength(Error, strlen(@Error[1]));
+    SetLength(Error, StrLen(PAnsiChar(Error)));
     raise EZSQLException.Create(Error);
   end;
 end;
@@ -217,7 +217,7 @@ begin
   LineBuffer := '';
   SetLength(LineBuffer, 50);
   IBPlainDriver.isc_get_client_version(@Linebuffer[1]);
-  SetLength(LineBuffer, StrLen(@LineBuffer[1]));
+  SetLength(LineBuffer, StrLen(PAnsiChar(LineBuffer)));
   GetFirebirdVersion(LineBuffer, IsFirebird, FirebirdVersion);
 
   if not IsFirebird or (FirebirdVersion < 3000000) then
@@ -256,7 +256,7 @@ begin
     Info.Add('isc_spb_dbname=' + UTF8Encode(FDatabase));
     Info.Add('isc_spb_bkp_file=' + UTF8Encode(FBackupFileName));
     Info.Add('isc_spb_verbose');
-    TPB := BuildPB(IBPlainDriver, Info, isc_action_svc_backup, 'isc_spb_', ServiceManagerParams);
+    TPB := BuildPB(IBPlainDriver, Info, isc_action_svc_backup, 'isc_spb_', ServiceManagerParams {$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
 
     {
     TPB := '';
@@ -275,19 +275,19 @@ begin
     }
 
     FillChar(StatusVector, SizeOf(StatusVector), 0);
-    Status := IBPlainDriver.isc_service_start(@StatusVector , @ServiceHandle, nil, Length(TPB), PAnsiChar(TPB));
+    Status := IBPlainDriver.isc_service_start(@StatusVector , @ServiceHandle, nil, Length(TPB), {PAnsiChar(TPB)} PISC_SCHAR(@TPB[1]));
 
     if Status <> 0 then
       HandleIbError(IBPlainDriver, StatusVector);
 
     Info.Clear;
-    APB := BuildPB(IBPlainDriver, Info, isc_info_svc_line, 'isc_spb_', ServiceManagerParams);
+    APB := BuildPB(IBPlainDriver, Info, isc_info_svc_line, 'isc_spb_', ServiceManagerParams {$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
 
     while true do begin
       SetLength(LineBuffer, 1024);
       FillChar(LineBuffer[1], Length(LineBuffer), #0);
-      Status := IBPlainDriver.isc_service_query(@StatusVector, @ServiceHandle, nil, 0              , PEmptyAnsiString,   Length(APB),        @APB[1],               Length(LineBuffer), @LineBuffer[1]);
-//                            isc_service_query(@FStatusVector,@SvcHandle,     nil, Length(SendSpb), PAnsiChar(SendSpb), Length(RequestSpb), PAnsiChar(RequestSpb), Length(Buffer),     PAnsiChar(Buffer))
+      Status := IBPlainDriver.isc_service_query(@StatusVector, @ServiceHandle, nil, 0              , PISC_SCHAR(PEmptyAnsiString), Length(APB),        PISC_SCHAR(@APB[1]),   Length(LineBuffer), @LineBuffer[1]);
+//                            isc_service_query(@FStatusVector,@SvcHandle,     nil, Length(SendSpb), PAnsiChar(SendSpb),           Length(RequestSpb), PAnsiChar(RequestSpb), Length(Buffer),     PAnsiChar(Buffer))
       if Status <> 0 then
         HandleIbError(IBPlainDriver, StatusVector);
       if (Byte(LineBuffer[1]) <> isc_info_svc_line) then
