@@ -896,7 +896,7 @@ type
     ///  cases the commit occurs when all results and output parameter values
     ///  have been retrieved. It is not recommented setting autoCommit to false
     ///  because a call to either the method <c>commit</c> or the method
-    ///  <c>rollback</c> will restart the transaction. It's use full only if
+    ///  <c>rollback</c> will restart the transaction. It is useful only if
     ///  repeately many opertions are done and no startTransaction is intended
     ///  to use. If you change mode to true the current Transaction and it's
     ///  nested SavePoints are committed then.</summary>
