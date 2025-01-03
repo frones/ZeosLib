@@ -214,6 +214,7 @@ begin
   if not Assigned(IBPlainDriver) then
     raise EZSQLException.Create('Could not get the plain driver instance');
 
+  // check the library version
   LineBuffer := '';
   SetLength(LineBuffer, 50);
   IBPlainDriver.isc_get_client_version(@Linebuffer[1]);
@@ -227,12 +228,11 @@ begin
   try
     // connect to service manager
     Info := TStringList.Create;
-    //Info.Add('isc_spb_current_version');
     Info.Add('isc_spb_user_name=' + UTF8Encode(FUserName));
     Info.Add('isc_spb_password=' + UTF8Encode(FPassword));
     Info.Add('isc_spb_utf8_filename');
     Info.Add('isc_spb_expected_db=' + UTF8Encode(FDatabase));
-    SPB := BuildPB(IBPlainDriver, Info, {isc_dpb_version1} isc_spb_version1, 'isc_spb_', ServiceManagerParams{$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
+    SPB := BuildPB(IBPlainDriver, Info, isc_spb_version1, 'isc_spb_', ServiceManagerParams{$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
 
     if FHostName = '' then
       ServiceName := 'service_mgr'
@@ -246,33 +246,16 @@ begin
     end;
 
     Status := IBPlainDriver.isc_service_attach(@StatusVector, 0, @ServiceName[1], @ServiceHandle, Length(SPB), @SPB[1]);
-    //if not Assigned(ServiceHandle) then
-    //  ShowMessage('is null');
 
     if Status <> 0 then
       HandleIbError(IBPlainDriver, StatusVector);
 
+    // create the service task
     Info.Clear;
     Info.Add('isc_spb_dbname=' + UTF8Encode(FDatabase));
     Info.Add('isc_spb_bkp_file=' + UTF8Encode(FBackupFileName));
     Info.Add('isc_spb_verbose');
     TPB := BuildPB(IBPlainDriver, Info, isc_action_svc_backup, 'isc_spb_', ServiceManagerParams {$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
-
-    {
-    TPB := '';
-
-    TPB := Char(isc_action_svc_backup);
-    //TPB := TPB + Char(isc_spb_utf8_filename);
-    TPB := TPB + Char(isc_spb_dbname);
-    AddSpbLength(TPB, Length(DbName));
-    TPB := TPB + DbName;
-
-    TPB := TPB + Char(isc_spb_bkp_file);
-    AddSpbLength(TPB, Length(BackupFileName));
-    TPB := TPB + BackupFileName;
-
-    TPB := TPB + char(isc_spb_verbose);
-    }
 
     FillChar(StatusVector, SizeOf(StatusVector), 0);
     Status := IBPlainDriver.isc_service_start(@StatusVector , @ServiceHandle, nil, Length(TPB), {PAnsiChar(TPB)} PISC_SCHAR(@TPB[1]));
@@ -280,21 +263,21 @@ begin
     if Status <> 0 then
       HandleIbError(IBPlainDriver, StatusVector);
 
+    // query the service for information in a loop
+    // the loop ends when the server has no more data
     Info.Clear;
     APB := BuildPB(IBPlainDriver, Info, isc_info_svc_line, 'isc_spb_', ServiceManagerParams {$IFDEF UNICODE}, zCP_UTF8{$ENDIF});
 
     while true do begin
       SetLength(LineBuffer, 1024);
       FillChar(LineBuffer[1], Length(LineBuffer), #0);
-      Status := IBPlainDriver.isc_service_query(@StatusVector, @ServiceHandle, nil, 0              , PISC_SCHAR(PEmptyAnsiString), Length(APB),        PISC_SCHAR(@APB[1]),   Length(LineBuffer), @LineBuffer[1]);
-//                            isc_service_query(@FStatusVector,@SvcHandle,     nil, Length(SendSpb), PAnsiChar(SendSpb),           Length(RequestSpb), PAnsiChar(RequestSpb), Length(Buffer),     PAnsiChar(Buffer))
+      Status := IBPlainDriver.isc_service_query(@StatusVector, @ServiceHandle, nil, 0, PISC_SCHAR(PEmptyAnsiString), Length(APB), PISC_SCHAR(@APB[1]), Length(LineBuffer), @LineBuffer[1]);
       if Status <> 0 then
         HandleIbError(IBPlainDriver, StatusVector);
       if (Byte(LineBuffer[1]) <> isc_info_svc_line) then
         raise EZSQLException.Create('unexpected API result');
       LineLen := PWord(@LineBuffer[2])^;
       if LineLen <> 0 then begin
-        //Memo1.Lines.Append(Copy(LineBuffer, 4, LineLen))
         if Assigned(FOnVerbose) then
           FOnVerbose(UTF8Decode(Copy(LineBuffer, 4, LineLen)));
       end else
