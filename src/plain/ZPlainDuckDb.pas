@@ -159,6 +159,7 @@ type
 
     //! DuckDB's index type.
     idx_t = cuint64;
+    Pidx_t = ^idx_t;
 	
     //! The callback that will be called to destroy data, e.g.,
     //! bind data (if any), init data (if any), extra data for replacement scans (if any)
@@ -356,7 +357,8 @@ type
     SDuckDB_Prepared_Statement = packed record
 	internal_ptr: Pointer;
     end;
-    TDuckDB_Prepared_Statement = ^ SDuckDB_Prepared_Statement;
+    TDuckDB_Prepared_Statement = ^SDuckDB_Prepared_Statement;
+    PDuckDB_Prepared_Statement = ^TDuckDB_Prepared_Statement;
 
     //! Extracted statements. Must be destroyed with `duckdb_destroy_extracted`.
     SDuckDB_Extracted_Statements = packed record
@@ -1223,6 +1225,291 @@ type
     // Hugeint Helpers
     //===--------------------------------------------------------------------===//
 
+    (*!
+    Converts a duckdb_hugeint object (as obtained from a `DUCKDB_TYPE_HUGEINT` column) into a double.
+
+    * @param val The hugeint value.
+    * @return The converted `double` element.
+    *)
+    TDuckDB_Hugeint_To_Double = function(val: TDuckDB_HugeInt): cdouble; stdcall;
+
+    (*!
+    Converts a double value to a duckdb_hugeint object.
+
+    If the conversion fails because the double value is too big the result will be 0.
+
+    * @param val The double value.
+    * @return The converted `duckdb_hugeint` element.
+    *)
+    TDuckDB_Double_To_Hugeint = function(val: cdouble): TDuckDB_HugeInt; stdcall;
+
+    //===--------------------------------------------------------------------===//
+    // Unsigned Hugeint Helpers
+    //===--------------------------------------------------------------------===//
+
+    (*!
+    Converts a duckdb_uhugeint object (as obtained from a `DUCKDB_TYPE_UHUGEINT` column) into a double.
+
+    * @param val The uhugeint value.
+    * @return The converted `double` element.
+    *)
+    TDuckDB_UHugeint_To_Double = function(val: TDuckDB_UHugeInt): cdouble; stdcall;
+
+    (*!
+    Converts a double value to a duckdb_uhugeint object.
+
+    If the conversion fails because the double value is too big the result will be 0.
+
+    * @param val The double value.
+    * @return The converted `duckdb_uhugeint` element.
+    *)
+    TDuckDB_Double_To_UHugeint = function(val: cdouble): TDuckDB_UHugeInt; stdcall;
+
+    //===--------------------------------------------------------------------===//
+    // Decimal Helpers
+    //===--------------------------------------------------------------------===//
+
+    (*!
+    Converts a double value to a duckdb_decimal object.
+
+    If the conversion fails because the double value is too big, or the width/scale are invalid the result will be 0.
+
+    * @param val The double value.
+    * @return The converted `duckdb_decimal` element.
+    *)
+    TDuckDB_Double_To_Decimal = function(val: cdouble; width: cuint8; scale: cuint8): TDuckDB_Decimal; stdcall;
+
+    (*!
+    Converts a duckdb_decimal object (as obtained from a `DUCKDB_TYPE_DECIMAL` column) into a double.
+
+    * @param val The decimal value.
+    * @return The converted `double` element.
+    *)
+    TDuckDB_Decimal_To_Double = function(val: TDuckDB_Decimal): cdouble; stdcall;
+
+    //===--------------------------------------------------------------------===//
+    // Prepared Statements
+    //===--------------------------------------------------------------------===//
+
+    // A prepared statement is a parameterized query that allows you to bind parameters to it.
+    // * This is useful to easily supply parameters to functions and avoid SQL injection attacks.
+    // * This is useful to speed up queries that you will execute several times with different parameters.
+    // Because the query will only be parsed, bound, optimized and planned once during the prepare stage,
+    // rather than once per execution.
+    // For example:
+    //   SELECT * FROM tbl WHERE id=?
+    // Or a query with multiple parameters:
+    //   SELECT * FROM tbl WHERE id=$1 OR name=$2
+
+    (*!
+    Create a prepared statement object from a query.
+
+    Note that after calling `duckdb_prepare`, the prepared statement should always be destroyed using
+    `duckdb_destroy_prepare`, even if the prepare fails.
+
+    If the prepare fails, `duckdb_prepare_error` can be called to obtain the reason why the prepare failed.
+
+    * @param connection The connection object
+    * @param query The SQL query to prepare
+    * @param out_prepared_statement The resulting prepared statement object
+    * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
+    *)
+    TDuckDB_Prepare = function(connection: TDuckDB_Connection; const query: PAnsiChar; out_prepared_statement: TDuckDB_Prepared_Statement): TDuckDB_State; stdcall;
+
+    (*!
+    Closes the prepared statement and de-allocates all memory allocated for the statement.
+
+    * @param prepared_statement The prepared statement to destroy.
+    *)
+    TDuckDB_Destroy_Prepare = procedure(prepared_statement: PDuckDB_Prepared_Statement); stdcall;
+
+    (*!
+    Returns the error message associated with the given prepared statement.
+    If the prepared statement has no error message, this returns `nullptr` instead.
+
+    The error message should not be freed. It will be de-allocated when `duckdb_destroy_prepare` is called.
+
+    * @param prepared_statement The prepared statement to obtain the error from.
+    * @return The error message, or `nullptr` if there is none.
+    *)
+    TDuckDB_Prepare_Error = function(prepared_statement: TDuckDB_Prepared_Statement): PAnsiChar; stdcall;
+
+    (*!
+    Returns the number of parameters that can be provided to the given prepared statement.
+
+    Returns 0 if the query was not successfully prepared.
+
+    * @param prepared_statement The prepared statement to obtain the number of parameters for.
+    *)
+    TDuckDB_NParams = function(prepared_statement: TDuckDB_Prepared_Statement): idx_t; stdcall;
+
+    (*!
+    Returns the name used to identify the parameter
+    The returned string should be freed using `duckdb_free`.
+
+    Returns NULL if the index is out of range for the provided prepared statement.
+
+    * @param prepared_statement The prepared statement for which to get the parameter name from.
+    *)
+    TDuckDB_Parameter_Name = function(prepared_statement: TDuckDB_Prepared_Statement; index: idx_t): PAnsiChar; stdcall;
+
+    (*!
+    Returns the parameter type for the parameter at the given index.
+
+    Returns `DUCKDB_TYPE_INVALID` if the parameter index is out of range or the statement was not successfully prepared.
+
+    * @param prepared_statement The prepared statement.
+    * @param param_idx The parameter index.
+    * @return The parameter type
+    *)
+    TDuckDB_Param_Type = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t): TDuckDB_Type; stdcall;
+
+    (*!
+    Clear the params bind to the prepared statement.
+    *)
+    TDuckDB_Clear_Bindings = function(prepared_statement: TDuckDB_Prepared_Statement): TDuckDB_State; stdcall;
+
+    (*!
+    Returns the statement type of the statement to be executed
+
+    * @param statement The prepared statement.
+    * @return duckdb_statement_type value or DUCKDB_STATEMENT_TYPE_INVALID
+    *)
+    TDuckDB_Prepared_Statement_Type = function(statement: TDuckDB_Prepared_Statement): TDuckDB_Statement_Type; stdcall;
+
+    //===--------------------------------------------------------------------===//
+    // Bind Values To Prepared Statements
+    //===--------------------------------------------------------------------===//
+
+    (*!
+    Binds a value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Value = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckdb_Value): TDuckDB_State; stdcall;
+
+    (*!
+    Retrieve the index of the parameter for the prepared statement, identified by name
+    *)
+    TDuckDB_Bind_Parameter_Index = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx_out: Pidx_t; name: PAnsiChar): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a bool value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Boolean = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cbool): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an int8_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Int8 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint8): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an int16_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Int16 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint16): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an int32_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Int32 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint32): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an int64_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Int64 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint64): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_hugeint value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Hugeint = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_HugeInt): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an duckdb_uhugeint value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_UHugeint = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_UHugeInt): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_decimal value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Decimal = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_Decimal): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an uint8_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_UInt8 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint8): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an uint16_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_UInt16 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint16): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an uint32_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_UInt32 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint32): TDuckDB_State; stdcall;
+
+    (*!
+    Binds an uint64_t value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Uint64 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint64): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a float value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Float = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cfloat): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a double value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Double = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cdouble): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_date value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Date = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Date): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_time value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Time = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Time): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_timestamp value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Timestamp = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_TimeStamp): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_timestamp value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Timestamp_TZ = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_TimeStamp): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a duckdb_interval value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Interval = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Interval): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a null-terminated varchar value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Varchar = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: PAnsiChar): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a varchar value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Varchar_Length = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: PAnsiChar; length: idx_t): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a blob value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Blob = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; data: Pointer; length: idx_t): TDuckDB_State; stdcall;
+
+    (*!
+    Binds a NULL value to the prepared statement at the specified index.
+    *)
+    TDuckDB_Bind_Null = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t): TDuckDB_State; stdcall;
+
+    //===--------------------------------------------------------------------===//
+    // Execute Prepared Statements
+    //===--------------------------------------------------------------------===//
+
 
 
 
@@ -1282,8 +1569,62 @@ type
       DuckDB_Value_String_Internal: TDuckDB_Value_String_Internal;
       DuckDB_Value_Blob: TDuckDB_Value_Blob;
       DuckDB_Value_Is_Null: TDuckDB_Value_Is_Null;
+      DuckDB_Malloc: TDuckDB_Malloc;
+      DuckDB_free: TDuckDB_free;
+      DuckDB_Vector_Size: TDuckDB_Vector_Size;
+      DuckDB_String_Is_Inlined: TDuckDB_String_Is_Inlined;
+      DuckDB_String_T_Length: TDuckDB_String_T_Length;
+      DuckDB_String_T_Data: TDuckDB_String_T_Data;
+      DuckDB_From_Date: TDuckDB_From_Date;
+      DuckDB_To_Date: TDuckDB_To_Date;
+      DuckDB_Is_Finite_Date: TDuckDB_Is_Finite_Date;
+      DuckDB_From_Time: TDuckDB_From_Time;
+      DuckDB_Create_Time_TZ: TDuckDB_Create_Time_TZ;
+      DuckDB_From_Time_TZ: TDuckDB_From_Time_TZ;
+      DuckDB_To_Time: TDuckDB_To_Time;
+      DuckDB_From_Timestamp: TDuckDB_From_Timestamp;
+      DuckDB_To_Timestamp: TDuckDB_To_Timestamp;
+      DuckDB_Is_Finite_Timestamp: TDuckDB_Is_Finite_Timestamp;
+      DuckDB_Hugeint_To_Double: TDuckDB_Hugeint_To_Double;
+      DuckDB_Double_To_Hugeint: TDuckDB_Double_To_Hugeint;
+      DuckDB_UHugeint_To_Double: TDuckDB_UHugeint_To_Double;
+      DuckDB_Double_To_UHugeint: TDuckDB_Double_To_UHugeint;
+      DuckDB_Double_To_Decimal: TDuckDB_Double_To_Decimal;
+      DuckDB_Decimal_To_Double: TDuckDB_Decimal_To_Double;
+      DuckDB_Prepare: TDuckDB_Prepare;
+      DuckDB_Destroy_Prepare: TDuckDB_Destroy_Prepare;
+      DuckDB_Prepare_Error: TDuckDB_Prepare_Error;
+      DuckDB_NParams: TDuckDB_NParams;
+      DuckDB_Parameter_Name: TDuckDB_Parameter_Name;
+      DuckDB_Param_Type: TDuckDB_Param_Type;
+      DuckDB_Clear_Bindings: TDuckDB_Clear_Bindings;
+      DuckDB_Prepared_Statement_Type: TDuckDB_Prepared_Statement_Type;
+      DuckDB_Bind_Value: TDuckDB_Bind_Value;
+      DuckDB_Bind_Parameter_Index: TDuckDB_Bind_Parameter_Index;
+      DuckDB_Bind_Boolean: TDuckDB_Bind_Boolean;
+      DuckDB_Bind_Int8: TDuckDB_Bind_Int8;
+      DuckDB_Bind_Int16: TDuckDB_Bind_Int16;
+      DuckDB_Bind_Int32: TDuckDB_Bind_Int32;
+      DuckDB_Bind_Int64: TDuckDB_Bind_Int64;
+      DuckDB_Bind_Hugeint: TDuckDB_Bind_Hugeint;
+      DuckDB_Bind_UHugeint: TDuckDB_Bind_UHugeint;
+      DuckDB_Bind_Decimal: TDuckDB_Bind_Decimal;
+      DuckDB_Bind_UInt8: TDuckDB_Bind_UInt8;
+      DuckDB_Bind_UInt16: TDuckDB_Bind_UInt16;
+      DuckDB_Bind_UInt32: TDuckDB_Bind_UInt32;
+      DuckDB_Bind_Uint64: TDuckDB_Bind_Uint64;
+      DuckDB_Bind_Float: TDuckDB_Bind_Float;
+      DuckDB_Bind_Double: TDuckDB_Bind_Double;
+      DuckDB_Bind_Date: TDuckDB_Bind_Date;
+      DuckDB_Bind_Time: TDuckDB_Bind_Time;
+      DuckDB_Bind_Timestamp: TDuckDB_Bind_Timestamp;
+      DuckDB_Bind_Timestamp_TZ: TDuckDB_Bind_Timestamp_TZ;
+      DuckDB_Bind_Interval: TDuckDB_Bind_Interval;
+      DuckDB_Bind_Varchar: TDuckDB_Bind_Varchar;
+      DuckDB_Bind_Varchar_Length: TDuckDB_Bind_Varchar_Length;
+      DuckDB_Bind_Blob: TDuckDB_Bind_Blob;
+      DuckDB_Bind_Null: TDuckDB_Bind_Null;
     end;
-
 implementation
 
 end.
