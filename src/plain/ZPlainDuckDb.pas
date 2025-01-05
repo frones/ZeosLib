@@ -1,11 +1,71 @@
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{             Native Plain Drivers for DuckDB             }
+{                                                         }
+{         Originally written by Jan Baumgarten            }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2020 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
 unit ZPlainDuckDb;
 
 interface
 
+{$I ZPlain.inc}
+
 uses
-    ctypes;
+  ctypes, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZCompatibility, ZPlainDriver;
+
+{$IFNDEF ZEOS_DISABLE_DUCKDB}
 
 const
+    WINDOWS_VS_DLL_LOCATION = 'duckdb.dll.dll';
+    WINDOWS_MINGW_DLL_LOCATION = 'libduckdb.dll';
+    LINUX_DLL_LOCATION = 'libduckdb'+SharedSuffix;
+
     //! An enum over DuckDB's internal types.
     //enum DUCKDB_TYPE
     DUCKDB_TYPE_INVALID      = 0;
@@ -226,7 +286,7 @@ type
 	micros: cint64;
     end;
 	
-	//! Hugeints are composed of a (lower, upper) component
+    //! Hugeints are composed of a (lower, upper) component
     //! The value of the hugeint is upper * 2^64 + lower
     //! For easy usage, the functions duckdb_hugeint_to_double/duckdb_double_to_hugeint are recommended
     TDuckDB_HugeInt = packed record
@@ -439,162 +499,71 @@ type
     typedef struct _duckdb_extension_info {
 	    void *internal_ptr;
     } * duckdb_extension_info;
+    *)
 
     //===--------------------------------------------------------------------===//
     // Function types
     //===--------------------------------------------------------------------===//
-    //! Additional function info. When setting this info, it is necessary to pass a destroy-callback function.
-    typedef struct _duckdb_function_info {
-	    void *internal_ptr;
-    } * duckdb_function_info;
+
+    // ...
 
     //===--------------------------------------------------------------------===//
     // Scalar function types
     //===--------------------------------------------------------------------===//
-    //! A scalar function. Must be destroyed with `duckdb_destroy_scalar_function`.
-    typedef struct _duckdb_scalar_function {
-	    void *internal_ptr;
-    } * duckdb_scalar_function;
 
-    //! A scalar function set. Must be destroyed with `duckdb_destroy_scalar_function_set`.
-    typedef struct _duckdb_scalar_function_set {
-	    void *internal_ptr;
-    } * duckdb_scalar_function_set;
-
-    //! The main function of the scalar function.
-    typedef void (*duckdb_scalar_function_t)(duckdb_function_info info, duckdb_data_chunk input, duckdb_vector output);
+    // ...
 
     //===--------------------------------------------------------------------===//
     // Aggregate function types
     //===--------------------------------------------------------------------===//
-    //! An aggregate function. Must be destroyed with `duckdb_destroy_aggregate_function`.
-    typedef struct _duckdb_aggregate_function {
-	    void *internal_ptr;
-    } * duckdb_aggregate_function;
 
-    //! A aggregate function set. Must be destroyed with `duckdb_destroy_aggregate_function_set`.
-    typedef struct _duckdb_aggregate_function_set {
-	    void *internal_ptr;
-    } * duckdb_aggregate_function_set;
-
-    //! Aggregate state
-    typedef struct _duckdb_aggregate_state {
-	    void *internal_ptr;
-    } * duckdb_aggregate_state;
-
-    //! Returns the aggregate state size
-    typedef idx_t (*duckdb_aggregate_state_size)(duckdb_function_info info);
-    //! Initialize the aggregate state
-    typedef void (*duckdb_aggregate_init_t)(duckdb_function_info info, duckdb_aggregate_state state);
-    //! Destroy aggregate state (optional)
-    typedef void (*duckdb_aggregate_destroy_t)(duckdb_aggregate_state *states, idx_t count);
-    //! Update a set of aggregate states with new values
-    typedef void (*duckdb_aggregate_update_t)(duckdb_function_info info, duckdb_data_chunk input,
-                                              duckdb_aggregate_state *states);
-    //! Combine aggregate states
-    typedef void (*duckdb_aggregate_combine_t)(duckdb_function_info info, duckdb_aggregate_state *source,
-                                               duckdb_aggregate_state *target, idx_t count);
-    //! Finalize aggregate states into a result vector
-    typedef void (*duckdb_aggregate_finalize_t)(duckdb_function_info info, duckdb_aggregate_state *source,
-                                                duckdb_vector result, idx_t count, idx_t offset);
+    // ...
 
     //===--------------------------------------------------------------------===//
     // Table function types
     //===--------------------------------------------------------------------===//
 
-    //! A table function. Must be destroyed with `duckdb_destroy_table_function`.
-    typedef struct _duckdb_table_function {
-	    void *internal_ptr;
-    } * duckdb_table_function;
-
-    //! The bind info of the function. When setting this info, it is necessary to pass a destroy-callback function.
-    typedef struct _duckdb_bind_info {
-	    void *internal_ptr;
-    } * duckdb_bind_info;
-
-    //! Additional function init info. When setting this info, it is necessary to pass a destroy-callback function.
-    typedef struct _duckdb_init_info {
-	    void *internal_ptr;
-    } * duckdb_init_info;
-
-    //! The bind function of the table function.
-    typedef void (*duckdb_table_function_bind_t)(duckdb_bind_info info);
-
-    //! The (possibly thread-local) init function of the table function.
-    typedef void (*duckdb_table_function_init_t)(duckdb_init_info info);
-
-    //! The main function of the table function.
-    typedef void (*duckdb_table_function_t)(duckdb_function_info info, duckdb_data_chunk output);
+    // ...
 
     //===--------------------------------------------------------------------===//
     // Cast types
     //===--------------------------------------------------------------------===//
 
-    //! A cast function. Must be destroyed with `duckdb_destroy_cast_function`.
-    typedef struct _duckdb_cast_function {
-	    void *internal_ptr;
-    } * duckdb_cast_function;
-
-    typedef bool (*duckdb_cast_function_t)(duckdb_function_info info, idx_t count, duckdb_vector input,
-                                           duckdb_vector output);
+    // ...
 
     //===--------------------------------------------------------------------===//
     // Replacement scan types
     //===--------------------------------------------------------------------===//
 
-    //! Additional replacement scan info. When setting this info, it is necessary to pass a destroy-callback function.
-    typedef struct _duckdb_replacement_scan_info {
-	    void *internal_ptr;
-    } * duckdb_replacement_scan_info;
-
-    //! A replacement scan function that can be added to a database.
-    typedef void (*duckdb_replacement_callback_t)(duckdb_replacement_scan_info info, const char *table_name, void *data);
+    // ...
 
     //===--------------------------------------------------------------------===//
     // Arrow-related types
     //===--------------------------------------------------------------------===//
 
-    //! Holds an arrow query result. Must be destroyed with `duckdb_destroy_arrow`.
-    typedef struct _duckdb_arrow {
-	    void *internal_ptr;
-    } * duckdb_arrow;
-
-    //! Holds an arrow array stream. Must be destroyed with `duckdb_destroy_arrow_stream`.
-    typedef struct _duckdb_arrow_stream {
-	    void *internal_ptr;
-    } * duckdb_arrow_stream;
-
-    //! Holds an arrow schema. Remember to release the respective ArrowSchema object.
-    typedef struct _duckdb_arrow_schema {
-	    void *internal_ptr;
-    } * duckdb_arrow_schema;
-
-    //! Holds an arrow array. Remember to release the respective ArrowArray object.
-    typedef struct _duckdb_arrow_array {
-	    void *internal_ptr;
-    } * duckdb_arrow_array;
+    // ...
 
     //===--------------------------------------------------------------------===//
     // DuckDB extension access
     //===--------------------------------------------------------------------===//
-    //! Passed to C API extension as parameter to the entrypoint
-    struct duckdb_extension_access {
-	    //! Indicate that an error has occurred
-	    void (*set_error)(duckdb_extension_info info, const char *error);
-	    //! Fetch the database from duckdb to register extensions to
-	    duckdb_database *(*get_database)(duckdb_extension_info info);
-	    //! Fetch the API
-	    const void *(*get_api)(duckdb_extension_info info, const char *version);
-    };
-    *)*)*)*)*)*)*)*)*)*)*)*)*)*)*)*)
+
+    /// ...
+
+
+    {** Represents a generic interface to SQLite native API. }
+    IZDuckDBPlainDriver = interface (IZPlainDriver)
+      ['{BE9C27ED-A75E-46BE-9219-87A88E4E03E1}']
+    end;
+
+  TZDuckDBPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZDuckDBPlainDriver)
+  public
+    //===--------------------------------------------------------------------===//
+    // Functions
+    //===--------------------------------------------------------------------===//
 
     //===--------------------------------------------------------------------===//
-// Functions
-//===--------------------------------------------------------------------===//
-
-//===--------------------------------------------------------------------===//
-// Open Connect
-//===--------------------------------------------------------------------===//
+    // Open Connect
+    //===--------------------------------------------------------------------===//
 
     (*!
     Creates a new database or opens an existing database file stored at the given path.
@@ -605,7 +574,7 @@ type
     * @param out_database The result database object.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Open = function(const path: PAnsiChar; out_database: PDuckDB_Database): TDuckDB_State; stdcall;
+    DuckDB_Open: function(const path: PAnsiChar; out_database: PDuckDB_Database): TDuckDB_State; stdcall;
 
     (*!
     Extended version of duckdb_open. Creates a new database or opens an existing database file stored at the given path.
@@ -618,7 +587,7 @@ type
     Note that the error must be freed using `duckdb_free`.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Open_Ext = function(const path: PAnsiChar; out_database: PDuckDB_Database; config: TDuckdb_Config;
+    DuckDB_Open_Ext: function(const path: PAnsiChar; out_database: PDuckDB_Database; config: TDuckdb_Config;
                                             out_error: PPAnsiChar): TDuckDB_State; stdcall;
 
     (*!
@@ -629,7 +598,7 @@ type
 
     * @param database The database object to shut down.
     *)
-    TDuckDB_Close = procedure(database: PDuckDB_Database); stdcall;
+    DuckDB_Close: procedure(database: PDuckDB_Database); stdcall;
 
     (*!
     Opens a connection to a database. Connections are required to query the database, and store transactional state
@@ -640,14 +609,14 @@ type
     * @param out_connection The result connection object.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckdb_Connect = function(database: TDuckDB_Database; out_connection: PDuckDB_Connection): TDuckDB_State; stdcall;
+    Duckdb_Connect: function(database: TDuckDB_Database; out_connection: PDuckDB_Connection): TDuckDB_State; stdcall;
 
     (*!
     Interrupt running query
 
     * @param connection The connection to interrupt
     *)
-    TDuckDB_Interrupt = procedure(connection: TDuckDB_Connection); stdcall;
+    DuckDB_Interrupt: procedure(connection: TDuckDB_Connection); stdcall;
 
     (*!
     Get progress of the running query
@@ -655,21 +624,21 @@ type
     * @param connection The working connection
     * @return -1 if no progress or a percentage of the progress
     *)
-    TDuckDB_Query_Progress = function(connection: TDuckDB_Connection): TDuckDB_Query_Progress_Type; stdcall;
+    DuckDB_Query_Progress: function(connection: TDuckDB_Connection): TDuckDB_Query_Progress_Type; stdcall;
 
     (*!
     Closes the specified connection and de-allocates all memory allocated for that connection.
 
     * @param connection The connection to close.
     *)
-    TDuckDB_Disconnect = procedure(connection: PDuckDB_Connection); stdcall;
+    DuckDB_Disconnect: procedure(connection: PDuckDB_Connection); stdcall;
 
     (*!
     Returns the version of the linked DuckDB, with a version postfix for dev versions
 
     Usually used for developing C extensions that must return this for a compatibility check.
     *)
-    TDuckDB_Library_Version = function(): PAnsiChar; stdcall;
+    DuckDB_Library_Version: function(): PAnsiChar; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Configuration
@@ -688,7 +657,7 @@ type
     * @param out_config The result configuration object.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Create_Config = function(out_config: PDuckDB_Config): TDuckDB_State; stdcall;
+    DuckDB_Create_Config: function(out_config: PDuckDB_Config): TDuckDB_State; stdcall;
 
     (*!
     This returns the total amount of configuration options available for usage with `duckdb_get_config_flag`.
@@ -697,7 +666,7 @@ type
 
     * @return The amount of config options available.
     *)
-    TDuckDB_Config_Count = function(): size_t; stdcall;
+    DuckDB_Config_Count: function(): size_t; stdcall;
 
     (*!
     Obtains a human-readable name and description of a specific configuration option. This can be used to e.g.
@@ -710,7 +679,7 @@ type
     * @param out_description A description of the configuration flag.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Get_Config_Flag = function(index: size_t; out_name: PPAnsiChar; out_description: PPAnsiChar): TDuckDB_State; stdcall;
+    DuckDB_Get_Config_Flag: function(index: size_t; out_name: PPAnsiChar; out_description: PPAnsiChar): TDuckDB_State; stdcall;
 
     (*!
     Sets the specified option for the specified configuration. The configuration option is indicated by name.
@@ -725,14 +694,14 @@ type
     * @param option The value to set the configuration flag to.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Set_Config = function(config: TDuckDB_Config; const name: PAnsiChar; const option: PAnsiChar): TDuckDB_State; stdcall;
+    DuckDB_Set_Config: function(config: TDuckDB_Config; const name: PAnsiChar; const option: PAnsiChar): TDuckDB_State; stdcall;
 
     (*!
     Destroys the specified configuration object and de-allocates all memory allocated for the object.
 
     * @param config The configuration object to destroy.
     *)
-    TDuckDB_Destroy_Config = procedure(config: PDuckDB_Config); stdcall;
+    DuckDB_Destroy_Config: procedure(config: PDuckDB_Config); stdcall;
 
     //===--------------------------------------------------------------------===//
     // Query Execution
@@ -751,14 +720,14 @@ type
     * @param out_result The query result.
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Query = function(connection: TDuckDB_Connection; const query: PAnsiChar; out_result: PDuckDB_Result): TDuckDB_State; stdcall;
+    DuckDB_Query: function(connection: TDuckDB_Connection; const query: PAnsiChar; out_result: PDuckDB_Result): TDuckDB_State; stdcall;
 
     (*!
     Closes the result and de-allocates all memory allocated for that connection.
 
     * @param result The result to destroy.
     *)
-    TDuckDB_Destroy_Result = procedure(result: PDuckDB_Result); stdcall;
+    DuckDB_Destroy_Result: procedure(result: PDuckDB_Result); stdcall;
 
     (*!
     Returns the column name of the specified column. The result should not need to be freed; the column names will
@@ -770,7 +739,7 @@ type
     * @param col The column index.
     * @return The column name of the specified column.
     *)
-    TDuckDB_Column_Name = function(result: PDuckDB_Result; col: idx_t): PAnsiChar; stdcall;
+    DuckDB_Column_Name: function(result: PDuckDB_Result; col: idx_t): PAnsiChar; stdcall;
 
     (*!
     Returns the column type of the specified column.
@@ -781,7 +750,7 @@ type
     * @param col The column index.
     * @return The column type of the specified column.
     *)
-    TDuckDB_Column_Type = function(result: PDuckDB_Result; col: idx_t): TDuckDB_Type; stdcall;
+    DuckDB_Column_Type: function(result: PDuckDB_Result; col: idx_t): TDuckDB_Type; stdcall;
 
     (*!
     Returns the statement type of the statement that was executed
@@ -789,7 +758,7 @@ type
     * @param result The result object to fetch the statement type from.
     * @return duckdb_statement_type value or DUCKDB_STATEMENT_TYPE_INVALID
     *)
-    TDuckDB_Result_Statement_Type = function(result: TDuckDB_Result): TDuckDB_Statement_Type; stdcall;
+    DuckDB_Result_Statement_Type: function(result: TDuckDB_Result): TDuckDB_Statement_Type; stdcall;
 
     (*!
     Returns the logical column type of the specified column.
@@ -802,7 +771,7 @@ type
     * @param col The column index.
     * @return The logical column type of the specified column.
     *)
-    TDuckDB_Column_Logical_Type = function(result: PDuckDB_Result; col: idx_t): TDuckDB_Logical_Type; stdcall;
+    DuckDB_Column_Logical_Type: function(result: PDuckDB_Result; col: idx_t): TDuckDB_Logical_Type; stdcall;
 
     (*!
     Returns the number of columns present in a the result object.
@@ -810,7 +779,7 @@ type
     * @param result The result object.
     * @return The number of columns present in the result object.
     *)
-    TDuckDB_Column_Count = function(result: PDuckDB_Result): idx_t; stdcall;
+    DuckDB_Column_Count: function(result: PDuckDB_Result): idx_t; stdcall;
 
     (*!
     Returns the number of rows changed by the query stored in the result. This is relevant only for INSERT/UPDATE/DELETE
@@ -819,7 +788,7 @@ type
     * @param result The result object.
     * @return The number of rows changed.
     *)
-    TDuckDB_Rows_Changed = function(result: PDuckDB_Result): idx_t; stdcall;
+    DuckDB_Rows_Changed: function(result: PDuckDB_Result): idx_t; stdcall;
 
     (*!
     Returns the error message contained within the result. The error is only set if `duckdb_query` returns `DuckDBError`.
@@ -829,7 +798,7 @@ type
     * @param result The result object to fetch the error from.
     * @return The error of the result.
     *)
-    TDuckDB_Result_Error = function(result: PDuckDB_Result): PAnsiChar; stdcall;
+    DuckDB_Result_Error: function(result: PDuckDB_Result): PAnsiChar; stdcall;
 
     (*!
     Returns the result error type contained within the result. The error is only set if `duckdb_query` returns
@@ -838,7 +807,7 @@ type
     * @param result The result object to fetch the error from.
     * @return The error type of the result.
     *)
-    TDuckDB_Result_Error_Type = function(result: PDuckDB_Result): TDuckDB_Error_Type; stdcall;
+    DuckDB_Result_Error_Type: function(result: PDuckDB_Result): TDuckDB_Error_Type; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Result Functions
@@ -863,7 +832,7 @@ type
     * @param chunk_index The chunk index to fetch from.
     * @return The resulting data chunk. Returns `NULL` if the chunk index is out of bounds.
     *)
-    TDuckDB_Result_Get_Chunk = function(result: TDuckDB_Result; chunk_index: idx_t): TDuckDB_Data_Chunk; stdcall; deprecated;
+    DuckDB_Result_Get_Chunk: function(result: TDuckDB_Result; chunk_index: idx_t): TDuckDB_Data_Chunk; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
@@ -873,7 +842,7 @@ type
     * @param result The result object to check.
     * @return Whether or not the result object is of the type StreamQueryResult
     *)
-    TDuckDB_Result_Is_Streaming = function(result: TDuckDB_Result): cbool; stdcall; deprecated;
+    DuckDB_Result_Is_Streaming: function(result: TDuckDB_Result): cbool; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
@@ -883,7 +852,7 @@ type
     * @param result The result object
     * @return Number of data chunks present in the result.
     *)
-    TDuckDB_Result_Chunk_Count = function(result: TDuckDB_Result): idx_t; stdcall; deprecated;
+    DuckDB_Result_Chunk_Count: function(result: TDuckDB_Result): idx_t; stdcall;
 
     (*!
     Returns the return_type of the given result, or DUCKDB_RETURN_TYPE_INVALID on error
@@ -891,7 +860,7 @@ type
     * @param result The result object
     * @return The return_type
     *)
-    TDuckDB_Result_Return_Type = function(result: TDuckDB_Result): TDuckDB_Result_Type; stdcall;
+    DuckDB_Result_Return_Type: function(result: TDuckDB_Result): TDuckDB_Result_Type; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Safe Fetch Functions
@@ -907,126 +876,126 @@ type
 
     * @return The boolean value at the specified location, or false if the value cannot be converted.
     *)
-    TDuckDB_Value_Boolean = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cbool; stdcall; deprecated;
+    DuckDB_Value_Boolean: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cbool; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The int8_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Int8 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint8; stdcall; deprecated;
+    DuckDB_Value_Int8: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint8; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The int16_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Int16 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint16; stdcall; deprecated;
+    DuckDB_Value_Int16: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint16; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The int32_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Int32 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint32; stdcall; deprecated;
+    DuckDB_Value_Int32: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint32; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The int64_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Int64 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint64; stdcall; deprecated;
+    DuckDB_Value_Int64: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cint64; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_hugeint value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Hugeint = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_HugeInt; stdcall; deprecated;
+    DuckDB_Value_Hugeint: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_HugeInt; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_uhugeint value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_UHugeint = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_UHugeInt; stdcall; deprecated;
+    DuckDB_Value_UHugeint: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_UHugeInt; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_decimal value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Decimal = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_Decimal; stdcall; deprecated;
+    DuckDB_Value_Decimal: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_Decimal; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The uint8_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_UInt8 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint8; stdcall; deprecated;
+    DuckDB_Value_UInt8: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint8; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The uint16_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_UInt16 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint16; stdcall; deprecated;
+    DuckDB_Value_UInt16: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint16; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The uint32_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_UInt32 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint32; stdcall; deprecated;
+    DuckDB_Value_UInt32: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint32; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The uint64_t value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_UInt64 = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint64; stdcall; deprecated;
+    DuckDB_Value_UInt64: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cuint64; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The float value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Float = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cfloat; stdcall; deprecated;
+    DuckDB_Value_Float: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cfloat; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The double value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Double = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cdouble; stdcall; deprecated;
+    DuckDB_Value_Double: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cdouble; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_date value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Date = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_Date; stdcall; deprecated;
+    DuckDB_Value_Date: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_Date; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_time value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Time = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_Time; stdcall; deprecated;
+    DuckDB_Value_Time: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_Time; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_timestamp value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Timestamp = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_TimeStamp; stdcall; deprecated;
+    DuckDB_Value_Timestamp: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_TimeStamp; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return The duckdb_interval value at the specified location, or 0 if the value cannot be converted.
     *)
-    TDuckDB_Value_Interval = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_Interval; stdcall; deprecated;
+    DuckDB_Value_Interval: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDb_Interval; stdcall;
 
     (*!
     **DEPRECATED**: Use duckdb_value_string instead. This function does not work correctly if the string contains null
@@ -1035,7 +1004,7 @@ type
     * @return The text value at the specified location as a null-terminated string, or nullptr if the value cannot be
     converted. The result must be freed with `duckdb_free`.
     *)
-    TDuckDB_Value_Varchar = function(result: PDuckDB_Result; col: idx_t; row: idx_t): PAnsiChar; stdcall;
+    DuckDB_Value_Varchar: function(result: PDuckDB_Result; col: idx_t; row: idx_t): PAnsiChar; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
@@ -1045,7 +1014,7 @@ type
 
     * @return The string value at the specified location. Attempts to cast the result value to string.
     *)
-    TDuckDB_Value_String = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_String; stdcall; deprecated;
+    DuckDB_Value_String: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_String; stdcall;
 
     (*!
     **DEPRECATED**: Use duckdb_value_string_internal instead. This function does not work correctly if the string contains
@@ -1056,7 +1025,7 @@ type
 
     The result must NOT be freed.
     *)
-    TDuckDB_Value_Varchar_Internal = function(result: PDuckDB_Result; col: idx_t; row: idx_t): PAnsiChar; stdcall;
+    DuckDB_Value_Varchar_Internal: function(result: PDuckDB_Result; col: idx_t; row: idx_t): PAnsiChar; stdcall;
 
     (*!
     **DEPRECATED**: Use duckdb_value_string_internal instead. This function does not work correctly if the string contains
@@ -1066,7 +1035,7 @@ type
 
     The result must NOT be freed.
     *)
-    TDuckDB_Value_String_Internal = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_String; stdcall;
+    DuckDB_Value_String_Internal: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_String; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
@@ -1074,14 +1043,14 @@ type
     * @return The duckdb_blob value at the specified location. Returns a blob with blob.data set to nullptr if the
     value cannot be converted. The resulting field "blob.data" must be freed with `duckdb_free.`
     *)
-    TDuckDB_Value_Blob = function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_Blob; stdcall; deprecated;
+    DuckDB_Value_Blob: function(result: PDuckDB_Result; col: idx_t; row: idx_t): TDuckDB_Blob; stdcall;
 
     (*!
     **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
     * @return Returns true if the value at the specified index is NULL, and false otherwise.
     *)
-    TDuckDB_Value_Is_Null = function(result: PDuckDB_Result; col: idx_t; row: idx_t): cbool; stdcall; deprecated;
+    DuckDB_Value_Is_Null: function(result: PDuckDB_Result; col: idx_t; row: idx_t): cbool; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Helpers
@@ -1094,7 +1063,7 @@ type
     * @param size The number of bytes to allocate.
     * @return A pointer to the allocated memory region.
     *)
-    TDuckDB_Malloc = function(size: size_t): Pointer; stdcall;
+    DuckDB_Malloc: function(size: size_t): Pointer; stdcall;
 
     (*!
     Free a value returned from `duckdb_malloc`, `duckdb_value_varchar`, `duckdb_value_blob`, or
@@ -1102,7 +1071,7 @@ type
 
     * @param ptr The memory region to de-allocate.
     *)
-    TDuckDB_free = procedure(ptr: Pointer); stdcall;
+    DuckDB_free: procedure(ptr: Pointer); stdcall;
 
     (*!
     The internal vector size used by DuckDB.
@@ -1110,14 +1079,14 @@ type
 
     * @return The vector size.
     *)
-    TDuckDB_Vector_Size = function(): idx_t; stdcall;
+    DuckDB_Vector_Size: function(): idx_t; stdcall;
 
     (*!
     Whether or not the duckdb_string_t value is inlined.
     This means that the data of the string does not have a separate allocation.
 
     *)
-    TDuckDB_String_Is_Inlined = function(AString: TDuckDB_String_T): cbool; stdcall;
+    DuckDB_String_Is_Inlined: function(AString: TDuckDB_String_T): cbool; stdcall;
 
     (*!
     Get the string length of a string_t
@@ -1125,7 +1094,7 @@ type
     * @param string The string to get the length of.
     * @return The length.
     *)
-    TDuckDB_String_T_Length = function(AString: TDuckDB_String_T): cuint32; stdcall;
+    DuckDB_String_T_Length: function(AString: TDuckDB_String_T): cuint32; stdcall;
 
     (*!
     Get a pointer to the string data of a string_t
@@ -1133,7 +1102,7 @@ type
     * @param string The string to get the pointer to.
     * @return The pointer.
     *)
-    TDuckDB_String_T_Data = function(AString: PDuckDB_String_T): PAnsiChar; stdcall;
+    DuckDB_String_T_Data: function(AString: PDuckDB_String_T): PAnsiChar; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Date Time Timestamp Helpers
@@ -1145,7 +1114,7 @@ type
     * @param date The date object, as obtained from a `DUCKDB_TYPE_DATE` column.
     * @return The `duckdb_date_struct` with the decomposed elements.
     *)
-    TDuckDB_From_Date = function(ADate: TDuckDb_Date): TDuckDb_Date_Struct; stdcall;
+    DuckDB_From_Date: function(ADate: TDuckDb_Date): TDuckDb_Date_Struct; stdcall;
 
     (*!
     Re-compose a `duckdb_date` from year, month and date (`duckdb_date_struct`).
@@ -1153,7 +1122,7 @@ type
     * @param date The year, month and date stored in a `duckdb_date_struct`.
     * @return The `duckdb_date` element.
     *)
-    TDuckDB_To_Date = function(date: TDuckDb_Date_Struct): TDuckDb_Date; stdcall;
+    DuckDB_To_Date: function(date: TDuckDb_Date_Struct): TDuckDb_Date; stdcall;
 
     (*!
     Test a `duckdb_date` to see if it is a finite value.
@@ -1161,7 +1130,7 @@ type
     * @param date The date object, as obtained from a `DUCKDB_TYPE_DATE` column.
     * @return True if the date is finite, false if it is ±infinity.
     *)
-    TDuckDB_Is_Finite_Date = function(date: TDuckDb_Date): cbool; stdcall;
+    DuckDB_Is_Finite_Date: function(date: TDuckDb_Date): cbool; stdcall;
 
     (*!
     Decompose a `duckdb_time` object into hour, minute, second and microsecond (stored as `duckdb_time_struct`).
@@ -1169,7 +1138,7 @@ type
     * @param time The time object, as obtained from a `DUCKDB_TYPE_TIME` column.
     * @return The `duckdb_time_struct` with the decomposed elements.
     *)
-    TDuckDB_From_Time = function(ATime: TDuckDb_Time): TDuckDb_Time_Struct; stdcall;
+    DuckDB_From_Time: function(ATime: TDuckDb_Time): TDuckDb_Time_Struct; stdcall;
 
     (*!
     Create a `duckdb_time_tz` object from micros and a timezone offset.
@@ -1178,7 +1147,7 @@ type
     * @param offset The timezone offset component of the time.
     * @return The `duckdb_time_tz` element.
     *)
-    TDuckDB_Create_Time_TZ = function(micros: cint64; offset: cint32): TDuckDb_Time_TZ; stdcall;
+    DuckDB_Create_Time_TZ: function(micros: cint64; offset: cint32): TDuckDb_Time_TZ; stdcall;
 
     (*!
     Decompose a TIME_TZ objects into micros and a timezone offset.
@@ -1187,7 +1156,7 @@ type
 
     * @param micros The time object, as obtained from a `DUCKDB_TYPE_TIME_TZ` column.
     *)
-    TDuckDB_From_Time_TZ = function(micros: TDuckDb_Time_TZ): TDuckDb_Time_TZ_Struct; stdcall;
+    DuckDB_From_Time_TZ: function(micros: TDuckDb_Time_TZ): TDuckDb_Time_TZ_Struct; stdcall;
 
     (*!
     Re-compose a `duckdb_time` from hour, minute, second and microsecond (`duckdb_time_struct`).
@@ -1195,7 +1164,7 @@ type
     * @param time The hour, minute, second and microsecond in a `duckdb_time_struct`.
     * @return The `duckdb_time` element.
     *)
-    TDuckDB_To_Time = function(ATime: TDuckDb_Time_Struct): TDuckDb_Time; stdcall;
+    DuckDB_To_Time: function(ATime: TDuckDb_Time_Struct): TDuckDb_Time; stdcall;
 
     (*!
     Decompose a `duckdb_timestamp` object into a `duckdb_timestamp_struct`.
@@ -1203,7 +1172,7 @@ type
     * @param ts The ts object, as obtained from a `DUCKDB_TYPE_TIMESTAMP` column.
     * @return The `duckdb_timestamp_struct` with the decomposed elements.
     *)
-    TDuckDB_From_Timestamp = function(ts: TDuckDb_TimeStamp): TDuckDB_TimeStamp_Struct; stdcall;
+    DuckDB_From_Timestamp: function(ts: TDuckDb_TimeStamp): TDuckDB_TimeStamp_Struct; stdcall;
 
     (*!
     Re-compose a `duckdb_timestamp` from a duckdb_timestamp_struct.
@@ -1211,7 +1180,7 @@ type
     * @param ts The de-composed elements in a `duckdb_timestamp_struct`.
     * @return The `duckdb_timestamp` element.
     *)
-    TDuckDB_To_Timestamp = function(ts: TDuckDB_TimeStamp_Struct): TDuckDb_TimeStamp; stdcall;
+    DuckDB_To_Timestamp: function(ts: TDuckDB_TimeStamp_Struct): TDuckDb_TimeStamp; stdcall;
 
     (*!
     Test a `duckdb_timestamp` to see if it is a finite value.
@@ -1219,7 +1188,7 @@ type
     * @param ts The timestamp object, as obtained from a `DUCKDB_TYPE_TIMESTAMP` column.
     * @return True if the timestamp is finite, false if it is ±infinity.
     *)
-    TDuckDB_Is_Finite_Timestamp = function(ts: TDuckDb_TimeStamp): cbool; stdcall;
+    DuckDB_Is_Finite_Timestamp: function(ts: TDuckDb_TimeStamp): cbool; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Hugeint Helpers
@@ -1231,7 +1200,7 @@ type
     * @param val The hugeint value.
     * @return The converted `double` element.
     *)
-    TDuckDB_Hugeint_To_Double = function(val: TDuckDB_HugeInt): cdouble; stdcall;
+    DuckDB_Hugeint_To_Double: function(val: TDuckDB_HugeInt): cdouble; stdcall;
 
     (*!
     Converts a double value to a duckdb_hugeint object.
@@ -1241,7 +1210,7 @@ type
     * @param val The double value.
     * @return The converted `duckdb_hugeint` element.
     *)
-    TDuckDB_Double_To_Hugeint = function(val: cdouble): TDuckDB_HugeInt; stdcall;
+    DuckDB_Double_To_Hugeint: function(val: cdouble): TDuckDB_HugeInt; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Unsigned Hugeint Helpers
@@ -1253,7 +1222,7 @@ type
     * @param val The uhugeint value.
     * @return The converted `double` element.
     *)
-    TDuckDB_UHugeint_To_Double = function(val: TDuckDB_UHugeInt): cdouble; stdcall;
+    DuckDB_UHugeint_To_Double: function(val: TDuckDB_UHugeInt): cdouble; stdcall;
 
     (*!
     Converts a double value to a duckdb_uhugeint object.
@@ -1263,7 +1232,7 @@ type
     * @param val The double value.
     * @return The converted `duckdb_uhugeint` element.
     *)
-    TDuckDB_Double_To_UHugeint = function(val: cdouble): TDuckDB_UHugeInt; stdcall;
+    DuckDB_Double_To_UHugeint: function(val: cdouble): TDuckDB_UHugeInt; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Decimal Helpers
@@ -1277,7 +1246,7 @@ type
     * @param val The double value.
     * @return The converted `duckdb_decimal` element.
     *)
-    TDuckDB_Double_To_Decimal = function(val: cdouble; width: cuint8; scale: cuint8): TDuckDB_Decimal; stdcall;
+    DuckDB_Double_To_Decimal: function(val: cdouble; width: cuint8; scale: cuint8): TDuckDB_Decimal; stdcall;
 
     (*!
     Converts a duckdb_decimal object (as obtained from a `DUCKDB_TYPE_DECIMAL` column) into a double.
@@ -1285,7 +1254,7 @@ type
     * @param val The decimal value.
     * @return The converted `double` element.
     *)
-    TDuckDB_Decimal_To_Double = function(val: TDuckDB_Decimal): cdouble; stdcall;
+    DuckDB_Decimal_To_Double: function(val: TDuckDB_Decimal): cdouble; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Prepared Statements
@@ -1314,14 +1283,14 @@ type
     * @param out_prepared_statement The resulting prepared statement object
     * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
     *)
-    TDuckDB_Prepare = function(connection: TDuckDB_Connection; const query: PAnsiChar; out_prepared_statement: TDuckDB_Prepared_Statement): TDuckDB_State; stdcall;
+    DuckDB_Prepare: function(connection: TDuckDB_Connection; const query: PAnsiChar; out_prepared_statement: TDuckDB_Prepared_Statement): TDuckDB_State; stdcall;
 
     (*!
     Closes the prepared statement and de-allocates all memory allocated for the statement.
 
     * @param prepared_statement The prepared statement to destroy.
     *)
-    TDuckDB_Destroy_Prepare = procedure(prepared_statement: PDuckDB_Prepared_Statement); stdcall;
+    DuckDB_Destroy_Prepare: procedure(prepared_statement: PDuckDB_Prepared_Statement); stdcall;
 
     (*!
     Returns the error message associated with the given prepared statement.
@@ -1332,7 +1301,7 @@ type
     * @param prepared_statement The prepared statement to obtain the error from.
     * @return The error message, or `nullptr` if there is none.
     *)
-    TDuckDB_Prepare_Error = function(prepared_statement: TDuckDB_Prepared_Statement): PAnsiChar; stdcall;
+    DuckDB_Prepare_Error: function(prepared_statement: TDuckDB_Prepared_Statement): PAnsiChar; stdcall;
 
     (*!
     Returns the number of parameters that can be provided to the given prepared statement.
@@ -1341,7 +1310,7 @@ type
 
     * @param prepared_statement The prepared statement to obtain the number of parameters for.
     *)
-    TDuckDB_NParams = function(prepared_statement: TDuckDB_Prepared_Statement): idx_t; stdcall;
+    DuckDB_NParams: function(prepared_statement: TDuckDB_Prepared_Statement): idx_t; stdcall;
 
     (*!
     Returns the name used to identify the parameter
@@ -1351,7 +1320,7 @@ type
 
     * @param prepared_statement The prepared statement for which to get the parameter name from.
     *)
-    TDuckDB_Parameter_Name = function(prepared_statement: TDuckDB_Prepared_Statement; index: idx_t): PAnsiChar; stdcall;
+    DuckDB_Parameter_Name: function(prepared_statement: TDuckDB_Prepared_Statement; index: idx_t): PAnsiChar; stdcall;
 
     (*!
     Returns the parameter type for the parameter at the given index.
@@ -1362,12 +1331,12 @@ type
     * @param param_idx The parameter index.
     * @return The parameter type
     *)
-    TDuckDB_Param_Type = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t): TDuckDB_Type; stdcall;
+    DuckDB_Param_Type: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t): TDuckDB_Type; stdcall;
 
     (*!
     Clear the params bind to the prepared statement.
     *)
-    TDuckDB_Clear_Bindings = function(prepared_statement: TDuckDB_Prepared_Statement): TDuckDB_State; stdcall;
+    DuckDB_Clear_Bindings: function(prepared_statement: TDuckDB_Prepared_Statement): TDuckDB_State; stdcall;
 
     (*!
     Returns the statement type of the statement to be executed
@@ -1375,7 +1344,7 @@ type
     * @param statement The prepared statement.
     * @return duckdb_statement_type value or DUCKDB_STATEMENT_TYPE_INVALID
     *)
-    TDuckDB_Prepared_Statement_Type = function(statement: TDuckDB_Prepared_Statement): TDuckDB_Statement_Type; stdcall;
+    DuckDB_Prepared_Statement_Type: function(statement: TDuckDB_Prepared_Statement): TDuckDB_Statement_Type; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Bind Values To Prepared Statements
@@ -1384,247 +1353,338 @@ type
     (*!
     Binds a value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Value = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckdb_Value): TDuckDB_State; stdcall;
+    DuckDB_Bind_Value: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckdb_Value): TDuckDB_State; stdcall;
 
     (*!
     Retrieve the index of the parameter for the prepared statement, identified by name
     *)
-    TDuckDB_Bind_Parameter_Index = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx_out: Pidx_t; name: PAnsiChar): TDuckDB_State; stdcall;
+    DuckDB_Bind_Parameter_Index: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx_out: Pidx_t; name: PAnsiChar): TDuckDB_State; stdcall;
 
     (*!
     Binds a bool value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Boolean = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cbool): TDuckDB_State; stdcall;
+    DuckDB_Bind_Boolean: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cbool): TDuckDB_State; stdcall;
 
     (*!
     Binds an int8_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Int8 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint8): TDuckDB_State; stdcall;
+    DuckDB_Bind_Int8: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint8): TDuckDB_State; stdcall;
 
     (*!
     Binds an int16_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Int16 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint16): TDuckDB_State; stdcall;
+    DuckDB_Bind_Int16: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint16): TDuckDB_State; stdcall;
 
     (*!
     Binds an int32_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Int32 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint32): TDuckDB_State; stdcall;
+    DuckDB_Bind_Int32: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint32): TDuckDB_State; stdcall;
 
     (*!
     Binds an int64_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Int64 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint64): TDuckDB_State; stdcall;
+    DuckDB_Bind_Int64: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cint64): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_hugeint value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Hugeint = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_HugeInt): TDuckDB_State; stdcall;
+    DuckDB_Bind_Hugeint: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_HugeInt): TDuckDB_State; stdcall;
 
     (*!
     Binds an duckdb_uhugeint value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_UHugeint = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_UHugeInt): TDuckDB_State; stdcall;
+    DuckDB_Bind_UHugeint: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_UHugeInt): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_decimal value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Decimal = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_Decimal): TDuckDB_State; stdcall;
+    DuckDB_Bind_Decimal: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDB_Decimal): TDuckDB_State; stdcall;
 
     (*!
     Binds an uint8_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_UInt8 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint8): TDuckDB_State; stdcall;
+    DuckDB_Bind_UInt8: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint8): TDuckDB_State; stdcall;
 
     (*!
     Binds an uint16_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_UInt16 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint16): TDuckDB_State; stdcall;
+    DuckDB_Bind_UInt16: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint16): TDuckDB_State; stdcall;
 
     (*!
     Binds an uint32_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_UInt32 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint32): TDuckDB_State; stdcall;
+    DuckDB_Bind_UInt32: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint32): TDuckDB_State; stdcall;
 
     (*!
     Binds an uint64_t value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Uint64 = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint64): TDuckDB_State; stdcall;
+    DuckDB_Bind_Uint64: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cuint64): TDuckDB_State; stdcall;
 
     (*!
     Binds a float value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Float = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cfloat): TDuckDB_State; stdcall;
+    DuckDB_Bind_Float: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cfloat): TDuckDB_State; stdcall;
 
     (*!
     Binds a double value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Double = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cdouble): TDuckDB_State; stdcall;
+    DuckDB_Bind_Double: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: cdouble): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_date value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Date = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Date): TDuckDB_State; stdcall;
+    DuckDB_Bind_Date: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Date): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_time value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Time = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Time): TDuckDB_State; stdcall;
+    DuckDB_Bind_Time: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Time): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_timestamp value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Timestamp = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_TimeStamp): TDuckDB_State; stdcall;
+    DuckDB_Bind_Timestamp: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_TimeStamp): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_timestamp value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Timestamp_TZ = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_TimeStamp): TDuckDB_State; stdcall;
+    DuckDB_Bind_Timestamp_TZ: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_TimeStamp): TDuckDB_State; stdcall;
 
     (*!
     Binds a duckdb_interval value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Interval = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Interval): TDuckDB_State; stdcall;
+    DuckDB_Bind_Interval: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: TDuckDb_Interval): TDuckDB_State; stdcall;
 
     (*!
     Binds a null-terminated varchar value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Varchar = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: PAnsiChar): TDuckDB_State; stdcall;
+    DuckDB_Bind_Varchar: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: PAnsiChar): TDuckDB_State; stdcall;
 
     (*!
     Binds a varchar value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Varchar_Length = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: PAnsiChar; length: idx_t): TDuckDB_State; stdcall;
+    DuckDB_Bind_Varchar_Length: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; val: PAnsiChar; length: idx_t): TDuckDB_State; stdcall;
 
     (*!
     Binds a blob value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Blob = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; data: Pointer; length: idx_t): TDuckDB_State; stdcall;
+    DuckDB_Bind_Blob: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t; data: Pointer; length: idx_t): TDuckDB_State; stdcall;
 
     (*!
     Binds a NULL value to the prepared statement at the specified index.
     *)
-    TDuckDB_Bind_Null = function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t): TDuckDB_State; stdcall;
+    DuckDB_Bind_Null: function(prepared_statement: TDuckDB_Prepared_Statement; param_idx: idx_t): TDuckDB_State; stdcall;
 
     //===--------------------------------------------------------------------===//
     // Execute Prepared Statements
     //===--------------------------------------------------------------------===//
 
+    (*!
+    Executes the prepared statement with the given bound parameters, and returns a materialized query result.
 
+    This method can be called multiple times for each prepared statement, and the parameters can be modified
+    between calls to this function.
 
+    Note that the result must be freed with `duckdb_destroy_result`.
 
+    * @param prepared_statement The prepared statement to execute.
+    * @param out_result The query result.
+    * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
+    *)
+    DuckDB_Execute_Prepared: function(prepared_statement: TDuckDB_Prepared_Statement; out_result: PDuckDB_Result): TDuckDB_State; stdcall;
 
+    (*!
+    **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
 
+    Executes the prepared statement with the given bound parameters, and returns an optionally-streaming query result.
+    To determine if the resulting query was in fact streamed, use `duckdb_result_is_streaming`
 
+    This method can be called multiple times for each prepared statement, and the parameters can be modified
+    between calls to this function.
 
-    TDuckDB_API = record
-      DuckDB_Open: TDuckDB_Open;
-      DuckDB_Open_Ext: TDuckDB_Open_Ext;
-      DuckDB_Close: TDuckDB_Close;
-      DuckDB_State: TDuckDB_State;
-      DuckDB_Interrupt: TDuckDB_Interrupt;
-      DuckDB_Query_Progress: TDuckDB_Query_Progress;
-      DuckDB_Disconnect: TDuckDB_Disconnect;
-      DuckDB_Library_Version: TDuckDB_Library_Version;
-      DuckDB_Create_Config: TDuckDB_Create_Config;
-      DuckDB_Config_Count: TDuckDB_Config_Count;
-      DuckDB_Get_Config_Flag: TDuckDB_Get_Config_Flag;
-      DuckDB_Set_Config: TDuckDB_Set_Config;
-      DuckDB_Destroy_Config: TDuckDB_Destroy_Config;
-      DuckDB_Query: TDuckDB_Query;
-      DuckDB_Destroy_Result: TDuckDB_Destroy_Result;
-      DuckDB_Column_Name: TDuckDB_Column_Name;
-      DuckDB_Column_Type: TDuckDB_Column_Type;
-      DuckDB_Result_Statement_Type: TDuckDB_Result_Statement_Type;
-      DuckDB_Column_Logical_Type: TDuckDB_Column_Logical_Type;
-      DuckDB_Column_Count: TDuckDB_Column_Count;
-      DuckDB_Rows_Changed: TDuckDB_Rows_Changed;
-      DuckDB_Result_Error: TDuckDB_Result_Error;
-      DuckDB_Result_Error_Type: TDuckDB_Result_Error_Type;
-      DuckDB_Result_Get_Chunk: TDuckDB_Result_Get_Chunk;
-      DuckDB_Result_Is_Streaming: TDuckDB_Result_Is_Streaming;
-      DuckDB_Result_Chunk_Count: TDuckDB_Result_Chunk_Count;
-      DuckDB_Result_Return_Type: TDuckDB_Result_Return_Type;
-      DuckDB_Value_Boolean: TDuckDB_Value_Boolean;
-      DuckDB_Value_Int8: TDuckDB_Value_Int8;
-      DuckDB_Value_Int16: TDuckDB_Value_Int16;
-      DuckDB_Value_Int32: TDuckDB_Value_Int32;
-      DuckDB_Value_Int64: TDuckDB_Value_Int64;
-      DuckDB_Value_Hugeint: TDuckDB_Value_Hugeint;
-      DuckDB_Value_UHugeint: TDuckDB_Value_UHugeint;
-      DuckDB_Value_Decimal: TDuckDB_Value_Decimal;
-      DuckDB_Value_UInt8: TDuckDB_Value_UInt8;
-      DuckDB_Value_UInt16: TDuckDB_Value_UInt16;
-      DuckDB_Value_UInt32: TDuckDB_Value_UInt32;
-      DuckDB_Value_UInt64: TDuckDB_Value_UInt64;
-      DuckDB_Value_Float: TDuckDB_Value_Float;
-      DuckDB_Value_Double: TDuckDB_Value_Double;
-      DuckDB_Value_Date: TDuckDB_Value_Date;
-      DuckDB_Value_Time: TDuckDB_Value_Time;
-      DuckDB_Value_Timestamp: TDuckDB_Value_Timestamp;
-      DuckDB_Value_Interval: TDuckDB_Value_Interval;
-      DuckDB_Value_Varchar: TDuckDB_Value_Varchar;
-      DuckDB_Value_String: TDuckDB_Value_String;
-      DuckDB_Value_Varchar_Internal: TDuckDB_Value_Varchar_Internal;
-      DuckDB_Value_String_Internal: TDuckDB_Value_String_Internal;
-      DuckDB_Value_Blob: TDuckDB_Value_Blob;
-      DuckDB_Value_Is_Null: TDuckDB_Value_Is_Null;
-      DuckDB_Malloc: TDuckDB_Malloc;
-      DuckDB_free: TDuckDB_free;
-      DuckDB_Vector_Size: TDuckDB_Vector_Size;
-      DuckDB_String_Is_Inlined: TDuckDB_String_Is_Inlined;
-      DuckDB_String_T_Length: TDuckDB_String_T_Length;
-      DuckDB_String_T_Data: TDuckDB_String_T_Data;
-      DuckDB_From_Date: TDuckDB_From_Date;
-      DuckDB_To_Date: TDuckDB_To_Date;
-      DuckDB_Is_Finite_Date: TDuckDB_Is_Finite_Date;
-      DuckDB_From_Time: TDuckDB_From_Time;
-      DuckDB_Create_Time_TZ: TDuckDB_Create_Time_TZ;
-      DuckDB_From_Time_TZ: TDuckDB_From_Time_TZ;
-      DuckDB_To_Time: TDuckDB_To_Time;
-      DuckDB_From_Timestamp: TDuckDB_From_Timestamp;
-      DuckDB_To_Timestamp: TDuckDB_To_Timestamp;
-      DuckDB_Is_Finite_Timestamp: TDuckDB_Is_Finite_Timestamp;
-      DuckDB_Hugeint_To_Double: TDuckDB_Hugeint_To_Double;
-      DuckDB_Double_To_Hugeint: TDuckDB_Double_To_Hugeint;
-      DuckDB_UHugeint_To_Double: TDuckDB_UHugeint_To_Double;
-      DuckDB_Double_To_UHugeint: TDuckDB_Double_To_UHugeint;
-      DuckDB_Double_To_Decimal: TDuckDB_Double_To_Decimal;
-      DuckDB_Decimal_To_Double: TDuckDB_Decimal_To_Double;
-      DuckDB_Prepare: TDuckDB_Prepare;
-      DuckDB_Destroy_Prepare: TDuckDB_Destroy_Prepare;
-      DuckDB_Prepare_Error: TDuckDB_Prepare_Error;
-      DuckDB_NParams: TDuckDB_NParams;
-      DuckDB_Parameter_Name: TDuckDB_Parameter_Name;
-      DuckDB_Param_Type: TDuckDB_Param_Type;
-      DuckDB_Clear_Bindings: TDuckDB_Clear_Bindings;
-      DuckDB_Prepared_Statement_Type: TDuckDB_Prepared_Statement_Type;
-      DuckDB_Bind_Value: TDuckDB_Bind_Value;
-      DuckDB_Bind_Parameter_Index: TDuckDB_Bind_Parameter_Index;
-      DuckDB_Bind_Boolean: TDuckDB_Bind_Boolean;
-      DuckDB_Bind_Int8: TDuckDB_Bind_Int8;
-      DuckDB_Bind_Int16: TDuckDB_Bind_Int16;
-      DuckDB_Bind_Int32: TDuckDB_Bind_Int32;
-      DuckDB_Bind_Int64: TDuckDB_Bind_Int64;
-      DuckDB_Bind_Hugeint: TDuckDB_Bind_Hugeint;
-      DuckDB_Bind_UHugeint: TDuckDB_Bind_UHugeint;
-      DuckDB_Bind_Decimal: TDuckDB_Bind_Decimal;
-      DuckDB_Bind_UInt8: TDuckDB_Bind_UInt8;
-      DuckDB_Bind_UInt16: TDuckDB_Bind_UInt16;
-      DuckDB_Bind_UInt32: TDuckDB_Bind_UInt32;
-      DuckDB_Bind_Uint64: TDuckDB_Bind_Uint64;
-      DuckDB_Bind_Float: TDuckDB_Bind_Float;
-      DuckDB_Bind_Double: TDuckDB_Bind_Double;
-      DuckDB_Bind_Date: TDuckDB_Bind_Date;
-      DuckDB_Bind_Time: TDuckDB_Bind_Time;
-      DuckDB_Bind_Timestamp: TDuckDB_Bind_Timestamp;
-      DuckDB_Bind_Timestamp_TZ: TDuckDB_Bind_Timestamp_TZ;
-      DuckDB_Bind_Interval: TDuckDB_Bind_Interval;
-      DuckDB_Bind_Varchar: TDuckDB_Bind_Varchar;
-      DuckDB_Bind_Varchar_Length: TDuckDB_Bind_Varchar_Length;
-      DuckDB_Bind_Blob: TDuckDB_Bind_Blob;
-      DuckDB_Bind_Null: TDuckDB_Bind_Null;
-    end;
+    Note that the result must be freed with `duckdb_destroy_result`.
+
+    * @param prepared_statement The prepared statement to execute.
+    * @param out_result The query result.
+    * @return `DuckDBSuccess` on success or `DuckDBError` on failure.
+    *)
+    DuckDB_Execute_Prepared_Streaming: function(prepared_statement: TDuckDB_Prepared_Statement; out_result: PDuckDB_Result): TDuckDB_State; stdcall;
+  protected
+    function GetUnicodeCodePageName: String; override;
+    procedure LoadCodePages; override;
+    function Clone: IZPlainDriver; override;
+    procedure LoadApi; override;
+  public
+    constructor Create;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
+
+{$ENDIF ZEOS_DISABLE_DUCKDB}
+
 implementation
+
+{$IFNDEF ZEOS_DISABLE_DUCKDB}
+
+uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+
+{ TZSQLitePlainDriver }
+
+function TZDuckDBPlainDriver.GetUnicodeCodePageName: String;
+begin
+  Result := 'UTF8'
+end;
+
+procedure TZDuckDBPlainDriver.LoadCodePages;
+begin
+  { MultiByte }
+  AddCodePage('UTF8', 1, ceUTF8, zCP_UTF8, 'URF-8', 4);
+end;
+
+constructor TZDuckDBPlainDriver.Create;
+begin
+  inherited create;
+  FLoader := TZNativeLibraryLoader.Create([]);
+  {$IFDEF MSWINDOWS}
+  FLoader.AddLocation(WINDOWS_VS_DLL_LOCATION);
+  FLoader.AddLocation(WINDOWS_MINGW_DLL_LOCATION);
+  {$ELSE}
+  FLoader.AddLocation(LINUX_DLL_LOCATION);
+  FLoader.AddLocation(LINUX_DLL_LOCATION+'.0');
+  {$ENDIF}
+  LoadCodePages;
+end;
+
+function TZDuckDBPlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZDuckDBPlainDriver.Create;
+end;
+
+procedure TZDuckDBPlainDriver.LoadApi;
+begin
+  { ************** Load adresses of API Functions ************* }
+  with Loader do begin
+    @DuckDB_Open := GetAddress('duckdb_open');
+    @DuckDB_Open_Ext := GetAddress('duckdb_open_ext');
+    @DuckDB_Close := GetAddress('duckdb_close');
+    @DuckDB_Connect := GetAddress('duckdb_connect');
+    @DuckDB_Interrupt := GetAddress('duckdb_interrupt');
+    @DuckDB_Query_Progress := GetAddress('duckdb_query_progress');
+    @DuckDB_Disconnect := GetAddress('duckdb_disconnect');
+    @DuckDB_Library_Version := GetAddress('duckdb_library_version');
+    @DuckDB_Create_Config := GetAddress('duckdb_create_config');
+    @DuckDB_Config_Count := GetAddress('duckdb_config_count');
+    @DuckDB_Get_Config_Flag := GetAddress('duckdb_get_config_flag');
+    @DuckDB_Set_Config := GetAddress('duckdb_set_config');
+    @DuckDB_Destroy_Config := GetAddress('duckdb_destroy_config');
+    @DuckDB_Query := GetAddress('duckdb_query');
+    @DuckDB_Destroy_Result := GetAddress('duckdb_destroy_result');
+    @DuckDB_Column_Name := GetAddress('duckdb_column_name');
+    @DuckDB_Column_Type := GetAddress('duckdb_column_type');
+    @DuckDB_Result_Statement_Type := GetAddress('duckdb_result_statement_type');
+    @DuckDB_Column_Logical_Type := GetAddress('duckdb_column_logical_type');
+    @DuckDB_Column_Count := GetAddress('duckdb_column_count');
+    @DuckDB_Rows_Changed := GetAddress('duckdb_rows_changed');
+    @DuckDB_Result_Error := GetAddress('duckdb_result_error');
+    @DuckDB_Result_Error_Type := GetAddress('duckdb_result_error_type');
+    @DuckDB_Result_Get_Chunk := GetAddress('duckdb_result_get_chunk');
+    @DuckDB_Result_Is_Streaming := GetAddress('duckdb_result_is_streaming');
+    @DuckDB_Result_Chunk_Count := GetAddress('duckdb_result_chunk_count');
+    @DuckDB_Result_Return_Type := GetAddress('duckdb_result_return_type');
+    @DuckDB_Value_Boolean := GetAddress('duckdb_value_boolean');
+    @DuckDB_Value_Int8 := GetAddress('duckdb_value_int8');
+    @DuckDB_Value_Int16 := GetAddress('duckdb_value_int16');
+    @DuckDB_Value_Int32 := GetAddress('duckdb_value_int32');
+    @DuckDB_Value_Int64 := GetAddress('duckdb_value_int64');
+    @DuckDB_Value_Hugeint := GetAddress('duckdb_value_hugeint');
+    @DuckDB_Value_UHugeint := GetAddress('duckdb_value_uhugeint');
+    @DuckDB_Value_Decimal := GetAddress('duckdb_value_decimal');
+    @DuckDB_Value_UInt8 := GetAddress('duckdb_value_uint8');
+    @DuckDB_Value_UInt16 := GetAddress('duckdb_value_uint16');
+    @DuckDB_Value_UInt32 := GetAddress('duckdb_value_uint32');
+    @DuckDB_Value_UInt64 := GetAddress('duckdb_value_uint64');
+    @DuckDB_Value_Float := GetAddress('duckdb_value_float');
+    @DuckDB_Value_Double := GetAddress('duckdb_value_double');
+    @DuckDB_Value_Date := GetAddress('duckdb_value_date');
+    @DuckDB_Value_Time := GetAddress('duckdb_value_time');
+    @DuckDB_Value_Timestamp := GetAddress('duckdb_value_timestamp');
+    @DuckDB_Value_Interval := GetAddress('duckdb_value_interval');
+    @DuckDB_Value_Varchar := GetAddress('duckdb_value_varchar');
+    @DuckDB_Value_String := GetAddress('duckdb_value_string');
+    @DuckDB_Value_Varchar_Internal := GetAddress('duckdb_value_varchar_internal');
+    @DuckDB_Value_String_Internal := GetAddress('duckdb_value_string_internal');
+    @DuckDB_Value_Blob := GetAddress('duckdb_value_blob');
+    @DuckDB_Value_Is_Null := GetAddress('duckdb_value_is_null');
+    @DuckDB_Malloc := GetAddress('duckdb_malloc');
+    @DuckDB_free := GetAddress('duckdb_free');
+    @DuckDB_Vector_Size := GetAddress('duckdb_vector_size');
+    @DuckDB_String_Is_Inlined := GetAddress('duckdb_string_is_inlined');
+    @DuckDB_String_T_Length := GetAddress('duckdb_string_t_length');
+    @DuckDB_String_T_Data := GetAddress('duckdb_string_t_data');
+    @DuckDB_From_Date := GetAddress('duckdb_from_date');
+    @DuckDB_To_Date := GetAddress('duckdb_to_date');
+    @DuckDB_Is_Finite_Date := GetAddress('duckdb_is_finite_date');
+    @DuckDB_From_Time := GetAddress('duckdb_from_time');
+    @DuckDB_Create_Time_TZ := GetAddress('duckdb_create_time_tz');
+    @DuckDB_From_Time_TZ := GetAddress('duckdb_from_time_tz');
+    @DuckDB_To_Time := GetAddress('duckdb_to_time');
+    @DuckDB_From_Timestamp := GetAddress('duckdb_from_timestamp');
+    @DuckDB_To_Timestamp := GetAddress('duckdb_to_timestamp');
+    @DuckDB_Is_Finite_Timestamp := GetAddress('duckdb_is_finite_timestamp');
+    @DuckDB_Hugeint_To_Double := GetAddress('duckdb_hugeint_to_double');
+    @DuckDB_Double_To_Hugeint := GetAddress('duckdb_double_to_hugeint');
+    @DuckDB_UHugeint_To_Double := GetAddress('duckdb_uhugeint_to_double');
+    @DuckDB_Double_To_UHugeint := GetAddress('duckdb_double_to_uhugeint');
+    @DuckDB_Double_To_Decimal := GetAddress('duckdb_double_to_decimal');
+    @DuckDB_Decimal_To_Double := GetAddress('duckdb_decimal_do_double');
+    @DuckDB_Prepare := GetAddress('duckdb_prepare');
+    @DuckDB_Destroy_Prepare := GetAddress('duckdb_destroy_prepare');
+    @DuckDB_Prepare_Error := GetAddress('duckdb_prepare_error');
+    @DuckDB_NParams := GetAddress('duckdb_nparams');
+    @DuckDB_Parameter_Name := GetAddress('duckdb_parameter_name');
+    @DuckDB_Param_Type := GetAddress('duckdb_param_type');
+    @DuckDB_Clear_Bindings := GetAddress('duckdb_clear_bindings');
+    @DuckDB_Prepared_Statement_Type := GetAddress('duckdb_prepared_statement_type');
+    @DuckDB_Bind_Value := GetAddress('duckdb_bind_value');
+    @DuckDB_Bind_Parameter_Index := GetAddress('duckdb_bind_parameter_index');
+    @DuckDB_Bind_Boolean := GetAddress('duckdb_bind_boolean');
+    @DuckDB_Bind_Int8 := GetAddress('duckdb_bind_int8');
+    @DuckDB_Bind_Int16 := GetAddress('duckdb_bind_int16');
+    @DuckDB_Bind_Int32 := GetAddress('duckdb_bind_int32');
+    @DuckDB_Bind_Int64 := GetAddress('duckdb_bind_int64');
+    @DuckDB_Bind_Hugeint := GetAddress('duckdb_bind_hugeint');
+    @DuckDB_Bind_UHugeint := GetAddress('duckdb_bind_uhugeint');
+    @DuckDB_Bind_Decimal := GetAddress('duckdb_bind_decimal');
+    @DuckDB_Bind_UInt8 := GetAddress('duckdb_bind_uint8');
+    @DuckDB_Bind_UInt16 := GetAddress('duckdb_bind_uint16');
+    @DuckDB_Bind_UInt32 := GetAddress('duckdb_bind_uint32');
+    @DuckDB_Bind_UInt64 := GetAddress('duckdb_bind_uint64');
+    @DuckDB_Bind_Float := GetAddress('duckdb_bind_float');
+    @DuckDB_Bind_Double := GetAddress('duckdb_bind_double');
+    @DuckDB_Bind_Date := GetAddress('duckdb_bind_date');
+    @DuckDB_Bind_Time := GetAddress('duckdb_bind_time');
+    @DuckDB_Bind_Timestamp := GetAddress('duckdb_bind_timestamp');
+    @DuckDB_Bind_Timestamp_TZ := GetAddress('duckdb_bind_timestamp_tz');
+    @DuckDB_Bind_Interval := GetAddress('duckdb_bind_interval');
+    @DuckDB_Bind_Varchar := GetAddress('duckdb_bind_varchar');
+    @DuckDB_Bind_Varchar_Length := GetAddress('duckdb_bind_varchar_length');
+    @DuckDB_Bind_Blob := GetAddress('duckdb_bind_blob');
+    @DuckDB_Bind_Null := GetAddress('duckdb_bind_null');
+    @DuckDB_Execute_Prepared := GetAddress('duckdb_execute_prepared');
+    @DuckDB_Execute_Prepared_Streaming := GetAddress('duckdb_execute_prepared_streaming');
+  end;
+end;
+
+function TZDuckDBPlainDriver.GetProtocol: string;
+begin
+  Result := 'DuckDB';
+end;
+
+function TZDuckDBPlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for DuckDB';
+end;
+
+{$ENDIF ZEOS_DISABLE_DUCKDB}
 
 end.
