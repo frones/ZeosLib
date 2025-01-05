@@ -812,7 +812,8 @@ const
       ({spAS400}      cUnknown,   cUnknown,   cUnknown),
       ({spInformix}   cUnknown,   cUnknown,   cUnknown),
       ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
-      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
+      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown),
+      ({spDuckDB}     cUnknown,   cUnknown,   cUnknown)
     );
   cSavePointSyntaxA: array[TZServerProvider, TZSavePointQueryType] of RawByteString =
     ( ({spUnknown}    cUnknown,   cUnknown,   cUnknown),
@@ -830,7 +831,8 @@ const
       ({spAS400}      cUnknown,   cUnknown,   cUnknown),
       ({spInformix}   cUnknown,   cUnknown,   cUnknown),
       ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
-      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
+      ({spFoxPro}     cUnknown,   cUnknown,   cUnknown),
+      ({spDuckDB}     cUnknown,   cUnknown,   cUnknown)
     );
 
   sCommitMsg = 'COMMIT TRANSACTION';
@@ -876,7 +878,8 @@ const
     {spAS400}     nil,
     {spInformix}  TZInformixSequence,
     {spCUBRID}    TZCubridSequence,
-    {spFoxPro}    nil
+    {spFoxPro}    nil,
+    {spDuckDB}    nil
     );
 
 { TZAbstractDriver }

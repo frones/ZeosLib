@@ -357,7 +357,7 @@ type
   /// <summary>Defines the server type.</summary>
   TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
-    spInformix, spCUBRID, spFoxPro);
+    spInformix, spCUBRID, spFoxPro, spDuckDB);
 
   /// <summary>Defines a LOB stream mode.</summary>
   TZLobStreamMode = (lsmRead, lsmWrite, lsmReadWrite);
@@ -4465,6 +4465,7 @@ type
   end;
 
   TZVerboseCallback = procedure(Message: ZWideString) of object;
+  TZBackupDataCallback = procedure(Bytes: PByte; Count: Cardinal) of object;
 
   IZBackup = Interface(IZInterface)
     ['{0DB11896-0005-4817-8F8F-94E555A262BE}']
@@ -4484,6 +4485,8 @@ type
     function GetPassword: ZWideString;
     procedure SetBackupFileName(FileName: ZWideString);
     function GetBackupFileName: ZWideString;
+    procedure SetOnBackupData(Callback: TZBackupDataCallback);
+    function GetOnBackupData: TZBackupDataCallback;
     procedure Backup;
     property HostName: ZWideString read GetHostName write SetHostName;
     property Database: ZWideString read GetDatabase write SetDatabase;
@@ -4493,6 +4496,7 @@ type
     property UserName: ZWideString read GetUserName write SetUserName;
     property Password: ZWideString read GetPassword write SetPassword;
     property BackupFileName: ZWideString read GetBackupFileName write SetBackupFileName;
+    property OnBackupdata: TZBackupDataCallback read GetOnBackupData write SetOnBackupData;
   end;
 
 var

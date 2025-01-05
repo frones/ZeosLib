@@ -62,7 +62,7 @@ uses
 {$IFNDEF ZEOS_DISABLE_DUCKDB}
 
 const
-    WINDOWS_VS_DLL_LOCATION = 'duckdb.dll.dll';
+    WINDOWS_VS_DLL_LOCATION = 'duckdb.dll';
     WINDOWS_MINGW_DLL_LOCATION = 'libduckdb.dll';
     LINUX_DLL_LOCATION = 'libduckdb'+SharedSuffix;
 
