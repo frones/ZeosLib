@@ -79,11 +79,13 @@ type
   IZDbcDuckDBConnection = interface (IZConnection)
     ['{C6ACB283-1126-426B-9637-B4CFD430BB33}']
     function GetPlainDriver: TZDuckDBPlainDriver;
+    function GetConnectionHandle: TDuckDB_Connection;
+    procedure CheckDuckDbError(AResult: PDuckDB_Result);
   end;
 
   {** Implements DBC Proxy Database Connection. }
 
-  { TZProxyConnection }
+  { TZDuckDBConnection }
 
   TZDbcDuckDBConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractSingleTxnConnection{$ENDIF},
     IZConnection, IZTransaction, IZDbcDuckDBConnection)
@@ -190,7 +192,6 @@ type
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetUseMetadata(Value: Boolean); override;
-    // AutoEncodeStrings is not supported
 
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
@@ -206,6 +207,8 @@ type
     function GetStatementAnalyser: IZStatementAnalyser;
 
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
+
+    function GetConnectionHandle: TDuckDB_Connection;
   end;
 
 var
@@ -218,7 +221,7 @@ implementation
 
 uses
   ZSysUtils, ZFastCode, ZEncoding, ZDbcMetadata,
-  {ZDbcProxyMetadata, ZDbcProxyStatement,} ZDbcProperties,
+  {ZDbcProxyMetadata,} ZDbcDuckDBStatement, ZDbcProperties,
   ZGenericSqlToken, ZMessages, Typinfo, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -553,6 +556,11 @@ end;
 procedure TZDbcDuckDBConnection.SetUseMetadata(Value: Boolean);
 begin
   //
+end;
+
+function TZDbcDuckDBConnection.GetConnectionHandle: TDuckDB_Connection;
+begin
+  Result := FConnection;
 end;
 
 initialization
