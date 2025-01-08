@@ -129,15 +129,11 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZSysUtils, ZFastCode, ZMessages, ZDbcDuckDB, {ZDbcProxyResultSet, ZDbcProxyUtils,}
-  ZEncoding, ZTokenizer, ZClasses,
+  ZSysUtils, ZFastCode, ZMessages, ZDbcDuckDB, ZDbcDuckDBResultSet, ZDbcDuckDBUtils,
+  ZEncoding, ZTokenizer, ZClasses, ZDbcResultSetMetadata,
   Variants, ZExceptions, FmtBcd
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
-
-var
-  //the encoded date of 1970-01-01
-  DateShift: Integer;
 
 function ZTimeToDuckTime(const ZTime: TZTime): TDuckDb_Time;
 begin
@@ -150,7 +146,7 @@ end;
 function ZTimeStampToDuckTimeStamp(ZTimeStamp: TZTimeStamp): TDuckDb_TimeStamp;
 begin
   Result.micros := Trunc(EncodeDate(ZTimeStamp.Year, ZTimeStamp.Month, ZTimeStamp.Day));
-  Result.micros := Result.micros - DateShift;              // days since 1970-01-01
+  Result.micros := Result.micros - DuckDBDateShift;              // days since 1970-01-01
   Result.micros := Result.micros * 24 + ZTimeStamp.Hour;   // hours since 1970-01-01
   Result.micros := Result.micros * 60 + ZTimeStamp.Minute; // minutes since 1970-01-01
   Result.micros := Result.micros * 60 + ZTimeStamp.Second; // seconds since 1970-01-01
@@ -175,15 +171,12 @@ begin
 end;
 
 function TZDbcDuckDBPreparedStatement.CreateResultSet(Const DuckResult: TDuckDB_Result): IZResultSet;
-(*
 var
-  NativeResultSet: TZDbcProxyResultSet;
+  NativeResultSet: TZDbcDuckDBResultSet;
   CachedResultSet: TZCachedResultSet;
   CachedResolver: IZCachedResolver;
-*)
 begin
-(*
-  NativeResultSet := TZDbcProxyResultSet.Create(Connection, SQL, ResultStr);
+  NativeResultSet := TZDbcDuckDBResultSet.Create(Connection, SQL, DuckResult);
   NativeResultSet.SetConcurrency(rcReadOnly);
   LastUpdateCount := NativeResultSet.GetUpdateCount;
 
@@ -192,21 +185,7 @@ begin
 
   if GetResultSetConcurrency = rcUpdatable then
   begin
-    case GetConnection.GetServerProvider of
-      // The following cached resolvers cannot be used, because they need handles
-      // from their databases: ADO, MySQL, SQLite
-      spASA: CachedResolver := TZASACachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
-      spMSSQL, spASE: CachedResolver := TZDBLibCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
-      {$IFNDEF ZEOS73UP}
-      spIB_FB: CachedResolver := TZInterbase6CachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
-      {$ENDIF}
-      spOracle: CachedResolver := TZOracleCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
-      {$IFNDEF ZEOS73UP}
-      spPostgreSQL: CachedResolver := TZPostgreSQLCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
-      {$ENDIF}
-      else CachedResolver := TZGenericCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
-    end;
-
+    CachedResolver := TZGenericCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
     CachedResultSet.SetConcurrency(rcUpdatable);
     LastResultSet := CachedResultSet;
@@ -217,7 +196,6 @@ begin
   end;
   if Result <> nil then
     FOpenResultSet := Pointer(Result);
-*)
 end;
 
 function TZDbcDuckDBPreparedStatement.ExecuteQueryPrepared: IZResultSet;
@@ -329,7 +307,7 @@ begin
                RaiseBindError(x, 'varchar');
           end;
         stDate: begin
-            TempDuckDate.days := Trunc(ClientVarManager.GetAsDateTime(InParamValues[x])) - DateShift;
+            TempDuckDate.days := Trunc(ClientVarManager.GetAsDateTime(InParamValues[x])) - DuckDBDateShift;
             if FPlainDriver.DuckDB_Bind_Date(FStatement, x, TempDuckDate) <> DuckDBSuccess then
                RaiseBindError(x, 'date');
           end;
@@ -377,9 +355,6 @@ begin
     end;
   end;
 end;
-
-initialization
-  DateShift := Trunc(EncodeDate(1970, 1, 1));
 
 {$ENDIF ZEOS_DISABLE_DUCKDB} //if set we have an empty unit
 end.

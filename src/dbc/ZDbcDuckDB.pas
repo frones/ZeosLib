@@ -363,20 +363,18 @@ end;
 
 function TZDbcDuckDBConnection.CreateStatementWithParams(Info: TStrings): IZStatement;
 begin
-  raise Exception.Create('CreateStatementWithParams is not implemented yet.');
   if IsClosed then
     Open;
 
-  //Result := TZDbcProxyPreparedStatement.Create((self as IZConnection), '', Info);
+  Result := TZDbcDuckDBPreparedStatement.Create((self as IZConnection), '', Info);
 end;
 
 function TZDbcDuckDBConnection.PrepareStatementWithParams(const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
-  raise Exception.Create('PrepareStatementWithParams is not implemented yet.');
   if IsClosed then
     Open;
 
-  //Result := TZDbcProxyPreparedStatement.Create((self as IZConnection), SQL, Info);
+  Result := TZDbcDuckDBPreparedStatement.Create((self as IZConnection), SQL, Info);
 end;
 
 function TZDbcDuckDBConnection.PrepareCallWithParams(const SQL: string; Info: TStrings): IZCallableStatement;
