@@ -782,6 +782,16 @@ type
     DuckDB_Column_Count: function(result: PDuckDB_Result): idx_t; stdcall;
 
     (*!
+    **DEPRECATION NOTICE**: This method is scheduled for removal in a future release.
+
+    Returns the number of rows present in the result object.
+
+    * @param result The result object.
+    * @return The number of rows present in the result object.
+    *)
+    DuckDB_Row_Count: function(result: PDuckDB_Result): idx_t; stdcall;
+
+    (*!
     Returns the number of rows changed by the query stored in the result. This is relevant only for INSERT/UPDATE/DELETE
     queries. For other queries the rows_changed will be 0.
 
@@ -789,6 +799,50 @@ type
     * @return The number of rows changed.
     *)
     DuckDB_Rows_Changed: function(result: PDuckDB_Result): idx_t; stdcall;
+
+    (*!
+    **DEPRECATED**: Prefer using `duckdb_result_get_chunk` instead.
+
+    Returns the data of a specific column of a result in columnar format.
+
+    The function returns a dense array which contains the result data. The exact type stored in the array depends on the
+    corresponding duckdb_type (as provided by `duckdb_column_type`). For the exact type by which the data should be
+    accessed, see the comments in [the types section](types) or the `DUCKDB_TYPE` enum.
+
+    For example, for a column of type `DUCKDB_TYPE_INTEGER`, rows can be accessed in the following manner:
+    ```c
+    int32_t *data = (int32_t * ) duckdb_column_data(&result, 0);
+    printf("Data for row %d: %d\n", row, data[row]);
+    ```
+
+    * @param result The result object to fetch the column data from.
+    * @param col The column index.
+    * @return The column data of the specified column.
+    *)
+    DuckDB_Column_Data: function(result: PDuckDB_Result; col: idx_t): Pointer; stdcall;
+
+    (*!
+    **DEPRECATED**: Prefer using `duckdb_result_get_chunk` instead.
+
+    Returns the nullmask of a specific column of a result in columnar format. The nullmask indicates for every row
+    whether or not the corresponding row is `NULL`. If a row is `NULL`, the values present in the array provided
+    by `duckdb_column_data` are undefined.
+
+    ```c
+    int32_t *data = (int32_t * ) duckdb_column_data(&result, 0);
+    bool *nullmask = duckdb_nullmask_data(&result, 0);
+    if (nullmask[row]) {
+        printf("Data for row %d: NULL\n", row);
+    } else {
+        printf("Data for row %d: %d\n", row, data[row]);
+    }
+    ```
+
+    * @param result The result object to fetch the nullmask from.
+    * @param col The column index.
+    * @return The nullmask of the specified column.
+    *)
+    DuckDB_Nullmask_Data: function(result: PDuckDB_Result; col: idx_t): pcbool; stdcall;
 
     (*!
     Returns the error message contained within the result. The error is only set if `duckdb_query` returns `DuckDBError`.
@@ -1584,7 +1638,10 @@ begin
     @DuckDB_Result_Statement_Type := GetAddress('duckdb_result_statement_type');
     @DuckDB_Column_Logical_Type := GetAddress('duckdb_column_logical_type');
     @DuckDB_Column_Count := GetAddress('duckdb_column_count');
+    @DuckDB_Row_Count := GetAddress('duckdb_row_count');
     @DuckDB_Rows_Changed := GetAddress('duckdb_rows_changed');
+    @DuckDB_Column_Data := GetAddress('duckdb_column_data');
+    @DuckDB_Nullmask_Data := GetAddress('duckdb_nullmask_data');
     @DuckDB_Result_Error := GetAddress('duckdb_result_error');
     @DuckDB_Result_Error_Type := GetAddress('duckdb_result_error_type');
     @DuckDB_Result_Get_Chunk := GetAddress('duckdb_result_get_chunk');
