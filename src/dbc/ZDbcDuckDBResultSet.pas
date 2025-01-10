@@ -735,17 +735,20 @@ begin
     exit;
   end;
 
-  TempBlob := FPlainDriver.DuckDB_Value_Blob(@FResult, ColumnIndex, RowNo - 1);
-  try
-    //if TempBlob.size = 0 then begin
-
-    //end else begin
+  if TZColumnInfo(ColumnsInfo.Items[ColumnIndex]).ColumnType in [stAsciiStream, stUnicodeStream] then begin
+    FWideBuffer := GetUnicodeString(ColumnIndex);
+    SetLength(Result, Length(FWideBuffer) shl 1);
+    Move(FWideBuffer[1], Result[0], Length(Result));
+    FWideBuffer := '';
+  end else begin
+    TempBlob := FPlainDriver.DuckDB_Value_Blob(@FResult, ColumnIndex, RowNo - 1);
+    try
       SetLength(Result, TempBlob.size);
       if TempBlob.size > 0 then
         Move(TempBlob.data^, Result[0], TempBlob.size);
-    //end;
-  finally
-    FPlainDriver.DuckDB_free(TempBlob.data);
+    finally
+      FPlainDriver.DuckDB_free(TempBlob.data);
+    end;
   end;
 end;
 
@@ -868,7 +871,10 @@ begin
   end;
 
   Bytes := GetBytes(ColumnIndex);
-  Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
+  if TZColumnInfo(ColumnsInfo.Items[ColumnIndex]).ColumnType in [stUnicodeStream]  then
+    Result := TZAbstractCLob.CreateWithData(@Bytes[0], Length(Bytes), GetConSettings) as IZBlob
+  else
+    Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
 end;
 
 function TZDbcDuckDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
