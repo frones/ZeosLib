@@ -93,7 +93,7 @@ type
     /// <param name="ResultStr">
     ///  A string containing the XML exncoded result set.
     /// </param>
-    constructor Create(const Connection: IZConnection; const SQL: string; const Result: TDuckDB_Result);
+    constructor Create(Const Statement: IZStatement; const Connection: IZConnection; const SQL: string; const Result: TDuckDB_Result);
     /// <summary>
     ///  Indicates if the value of the designated column in the current row
     ///  of this ResultSet object is Null.
@@ -287,7 +287,7 @@ end;
 
 { TZDbcProxyResultSet }
 
-constructor TZDbcDuckDBResultSet.Create(const Connection: IZConnection; const SQL: string; const Result: TDuckDB_Result);
+constructor TZDbcDuckDBResultSet.Create(const Statement: IZStatement; const Connection: IZConnection; const SQL: string; const Result: TDuckDB_Result);
 var
   ConSettings: PZConSettings;
   Metadata: IZDatabaseMetadata;
@@ -298,9 +298,10 @@ begin
   FPlainDriver := (Connection.GetIZPlainDriver as IZDuckDBPlainDriver).GetInstance as TZDuckDBPlainDriver;
 
   inherited Create(Statement, SQL,
-    TZAbstractResultSetMetadata.Create(Metadata, SQL, Self), ConSettings);
+    TZDbcDuckDBResultSetMetadata.Create(Metadata, SQL, Self), ConSettings);
 
   ResultSetType := rtScrollInsensitive;
+  SetConcurrency(rcReadOnly);
 
   Open;
 end;
@@ -734,11 +735,15 @@ begin
     exit;
   end;
 
-  TempBlob := FPlainDriver.DuckDB_Value_Blob(@Result, ColumnIndex, RowNo - 1);
+  TempBlob := FPlainDriver.DuckDB_Value_Blob(@FResult, ColumnIndex, RowNo - 1);
   try
-    SetLength(Result, TempBlob.size);
-    if TempBlob.size > 0 then
-      Move(TempBlob.data^, Result[0], TempBlob.size);
+    //if TempBlob.size = 0 then begin
+
+    //end else begin
+      SetLength(Result, TempBlob.size);
+      if TempBlob.size > 0 then
+        Move(TempBlob.data^, Result[0], TempBlob.size);
+    //end;
   finally
     FPlainDriver.DuckDB_free(TempBlob.data);
   end;

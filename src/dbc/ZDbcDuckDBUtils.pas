@@ -10,7 +10,11 @@ uses
 {$IFNDEF ZEOS_DISABLE_DUCKDB} //if set we have an empty unit
 
 const
+  {$IFNDEF FPC}
+  DuckDBMicrosecondsPerDay: Double = Double(24) * 60 *60 *1000 * 1000;
+  {$ELSE}
   DuckDBMicrosecondsPerDay = 24 * 60 *60 *1000 * 1000;
+  {$ENDIF}
 
 var
   //the encoded date of 1970-01-01

@@ -176,7 +176,7 @@ var
   CachedResultSet: TZCachedResultSet;
   CachedResolver: IZCachedResolver;
 begin
-  NativeResultSet := TZDbcDuckDBResultSet.Create(Connection, SQL, DuckResult);
+  NativeResultSet := TZDbcDuckDBResultSet.Create(Self as IZStatement, Connection, SQL, DuckResult);
   NativeResultSet.SetConcurrency(rcReadOnly);
   LastUpdateCount := NativeResultSet.GetUpdateCount;
 
@@ -230,9 +230,10 @@ begin
     (GetConnection as IZDbcDuckDBConnection).CheckDuckDbError(@DuckResult);
 
   LastUpdateCount := FPlainDriver.DuckDB_Rows_Changed(@DuckResult);
-  if FPlainDriver.DuckDB_Result_Return_Type(DuckResult) = DUCKDB_RESULT_TYPE_QUERY_RESULT then
-    CreateResultSet(DuckResult)
-  else begin
+  if FPlainDriver.DuckDB_Result_Return_Type(DuckResult) = DUCKDB_RESULT_TYPE_QUERY_RESULT then begin
+    CreateResultSet(DuckResult);
+    Result := True;
+  end else begin
     Result := False;
     LastResultSet := nil;
   end;
@@ -350,7 +351,7 @@ begin
               RaiseBindError(x, 'blob');
           end;
         else
-          raise EZSQLException.Create('Conversion of parameter ' + IntToStr(x) + ' is not supported (yet).');
+          raise EZSQLException.Create('Conversion of parameter ' + SysUtils.IntToStr(x) + ' is not supported (yet).');
       end;
     end;
   end;

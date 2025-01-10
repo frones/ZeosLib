@@ -1,4 +1,4 @@
-{*********************************************************}
+﻿{*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {             Native Plain Drivers for DuckDB             }
@@ -56,7 +56,7 @@ interface
 {$I ZPlain.inc}
 
 uses
-  ctypes, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$ifdef FPC}ctypes,{$ENDIF} SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZCompatibility, ZPlainDriver;
 
 {$IFNDEF ZEOS_DISABLE_DUCKDB}
@@ -110,7 +110,7 @@ const
     //enum duckdb_state
     DuckDBSuccess = 0;
     DuckDBError   = 1;
-	
+
     //! An enum over the pending state of a pending query result.
     //enum duckdb_pending_state
     DUCKDB_PENDING_RESULT_READY = 0;
@@ -208,6 +208,26 @@ const
     DUCKDB_CAST_TRY = 1;
 	
 type
+   // just for Delphi:
+   {$ifndef FPC}
+   cint8 = ShortInt;
+   cint16 = SmallInt;
+   cint32 = Integer;
+   cint64 = Int64;
+
+   cuint8 = Byte;
+   cuint16 = Word;
+   cuint32 = Cardinal;
+   cuint64 = UInt64;
+
+   cbool = longbool;
+   pcbool = ^longbool;
+   cfloat = Single;
+   cdouble = Double;
+
+   size_t = UIntPtr;
+   {$ENDIF}
+
    // Inserted for the enums:
    TDuckDB_State = cint32;
    TDuckDB_Type = cint32;
@@ -220,23 +240,23 @@ type
     //! DuckDB's index type.
     idx_t = cuint64;
     Pidx_t = ^idx_t;
-	
+
     //! The callback that will be called to destroy data, e.g.,
     //! bind data (if any), init data (if any), extra data for replacement scans (if any)
     //typedef void (*duckdb_delete_callback_t)(void *data);
     TDuckDb_Delete_Callback = procedure(data: Pointer); stdcall;
-	
+
     //! Used for threading, contains a task state. Must be destroyed with `duckdb_destroy_state`.
     //typedef void *duckdb_task_state;
     TDuckDb_Task_State = Pointer;
-	
+
     //===--------------------------------------------------------------------===//
     // Types (no explicit freeing)
      //===--------------------------------------------------------------------===//
 
     //! Days are stored as days since 1970-01-01
     //! Use the duckdb_from_date/duckdb_to_date function to extract individual information
-    TDuckDb_Date = packed record 
+    TDuckDb_Date = packed record
         days: cint32;
     end;
 
