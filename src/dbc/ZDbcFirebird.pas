@@ -512,7 +512,20 @@ begin
       end;
     finally
       Stmt.free(FStatus);
-      Stmt{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
+      try
+        if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then begin
+          {$IFDEF UNICODE}
+          if not DriverManager.HasLoggingListener then
+            FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+          {$ENDIF}
+          HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        end
+        else // free() releases intf on success
+          Stmt:= nil;
+      finally
+        if Assigned(Stmt) then
+          Stmt{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
+      end;
     end;
   end;
 end;
