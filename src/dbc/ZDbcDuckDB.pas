@@ -221,7 +221,7 @@ implementation
 
 uses
   ZSysUtils, ZFastCode, ZEncoding, ZDbcMetadata,
-  {ZDbcProxyMetadata,} ZDbcDuckDBStatement, ZDbcProperties,
+  ZDbcDuckDBMetadata, ZDbcDuckDBStatement, ZDbcProperties,
   ZGenericSqlToken, ZMessages, Typinfo, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -329,7 +329,7 @@ end;
 procedure TZDbcDuckDBConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZDuckDBPlainDriver;
-  FMetadata := TZAbstractDatabaseMetadata.Create(Self, Url);
+  FMetadata := TZDuckDBDatabaseMetadata.Create(Self, Url);
   inherited AfterConstruction;
 end;
 
@@ -453,6 +453,7 @@ begin
   if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
     DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
   Dispose(ConSettings.ClientCodePage);
+  inherited;
 end;
 
 function TZDbcDuckDBConnection.GetClientVersion: Integer;

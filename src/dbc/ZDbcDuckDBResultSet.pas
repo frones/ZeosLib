@@ -856,6 +856,7 @@ end;
 function TZDbcDuckDBResultSet.GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   Bytes: TBytes;
+  Chars: UTF8String;
 begin
   if LobStreamMode <> lsmRead then
     raise EZSQLException.Create('No lob stream mode besides lsmRead is supported.');
@@ -870,11 +871,13 @@ begin
     exit;
   end;
 
-  Bytes := GetBytes(ColumnIndex);
-  if TZColumnInfo(ColumnsInfo.Items[ColumnIndex]).ColumnType in [stUnicodeStream]  then
-    Result := TZAbstractCLob.CreateWithData(@Bytes[0], Length(Bytes), GetConSettings) as IZBlob
-  else
+  if TZColumnInfo(ColumnsInfo.Items[ColumnIndex]).ColumnType in [stAsciiStream, stUnicodeStream]  then begin
+    Chars := GetUTF8String(ColumnIndex);
+    Result := TZAbstractCLob.CreateWithData(@Chars[1], Length(Chars), zCP_UTF8, ConSettings) as IZBlob;
+  end else begin
+    Bytes := GetBytes(ColumnIndex);
     Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
+  end;
 end;
 
 function TZDbcDuckDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
