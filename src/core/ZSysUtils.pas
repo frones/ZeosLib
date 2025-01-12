@@ -4722,6 +4722,7 @@ var PStart, ZStart: PAnsiChar;
   C1: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
   EQ2: Boolean;
   B: Byte absolute EQ2;
+  TempStr: AnsiString;
 label inc_dbl; //keep code tiny
 begin
   PStart := Buf;
@@ -4734,7 +4735,13 @@ begin
     C1 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat)^ or $20;
     EQ2 := {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(PFormat+1)^ or $20 = C1;
     case C1 of
-      Ord('h'): if EQ2 or (Hour >= 10) then begin
+      Ord('h'): if Hour > 99 then begin
+                  TempStr := AnsiString(IntToStr(Hour));
+                  Move(PAnsiChar(TempStr)^, Buf^, Length(TempStr));
+                  Inc(Buf, Length(TempStr));
+                  Inc(PFormat, 1+Ord(EQ2));
+                  Continue;
+                end else if EQ2 or (Hour >= 10) then begin
                   PWord(Buf)^ := TwoDigitLookupW[Hour];
 Inc_dbl:          Inc(Buf, 2);
                   Inc(PFormat, 1+Ord(EQ2));
