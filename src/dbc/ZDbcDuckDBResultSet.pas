@@ -693,7 +693,7 @@ begin
     exit;
   end;
 
-  Result := FPlainDriver.DuckDB_Value_Double(@FPlainDriver, ColumnIndex, RowNo - 1);
+  Result := FPlainDriver.DuckDB_Value_Double(@FResult, ColumnIndex, RowNo - 1);
 end;
 
 function TZDbcDuckDBResultSet.GetBigDecimal(ColumnIndex: Integer): TBcd;
