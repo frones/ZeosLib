@@ -913,6 +913,7 @@ var
             try
               DestStream := DestDataset.CreateBlobStream(DestField, bmWrite);
               try
+                DestStream.Size := 0;
                 DestStream.CopyFrom(SrcStream, 0);
               finally
                 DestStream.Free;
