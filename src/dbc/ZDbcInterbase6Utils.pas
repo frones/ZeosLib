@@ -133,7 +133,8 @@ type
     pvtNone,     // no value
     pvtByteZ,    // 1-byte int that always = 0 (value ignored)
     pvtNum,      // 1/2/4-byte int, depending on a value
-    pvtString    // raw byte string
+    pvtString,   // raw byte string
+    pvtLongString  // a string that can be longer than 255 Bytes
   );
 
   { Paparameter string name and it's value}
@@ -360,7 +361,7 @@ const
     (Name: ConnProps_isc_dpb_process_name;          ValueType: pvtString;  Number: isc_dpb_process_name),
     (Name: ConnProps_isc_dpb_trusted_role;          ValueType: pvtString;  Number: isc_dpb_trusted_role),
     (Name: ConnProps_isc_dpb_org_filename;          ValueType: pvtString;  Number: isc_dpb_org_filename),
-    (Name: ConnProps_isc_dpb_utf8_filename;         ValueType: pvtNone;    Number: isc_dpb_utf8_filename),
+    (Name: ConnProps_isc_dpb_utf8_filename;         ValueType: pvtString;  Number: isc_dpb_utf8_filename),
     (Name: ConnProps_isc_dpb_ext_call_depth;        ValueType: pvtNum;     Number: isc_dpb_ext_call_depth),
     (Name: ConnProps_isc_dpb_auth_block;            ValueType: pvtString;  Number: isc_dpb_auth_block), // Bytes
     (Name: ConnProps_isc_dpb_client_version;        ValueType: pvtString;  Number: isc_dpb_client_version),
@@ -537,6 +538,7 @@ var
   ParamValue: String;
   tmp: RawByteString;
   PParam: PZIbParam;
+  tmpLen: Word;
 begin
   Result := EmptyRaw;
   Writer := TZRawSQLStringWriter.Create(1024);
@@ -553,8 +555,6 @@ begin
       case PParam.ValueType of
         pvtNone: begin
             Writer.AddChar(AnsiChar(PParam.Number), Result);
-            if VersionCode < isc_tpb_version3 then
-              Writer.AddChar(AnsiChar(#0), Result);
           end;
         pvtByteZ: begin
             Writer.AddChar(AnsiChar(PParam.Number), Result);
@@ -592,6 +592,19 @@ begin
             {$ENDIF}
             Writer.AddChar(AnsiChar(PParam.Number), Result);
             Writer.AddChar(AnsiChar(Length(tmp)), Result);
+            Writer.AddText(tmp, Result);
+          end;
+        pvtLongString:
+          begin
+            {$IFDEF UNICODE}
+            tmp := ZUnicodeToRaw(ParamValue, CP);
+            {$ELSE}
+            tmp := ParamValue;
+            {$ENDIF}
+            tmpLen := Length(tmp);
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            Writer.AddChar(PAnsiChar(@TmpLen)[0], Result);
+            Writer.AddChar(PAnsiChar(@TmpLen)[1], Result);
             Writer.AddText(tmp, Result);
           end;
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //pvtUnimpl

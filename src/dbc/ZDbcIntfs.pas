@@ -357,7 +357,7 @@ type
   /// <summary>Defines the server type.</summary>
   TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
-    spInformix, spCUBRID, spFoxPro);
+    spInformix, spCUBRID, spFoxPro, spDuckDB);
 
   /// <summary>Defines a LOB stream mode.</summary>
   TZLobStreamMode = (lsmRead, lsmWrite, lsmReadWrite);
@@ -896,7 +896,7 @@ type
     ///  cases the commit occurs when all results and output parameter values
     ///  have been retrieved. It is not recommented setting autoCommit to false
     ///  because a call to either the method <c>commit</c> or the method
-    ///  <c>rollback</c> will restart the transaction. It's use full only if
+    ///  <c>rollback</c> will restart the transaction. It is useful only if
     ///  repeately many opertions are done and no startTransaction is intended
     ///  to use. If you change mode to true the current Transaction and it's
     ///  nested SavePoints are committed then.</summary>
@@ -4462,6 +4462,41 @@ type
     ///  that produced this <c>Sequence</c> object.</summary>
     /// <returns>the connection that produced this sequence.</returns>
     function  GetConnection: IZConnection;
+  end;
+
+  TZVerboseCallback = procedure(Message: ZWideString) of object;
+  TZBackupDataCallback = procedure(Bytes: PByte; Count: Cardinal) of object;
+
+  IZBackup = Interface(IZInterface)
+    ['{0DB11896-0005-4817-8F8F-94E555A262BE}']
+    procedure SetHostName(HostName: ZWideString);
+    function GetHostName: ZWideString;
+    procedure SetDatabase(Database: ZWideString);
+    function GetDatabase: ZWideString;
+    procedure SetPort(Port: Word);
+    function GetPort: Word;
+    procedure SetOnVerbose(Callback: TZVerboseCallback);
+    function GetOnVerbose: TZVerboseCallback;
+    procedure SetLibLocation(LibLocation: ZWideString);
+    function GetLibLocation: ZWideString;
+    procedure SetUserName(UserName: ZWideString);
+    function GetUserName: ZWideString;
+    procedure SetPassword(Password: ZWideString);
+    function GetPassword: ZWideString;
+    procedure SetBackupFileName(FileName: ZWideString);
+    function GetBackupFileName: ZWideString;
+    procedure SetOnBackupData(Callback: TZBackupDataCallback);
+    function GetOnBackupData: TZBackupDataCallback;
+    procedure Backup;
+    property HostName: ZWideString read GetHostName write SetHostName;
+    property Database: ZWideString read GetDatabase write SetDatabase;
+    property Port: Word read GetPort write SetPort;
+    property OnVerbose: TZVerboseCallback read GetOnVerbose write SetOnVerbose;
+    property LibLocation: ZWideString read GetLibLocation write SetLibLocation;
+    property UserName: ZWideString read GetUserName write SetUserName;
+    property Password: ZWideString read GetPassword write SetPassword;
+    property BackupFileName: ZWideString read GetBackupFileName write SetBackupFileName;
+    property OnBackupdata: TZBackupDataCallback read GetOnBackupData write SetOnBackupData;
   end;
 
 var
