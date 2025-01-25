@@ -319,6 +319,7 @@ type
     procedure RaiseWriteStateError;
     procedure RaiseFieldTypeMismatchError(const AField: TField; AFieldDef: TFieldDef);
     procedure RaiseFieldSizeMismatchError(const AField: TField; AFieldDef: TFieldDef);
+    procedure SetActive(Value: Boolean); Override;
     function FetchOneRow: Boolean;
     function FetchRows(RowCount: Integer): Boolean;
     function FilterRow(RowNo: NativeInt): Boolean;
@@ -2061,6 +2062,16 @@ end;
 procedure TZAbstractRODataset.RaiseFieldReadOnlyError(const Field: TField);
 begin
   raise EZDatabaseError.Create(Format(SFieldReadOnly, [Field.DisplayName]));
+end;
+
+procedure TZAbstractRODataset.SetActive(Value: Boolean);
+begin
+  inherited;
+
+  {$IFNDEF DISABLE_ZPARAM}
+  if (FParams <> nil) And Not Value then
+    FParams.FlushParameterConSettings;
+  {$ENDIF}
 end;
 
 procedure TZAbstractRODataset.RaiseFieldSizeMismatchError(const AField: TField;
@@ -3977,10 +3988,6 @@ begin
   {$ENDIF}
   if CurrentRows <> nil then
     CurrentRows.Clear;
-  {$IFNDEF DISABLE_ZPARAM}
-  if FParams <> nil then
-    FParams.FlushParameterConSettings;
-  {$ENDIF}
 end;
 
 {**
