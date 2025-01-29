@@ -5246,10 +5246,11 @@ const
     (Name: 'REMARKS'; SQLType: stString; Length: 255)
   );
 
-  SchemaColumnCount = 1;
+  SchemaColumnCount = 2;
   SchemaColumns: array[FirstDbcIndex..SchemaColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
-    (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255)
+    (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
+    (Name: 'TABLE_CATALOG'; SQLType: stString; Length: 255)
   );
 
   CatalogColumnCount = 1;
