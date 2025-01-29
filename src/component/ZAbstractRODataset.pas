@@ -1699,12 +1699,7 @@ destructor TZAbstractRODataset.Destroy;
 begin
   Unprepare;
   if Assigned(Connection) then
-  begin
-    try
-      SetConnection(nil);
-    except
-    end;
-  end;
+    SetConnection(nil);
 
   FreeAndNil(FSQL);
   FreeAndNil(FParams);
