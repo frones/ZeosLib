@@ -421,6 +421,7 @@ const
   { Service Parameter Block }
   isc_spb_version1 = byte(1);
   isc_spb_current_version = byte(2);
+  isc_spb_version = isc_spb_current_version;
   isc_spb_version3 = byte(3);
   isc_spb_user_name = isc_dpb_user_name;
   isc_spb_password = isc_dpb_password;
