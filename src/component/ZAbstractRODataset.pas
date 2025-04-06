@@ -2043,7 +2043,7 @@ begin
   FFilterEnabled := False;
   FProperties := TStringList.Create;
   FFilterExpression := TZExpression.Create;
-  FFilterExpression.Tokenizer := CommonTokenizer;
+  FFilterExpression.Tokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
   FFilterStack := TZExecutionStack.Create;
 
   FDataLink := TZDataLink.Create(Self);
@@ -2780,6 +2780,23 @@ end;
 }
 procedure TZAbstractRODataset.SetStatementParams(Statement: IZPreparedStatement;
   ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
+  
+  procedure FixRangeDataType(var AParam: TParam);
+  begin
+    if not Assigned(AParam) then
+      Exit;
+
+    if (AParam.DataType = ftShortint) and ((AParam.AsInteger > 127) or (AParam.AsInteger < -128)) then
+      AParam.DataType := ftInteger
+    else if (AParam.DataType = ftSmallint) and ((AParam.AsInteger > 32768) or (AParam.AsInteger < -32767)) then
+      AParam.DataType := ftInteger
+    else if (AParam.DataType = ftLongWord) and (AParam.AsInteger < 0) then
+      AParam.DataType := ftInteger
+    else if (AParam.DataType = ftByte) and ((AParam.AsInteger > 255) or (AParam.AsInteger < 0)) then
+      AParam.DataType := ftInteger
+    else if (AParam.DataType = ftWord) and ((AParam.AsInteger > 65535) or (AParam.AsInteger < 0)) then
+      AParam.DataType := ftInteger
+  end;
 var
   I: Integer;
   TempParam, Param: TParam;
@@ -2820,6 +2837,7 @@ begin
             Continue;
         end;
 
+        FixRangeDataType(Param);
         SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
       end;
     finally
@@ -4903,8 +4921,12 @@ begin
   if (ResultSet <> nil) and not IsUniDirectional then
   begin
     FIndexFieldNames := Trim(FIndexFieldNames); {bangfauzan modification}
-    DefineSortedFields(Self, {FSortedFields} FIndexFieldNames {bangfauzan modification},
-    FSortedFieldRefs, FSortedComparsionKinds, FSortedOnlyDataFields);
+    DefineSortedFields(Self,
+      {FSortedFields} FIndexFieldNames {bangfauzan modification},
+      Self.FFilterExpression.Tokenizer,
+      FSortedFieldRefs,
+      FSortedComparsionKinds,
+      FSortedOnlyDataFields);
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then

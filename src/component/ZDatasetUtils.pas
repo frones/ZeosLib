@@ -234,7 +234,8 @@ function CompareKeyFields(Field1: TField; ResultSet: IZResultSet;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  const SortedFields: string; out FieldRefs: TObjectDynArray;
+  const SortedFields: string; const Tokenizer: IZTokenizer;
+  out FieldRefs: TObjectDynArray;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 
 {**
@@ -293,10 +294,6 @@ const ProcColDbcToDatasetType: array[TZProcedureColumnType] of TParamType =
 const DatasetTypeToProcColDbc: array[TParamType] of TZProcedureColumnType =
   (pctUnknown{ptUnknown}, pctIn{ptInput}, pctOut{ptOutPut},
     pctInOut{ptInputOutput}, pctReturn{ptResult});
-
-{** Common variables. }
-var
-  CommonTokenizer: IZTokenizer;
 
 implementation
 
@@ -1461,7 +1458,8 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  const SortedFields: string; out FieldRefs: TObjectDynArray;
+  const SortedFields: string; const Tokenizer: IZTokenizer;
+  out FieldRefs: TObjectDynArray;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 var
   I, TokenValueInt: Integer;
@@ -1477,7 +1475,7 @@ begin
   PrevTokenWasField := False;
   SetLength(FieldRefs, FieldCount);
   SetLength(CompareKinds, FieldCount);
-  Tokens := CommonTokenizer.TokenizeBufferToList(SortedFields,
+  Tokens := Tokenizer.TokenizeBufferToList(SortedFields,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
 
   try
@@ -1936,8 +1934,4 @@ begin
   end;
 end;
 
-initialization
-  CommonTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
-finalization
-  CommonTokenizer := nil;
 end.
