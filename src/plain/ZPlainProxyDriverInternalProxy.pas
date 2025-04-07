@@ -197,9 +197,7 @@ end;
 
 procedure TZDbcProxy.BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
 begin
-  //{$IFNDEF ANDROID}
   HTTPReqResp.HTTP.OnValidateServerCertificate := ValidateServerCertificate;
-  //{$ENDIF}
 end;
 {$ENDIF}
 
@@ -221,14 +219,10 @@ begin
     PropList.DelimitedText := Properties;
     {$IFDEF TCERTIFICATE_HAS_PUBLICKEY}
     if PropList.IndexOfName('TofuPubKeys') > 0 then begin
-      {$IFDEF ANDROID}
-      FRIO.HTTPWebNode.InvokeOptions := FRIO.HTTPWebNode.InvokeOptions + [soIgnoreInvalidCerts];
-      {$ELSE}
       FRIO.HTTPWebNode.OnBeforePost := BeforePostData;
       Certs := LowerCase(Trim(PropList.Values['TofuPubKeys']));
       if Certs <> 'yes' then
         FValidPublicKeys.DelimitedText := Certs;
-      {$ENDIF}
     end;
     {$ENDIF}
   finally
