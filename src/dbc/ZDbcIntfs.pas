@@ -4485,8 +4485,10 @@ type
     function GetPassword: ZWideString;
     procedure SetBackupFileName(FileName: ZWideString);
     function GetBackupFileName: ZWideString;
-    procedure SetOnBackupData(Callback: TZBackupDataCallback);
-    function GetOnBackupData: TZBackupDataCallback;
+    function GetInfo: TStrings;
+    procedure SetInfo(NewStrings: TStrings);
+    //procedure SetOnBackupData(Callback: TZBackupDataCallback);
+    //function GetOnBackupData: TZBackupDataCallback;
     procedure Backup;
     property HostName: ZWideString read GetHostName write SetHostName;
     property Database: ZWideString read GetDatabase write SetDatabase;
@@ -4496,7 +4498,9 @@ type
     property UserName: ZWideString read GetUserName write SetUserName;
     property Password: ZWideString read GetPassword write SetPassword;
     property BackupFileName: ZWideString read GetBackupFileName write SetBackupFileName;
-    property OnBackupdata: TZBackupDataCallback read GetOnBackupData write SetOnBackupData;
+    property Info: TStrings read GetInfo write SetInfo;
+    //property OnBackupdata: TZBackupDataCallback read GetOnBackupData write SetOnBackupData;
+
   end;
 
 var
