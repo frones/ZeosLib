@@ -87,6 +87,7 @@ type
     procedure TestSF391;
     procedure TestSF402;
     procedure TestSF421;
+    procedure TestDateTimeOffset;
  end;
 
 {$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
@@ -201,13 +202,11 @@ var
   Query: TZQuery;
   StoredProc: TZStoredProc;
   DblibConn: IZDBLibConnection;
+  FIsDblib: Boolean;
 begin
   if SkipForReason(srClosedBug) then Exit;
   Connection.Connect;
-  if Supports(Connection.DbcConnection, IZDBLibConnection, DblibConn) then begin
-    if (DblibConn.GetHostVersion < 9000000) and (DblibConn.GetServerProvider = spMSSQL) then
-      Fail('This test cannot succeed for MS SQL 2000 with DBLib. The dblib API (dbrpcparam) doesn''t allow to distinguish between empty strings and null.');
-  end;
+  FIsDblib := Supports(Connection.DbcConnection, IZDBLibConnection, DblibConn);
 
   {perfectly resolveable with ODBC, OleDB, ADO}
   StoredProc := TZStoredProc.Create(nil);
@@ -223,12 +222,18 @@ begin
     CheckEquals('xyz', Query.FieldByName('fld1').AsString);
     Query.Close;
 
-    StoredProc.ParamByName('@p').AsString := '';
-    StoredProc.ExecProc;
-    Query.Open;
-    CheckEquals('', Query.FieldByName('fld1').AsString);
-    CheckEquals(False, Query.FieldByName('fld1').IsNull);
-    Query.Close;
+    // The dblib API (dbrpcparam) doesn''t allow to send empty strings. See:
+    // - https://github.com/pymssql/pymssql/issues/243
+    // - https://marc.info/?l=freetds&m=127356206326275
+    // That is why we skip it.
+    if not FIsDblib then begin
+      StoredProc.ParamByName('@p').AsString := '';
+      StoredProc.ExecProc;
+      Query.Open;
+      CheckEquals('', Query.FieldByName('fld1').AsString);
+      CheckEquals(False, Query.FieldByName('fld1').IsNull);
+      Query.Close;
+    end;
 
     StoredProc.ParamByName('@p').Value := Null;
     StoredProc.ExecProc;
@@ -302,6 +307,7 @@ begin
         Query.Sql.Text := 'select * from  #t';
         Query.Open;
         Check(False, 'ado-behavior changed, change the test!');
+        Query.Close;
       except
         Exit;
       end;
@@ -353,6 +359,7 @@ begin
       CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321.12');
     finally
       if Protocol <> 'ado' then begin
+        Query.Close;
         Query.Sql.Text := 'drop table #t';
         Query.ExecSQL;
       end;
@@ -511,12 +518,16 @@ begin
   try
     Query.ParamCheck := false;
     Query.Options := [doCalcDefaults];
-    Query.Sql.Text := 'select * from (values (''apple''), (''banana''), (''cherry'')) as x(fruit)';
+    //This is not compatible with SQL Server 2000
+    //Query.Sql.Text := 'select * from (values (''apple''), (''banana''), (''cherry'')) as x(fruit)';
+    Query.SQL.Text := 'select ''apple'' as fruit union all select ''banana'' union all select ''cherry''';
     Query.Open;
     Query.Locate('fruit', 'cherry', [loPartialKey]);
     CheckEquals(3, Query.RecNo, 'Wrong record number located');
     Query.Close;
-    Query.Sql.Text := 'select * from (values (''apple''), (''''), (''banana''), (''cherry'')) as x(fruit)';
+    //This is not compatible with SQL Server 2000
+    //Query.Sql.Text := 'select * from (values (''apple''), (''''), (''banana''), (''cherry'')) as x(fruit)';
+    Query.SQL.Text := 'select ''apple'' as fruit union all select '''' union all select ''banana'' union all select ''cherry''';
     Query.Open;
     Query.Locate('fruit', 'che', [loPartialKey]);
     CheckEquals(4, Query.RecNo, 'Wrong record number located');
@@ -540,6 +551,9 @@ begin
   Connection.Connect;
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  // This test doesn't work on MS SQL 2000
+  if Connection.ServerVersion < 9000000 then
     Exit;
   Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
   Query := CreateQuery;
@@ -582,44 +596,42 @@ procedure TZTestCompMSSqlBugReport.TestSF402;
 var
   Query: TZQuery;
   dtE, dtA: TDateTime;
-  orgShortDateFormat, orgLongTimeFormat, S: String;
-  orgdSep, orgtSep: Char;
+  S: String;
 begin
   Connection.Connect;
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
     Exit;
   Query := CreateQuery;
-  orgdSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := '-';
-  orgtSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := '-';
-  orgShortDateFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat := 'yyyy/mm/dd';
-  orgLongTimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:nn:ss';
   try
     Query.Sql.Add('set dateformat mdy');
     Query.Sql.Add('select cast(''2020-01-01 08:30:45'' as datetime)');
-    Query.Sql.Add('union');
+    Query.Sql.Add('union all');
     Query.Sql.Add('select cast(''2020-01-01 00:00:00'' as datetime)');
+    Query.Sql.Add('union all');
+    Query.Sql.Add('select cast(''1899-12-30 10:00:00'' as datetime)');
+    Query.Sql.Add('order by 1 Desc');
     Query.Open;
-    //Write(Query.Fields[0].AsString, #10);//08:01:45
     dtE := EncodeDate(2020,01,01);
     dtE := dtE+EncodeTime(8,30,45,0);
     dtA := Query.Fields[0].AsDateTime;
     CheckEqualsDate(dtE, dtA, [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Should be "2020-01-01 08:30:45" ');
-    CheckEquals(DateTimeToStr(dtE{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF}), query.Fields[0].AsString, 'Should be "2020-01-01 08:30:45" ');
+    CheckEquals(DateTimeToStr(dtE), query.Fields[0].AsString, 'Should be "2020-01-01 08:30:45" ');
     Query.Next;
     CheckFalse(Query.Eof);
     dtA := Query.Fields[0].AsDateTime;
-    DateTimeToString(S, '', dtA{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF});
-    CheckEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01" ');
+    S := DateTimeToStr(dtA);
+    CheckEquals(S, query.Fields[0].DisplayText, 'Should be "2020-01-01" ');
+    S := DateToStr(dtA);
+    CheckEquals(S, query.Fields[0].DisplayText, 'Should be "2020-01-01" ');
+    CheckNotEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01 10:00:00" ');
+    Query.Next;
+    CheckFalse(Query.Eof);
+    dtA := Query.Fields[0].AsDateTime;
+    S := TimeToStr(dtA);
+    CheckEquals(S, query.Fields[0].DisplayText, 'Should be "10:00:00" ');
+    CheckNotEquals(S, query.Fields[0].AsString, 'Should be "1899-12-30 10:00:00" ');
   finally
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat := orgShortDateFormat;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := orgLongTimeFormat;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := orgdSep;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := orgtSep;
     FreeAndNil(Query);
   end;
 end;
@@ -641,7 +653,9 @@ begin
     if Protocol = 'ado' then
       Exit;
     q.Sql.Add('create table #t (b varbinary(128));');
-    q.Sql.Add('insert into #t values (0x6170706c65), (0x62616e616e61), (0x636865727279);');
+    q.Sql.Add('insert into #t values (0x6170706c65);');
+    q.Sql.Add('insert into #t values (0x62616e616e61);');
+    q.Sql.Add('insert into #t values (0x636865727279);');
     q.ExecSql;
     q.Sql.Clear;
     q.Sql.Add('select * from #t');
@@ -666,6 +680,33 @@ begin
     q.ExecSql;
   finally
     q.Free;
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.TestDateTimeOffset;
+var
+  Q: TZQuery;
+  Version: Integer;
+begin
+  Connection.Connect;
+  if (Protocol = 'mssql') and (Connection.DbcConnection.GetServerProvider = spMSSQL) then begin
+    Version := Connection.ServerVersion div 1000000;
+    if Version >= 13 then begin
+      Connection.ExecuteDirect('drop table if exists datetimeoffsettest');
+      Connection.ExecuteDirect('create table datetimeoffsettest(id integer not null, value datetimeoffset)');
+      Connection.ExecuteDirect('insert into datetimeoffsettest (id, value) values (20240507, ''2024-05-07 23:00:00 +02:00'')');
+      Q := CreateQuery;
+      try
+        Q.SQL.Text := 'select * from datetimeoffsettest';
+        Q.Open;
+        CheckEquals(1, Q.RecordCount);
+        CheckEquals(20240507, Q.FieldByName('id').AsInteger);
+        CheckEquals(EncodeDateTime(2024, 05, 07, 21, 00, 00, 00), Q.FieldByName('value').AsDateTime);
+        Q.Close;
+      finally
+        FreeAndNil(Q);
+      end;
+    end
   end;
 end;
 
@@ -737,19 +778,18 @@ begin
     {$ENDIF}
     CheckEquals(ord(ftBoolean), ord(Query.Fields[5].DataType));
     //tds returns wrong flags for fixed types... so the test fails
-    if (Protocol = 'mssql') or (Protocol = 'sybase')
-    //if this is fixed by the libs.. this behavior change give us a notifiaction
-    then CheckEquals(ord(ftVarBytes), ord(Query.Fields[6].DataType), 'binary(16)')
-    else CheckEquals(ord(ftBytes), ord(Query.Fields[6].DataType), 'binary(16)');
-    CheckEquals(ord(ftVarBytes), ord(Query.Fields[7].DataType), 'varbinary(16)');
-    CheckEquals(ord(ftBlob), ord(Query.Fields[8].DataType));
+    CheckEquals(ftBytes, Query.Fields[6].DataType, 'binary(16)'); //correct only with metadata
+    CheckEquals(ftVarBytes, Query.Fields[7].DataType, 'varbinary(16)');
+    CheckEquals(ftBlob, Query.Fields[8].DataType, 'Image');
     Query.Insert;
     Query.Fields[0].AsString := 'abc';
     Query.Fields[1].AsInteger := 1;
     Query.Fields[2].AsDateTime := Now;
     GUID1 := StringToGUID(sGUID1);
     GUID2 := StringToGUID(sGUID2);
+    Bts1 := nil;
     System.SetLength(Bts1, 16);
+    Bts2 := nil;
     System.SetLength(Bts2, 16);
     System.Move(Pointer(@GUID1)^, Pointer(Bts1)^, 16);
     System.Move(Pointer(@GUID2)^, Pointer(Bts2)^, 16);

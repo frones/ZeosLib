@@ -55,7 +55,7 @@ unit ZPlainProxyDriverIntf;
 
 interface
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IFDEF ENABLE_PROXY}
 
 uses
   Classes;
@@ -65,11 +65,14 @@ uses
   WideString = String;
   {$ENDIF}
 
+  StringArray = Array of String;
+
   IZDbcProxy = Interface(IUnknown)
     ['{374CAA55-95CD-44FE-8FF3-F90BF8D1DF8C}']
-    procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure Disconnect; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure SetAutoCommit(const Value: LongBool); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    function StartTransaction: Integer; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure Commit; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure Rollback; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     function SetProperties(const Properties : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
@@ -91,15 +94,29 @@ uses
     function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     function GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    /// <summary>
+    ///   Retrieves public keys that are valid now and in the future. Public keys
+    ///   are delimited by a colon (:).
+    /// </summary>
+    function GetPublicKeys: WideString; overload; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    /// <summary>
+    ///   Retrieves public keys that are valid now and in the future. Public keys
+    ///   are delimited by a colon (:).
+    ///   This overload can be used if no connection is established yet.
+    /// </summary>
+    /// <param name="EndPoint">
+    ///   The service endpoint to use.
+    /// </param>
+    function GetPublicKeys(EndPoint: WideString): WideString; overload; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
   end;
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$ENDIF ENABLE_PROXY}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IFDEF ENABLE_PROXY}
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$ENDIF ENABLE_PROXY}
 
 end.
 

@@ -88,6 +88,7 @@ type
     procedure TestDbcBCDValues;
     procedure TestDbcTransaction;
     procedure TestInsertFailAndCorrectCachedUpdates;
+    procedure TestDeleteUpdateDelete;
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -488,6 +489,7 @@ var RS: IZResultSet;
   SelStmt: IZPreparedStatement;
   I: Integer;
   C: Currency;
+  {$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD_E" does not seem to be initialized}{$ENDIF}
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
     BCD_A, BCD_E: TBCD;
@@ -506,13 +508,14 @@ var RS: IZResultSet;
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
     CheckEquals(0, BcdCompare(BCD_A, BCD_E), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD_A));
   end;
+  {$IFDEF FPC}{$POP}{$ENDIF}
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
   begin
     SelStmt.SetResultSetType(ResultSetType);
     for I := 0 to 4 do begin  //force realprepared to test as well
       RS := SelStmt.ExecuteQueryPrepared;
-      if ResultSetType = rtScrollSensitive then
+      if ResultSetType = rtScrollInsensitive then
         RS.GetMetadata.IsWritable(FirstDbcIndex); //force meta loading
       try
         Check(RS.Next, 'No row retrieved from bcd_values');
@@ -534,7 +537,7 @@ var RS: IZResultSet;
 begin
   SelStmt := Connection.PrepareStatement('select * from bcd_values');
   TestColTypes(rtForwardOnly);
-  TestColTypes(rtScrollSensitive);
+  TestColTypes(rtScrollInsensitive);
   SelStmt.SetResultSetConcurrency(rcUpdatable);
   RS := SelStmt.ExecuteQueryPrepared;
   try
@@ -1550,6 +1553,7 @@ begin
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
         CheckEquals(UnicodeString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
         P := ResultSet.GetPAnsiChar(p_name_Index, Len);
+        R := '';
         ZSetString(PAnsiChar(P), Len, R);
         CheckEquals(RawByteString(SNames[name]), R);
         P := ResultSet.GetPWideChar(p_name_Index, Len);
@@ -1819,11 +1823,14 @@ begin
       Txn[False].Rollback;
       Stmt := Connection.CreateStatement;
       Stmt.ExecuteUpdate('delete from people where p_id > 9');
+      Rs.Close;
     end;
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestInsertFailAndCorrectCachedUpdates;
+
+//See: https://sourceforge.net/p/zeoslib/tickets/461/
+procedure TZGenericTestDbcResultSet.TestDeleteUpdateDelete;
 const
   c_id_Index          = FirstDbcIndex + 0;
   c_dep_id_index      = FirstDbcIndex + 1;
@@ -1831,9 +1838,6 @@ var
   Sql: string;
   Statement: IZPreparedStatement;
   ResultSet: IZResultSet;
-  CachedRS: IZCachedResultSet;
-  Resolver: IZCachedResolver;
-  Succeeded: Boolean;
 begin
   Sql := 'DELETE FROM cargo where c_dep_id >= ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
@@ -1844,7 +1848,73 @@ begin
       'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
     CheckNotNull(Statement);
     Statement.SetResultSetConcurrency(rcUpdatable);
-    Statement.SetResultSetType(rtScrollSensitive);
+    Statement.SetResultSetType(rtScrollInsensitive);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID);
+    ResultSet.UpdateInt(c_dep_id_index, 1);
+    ResultSet.InsertRow;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID+1);
+    ResultSet.UpdateInt(c_dep_id_index, 1);
+    ResultSet.InsertRow;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID+2);
+    ResultSet.UpdateInt(c_dep_id_index, 1);
+    ResultSet.InsertRow;
+    ResultSet.First;
+    ResultSet.DeleteRow;
+    ResultSet.Next;
+    ResultSet.UpdateInt(c_dep_id_index, 2);
+    ResultSet.UpdateRow;
+    ResultSet.DeleteRow;
+  finally
+    ResultSet.Close;
+    Connection.Rollback;
+    Connection.CreateStatement.ExecuteUpdate(Sql);
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestInsertFailAndCorrectCachedUpdates;
+const
+  c_id_Index          = FirstDbcIndex + 0;
+  c_dep_id_index      = FirstDbcIndex + 1;
+var
+  Sql, Tmp: string;
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  CachedRS: IZCachedResultSet;
+  Resolver: IZCachedResolver;
+  Succeeded: Boolean;
+  Connection: IZConnection;
+  URL: TZURL;
+begin
+  Sql := 'DELETE FROM cargo where c_dep_id >= ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+  Connection := Self.Connection;
+  Connection.CreateStatement.ExecuteUpdate(Sql);
+  CheckFalse(Connection.IsClosed);
+  if (Provider = spSQLite) then begin  //
+    URL := TZURL.Create;
+    Tmp := Connection.GetURL;
+    URL.URL := Tmp;
+    try
+      if not StrToBoolEx(URL.Properties.Values[ConnProps_ForeignKeys]) then begin
+        URL.Properties.Values[ConnProps_ForeignKeys] := 'True';
+        Tmp := URL.URL;
+        Connection := DriverManager.GetConnection(Tmp);
+      end;
+    finally
+      FreeAndNil(URL);
+    end;
+  end;
+  Connection.StartTransaction;
+  try
+    { Creates prepared statement for cargo table }
+    Statement := Connection.PrepareStatement(
+      'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
+    CheckNotNull(Statement);
+    Statement.SetResultSetConcurrency(rcUpdatable);
+    Statement.SetResultSetType(rtScrollInsensitive);
     ResultSet := Statement.ExecuteQueryPrepared;
     Check(ResultSet.QueryInterface(IZCachedResultSet, CachedRS) = S_OK);
     Resolver := CachedRs.GetNativeResolver;
@@ -1889,7 +1959,7 @@ end;
 
 const
   hl_id_Index           = FirstDbcIndex;
-  stBooleanArray_Index  = FirstDbcIndex+1;
+  stBoolean_Index       = FirstDbcIndex+1;
   stByte_Index          = FirstDbcIndex+2;
   stShort_Index         = FirstDbcIndex+3;
   stInteger_Index       = FirstDbcIndex+4;
@@ -1940,7 +2010,7 @@ var
     begin
       hl_idArray[i] := FirstID+I;
       stBooleanArray[i] := Boolean(Random(1));
-      stByteArray[i] := Random(255);
+      stByteArray[i] := Random(125);
       stShortArray[i] := I;
       stLongArray[I] := I;
       stIntegerArray[I] := I;
@@ -1966,8 +2036,8 @@ begin
   CheckNotNull(PStatement);
   PrepareSomeData;
   PStatement.SetDataArray(hl_id_Index, hl_idArray, stInteger);
-  if LastFieldIndex >= stBooleanArray_Index then
-    PStatement.SetDataArray(stBooleanArray_Index, stBooleanArray, stBoolean);
+  if LastFieldIndex >= stBoolean_Index then
+    PStatement.SetDataArray(stBoolean_Index, stBooleanArray, stBoolean);
   if LastFieldIndex >= stByte_Index then
     PStatement.SetDataArray(stByte_Index, stByteArray, stByte);
   if LastFieldIndex >= stShort_Index then
@@ -2003,7 +2073,7 @@ begin
   if LastFieldIndex >= stBinaryStream_Index then
     PStatement.SetDataArray(stBinaryStream_Index, stBinaryStreamArray, stBinaryStream);
 
-  for i := stBooleanArray_Index to LastFieldIndex do begin
+  for i := stBoolean_Index to LastFieldIndex do begin
     Randomize;
     case TZSQLType(Random(14)+1) of
       stBoolean:
@@ -2167,8 +2237,8 @@ begin
       InternalTestArrayBinding(PStatement, 70, 10, LastFieldIndices[i]);
       PStatement.ClearParameters;
       PStatement.SetInt(hl_id_Index, 81);
-      if LastFieldIndices[i] >= stBooleanArray_Index then
-        PStatement.SetBoolean(stBooleanArray_Index, stBooleanArray[Random(9)]);
+      if LastFieldIndices[i] >= stBoolean_Index then
+        PStatement.SetBoolean(stBoolean_Index, stBooleanArray[Random(9)]);
       if LastFieldIndices[i] >= stByte_Index then
         PStatement.SetByte(stByte_Index, stByteArray[Random(9)]);
       if LastFieldIndices[i] >= stShort_Index then
@@ -2209,6 +2279,7 @@ begin
       begin
         Next;
         CheckEquals(81, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
+        Close;
       end;
     end;
   end else

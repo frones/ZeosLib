@@ -57,13 +57,13 @@ interface
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
+  {$IFNDEF FPC}Types, {$ENDIF}Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
   {$IFEND}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZSysUtils, ZVariant,
   ZCompatibility, ZPlainOracleDriver,
-  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging, ZDbcOracle;
+  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging, ZDbcOracle, ZDbcStatement, ZExceptions;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
@@ -90,7 +90,7 @@ type
   { a struct for the ora var(char/byte) types }
   POCIVary = ^TOCIVary;
   TOCIVary = record
-    Len: sb2;
+    Len: ub2;
     data: array[0..7] of Byte; //just something for debugging
   end;
   {** Declares SQL Object }
@@ -123,27 +123,64 @@ type
   PSB2Array = ^TSB2Array;
   TSB2Array = array[0..0] of sb2;
 
-  PZOCIParamBind = ^TZOCIParamBind;
-  TZOCIParamBind = record
-    {OCI bind Handles}
-    bindpp:     POCIBind; //An address of a bind handle which is implicitly allocated by this call. The bind handle maintains all the bind information for this particular input value. The handle is freed implicitly when the statement handle is deallocated. On input, the value of the pointer must be null or a valid bind handle. binding values
-    valuep:     PAnsiChar; //An address of a data value or an array of data values of the type specified in the dty parameter. An array of data values can be specified for mapping into a PL/SQL table or for providing data for SQL multiple-row operations. When an array of bind values is provided, this is called an array bind in OCI terms.
-                         //For SQLT_NTY or SQLT_REF binds, the valuep parameter is ignored. The pointers to OUT buffers are set in the pgvpp parameter initialized by OCIBindObject().
-                         //If the OCI_ATTR_CHARSET_ID attribute is set to OCI_UTF16ID (replaces the deprecated OCI_UCS2ID, which is retained for backward compatibility), all data passed to and received with the corresponding bind call is assumed to be in UTF-16 encoding.
-    value_sz:   sb4; //The size of a data value. In the case of an array bind, this is the maximum size of any element possible with the actual sizes being specified in the alenp parameter.
-                     //descriptors, locators, or REFs, whose size is unknown to client applications use the size of the structure you are passing in; for example, sizeof (OCILobLocator *).
-    dty:        ub2; //The data type of the value(s) being bound. Named data types (SQLT_NTY) and REFs (SQLT_REF) are valid only if the application has been initialized in object mode. For named data types, or REFs, additional calls must be made with the bind handle to set up the datatype-specific attributes.
-    indp:       PSB2Array; //Pointer to an indicator variable or array. For all data types, this is a pointer to sb2 or an array of sb2s. The only exception is SQLT_NTY, when this pointer is ignored and the actual pointer to the indicator structure or an array of indicator structures is initialized by OCIBindObject(). Ignored for dynamic binds.
-    {zeos}
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a reference of the TZOCIBindValue record</summary>
+  PZOCIBindValue = ^TZOCIBindValue;
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a BindValue record which widened the TZBindValue by a
+  ///  question mark position indicator</summary>
+  TZOCIBindValue = record
+    /// <summary>the generic TZQMarkPosBindValue record</summary>
+    BindValue:  TZBindValue;
+    /// <summary>An address of a bind handle which is implicitly allocated by
+    ///  this call. The bind handle maintains all the bind information for this
+    ///  particular input value. The handle is freed implicitly when the
+    ///  statement handle is deallocated. On input, the value of the pointer
+    ///must be null or a valid bind handle.</summary>
+    bindpp:     POCIBind;
+    /// <summary>An address of a data value or an array of data values of the
+    ///  type specified in the dty parameter. An array of data values can be
+    ///  specified for mapping into a PL/SQL table or for providing data for
+    ///  SQL multiple-row operations. When an array of bind values is provided,
+    ///  this is called an array bind in OCI terms.</summary>
+    /// <remarks>For SQLT_NTY or SQLT_REF binds, the valuep parameter is
+    ///  ignored. The pointers to OUT buffers are set in the pgvpp parameter
+    ///  initialized by OCIBindObject(). If the OCI_ATTR_CHARSET_ID attribute is
+    ///  set to OCI_UTF16ID (replaces the deprecated OCI_UCS2ID, which is
+    ///  retained for backward compatibility), all data passed to and received
+    ///  with the corresponding bind call is assumed to be in UTF-16 encoding.</remarks>
+    valuep:     PAnsiChar;
+    /// <summary>The size of a data value. In the case of an array bind, this is
+    ///  the maximum size of any element possible with the actual sizes being
+    ///  specified in the alenp parameter. sescriptors, locators, or REFs, whose
+    ///  size is unknown to client applications use the size of the structure
+    ///  you are passing in; for example, sizeof (OCILobLocator *).</summary>
+    value_sz:   sb4;
+    /// <summary>The data type of the value(s) being bound. Named data types
+    ///  (SQLT_NTY) and REFs (SQLT_REF) are valid only if the application has
+    ///  been initialized in object mode. For named data types, or REFs,
+    ///  additional calls must be made with the bind handle to set up the
+    ///  datatype-specific attributes.</summary>
+    dty:        ub2;
+    /// <summary>Pointer to an indicator variable or array. For all data types,
+    ///  this is a pointer to sb2 or an array of sb2s. The only exception is
+    ///  SQLT_NTY, when this pointer is ignored and the actual pointer to the
+    ///  indicator structure or an array of indicator structures is initialized
+    ///  by OCIBindObject(). Ignored for dynamic binds.</summary>
+    indp:       PSB2Array;
+    /// <summary>The descriptor type used for binding the values</summary>
     DescriptorType: sb4; //holds our descriptor type we use
-    curelen:      ub4; //the actual number of elements
-
+    /// <summary>the actual number of elements</summary>
+    curelen:      ub4;
+    /// <summary>field.precision used 4 out params; oracle still can't discribe
+    ///  them</summary>
     Precision: sb2; //field.precision used 4 out params
-    Scale:     sb1; //field.scale used 4 out params
+    /// <summary>field.scale used 4 out params; oracle still can't discribe
+    ///  them</summary>
+    Scale:     sb1;
+    /// <summary>Defines the parametername</summary>
     ParamName: String;
   end;
-  PZOCIParamBinds = ^TZOCIParamBinds;
-  TZOCIParamBinds = array[0..MAX_SQLVAR_LIMIT] of TZOCIParamBind; //just a nice dubugging range
 
   PZSQLVar = ^TZSQLVar;
   TZSQLVar = record
@@ -163,13 +200,13 @@ type
     Precision: sb2; //field.precision used 4 out params
     Scale:     sb1; //field.scale used 4 out params
     ColType:   TZSQLType; //Zeos SQLType
+    Data: TBytes;
+    DataIndicators:  Array of sb2;
+    DataLengths:     Array of ub2;
   end;
 
-  TZSQLVars = record
-    AllocNum:  ub4;
-    Variables: array[0..MAX_SQLVAR_LIMIT] of TZSQLVar; //just a nice dubugging range
-  end;
-  PZSQLVars = ^TZSQLVars;
+  TZSQLVarDynArray = Array of TZSQLVar;
+
 
 type
   {$A-}
@@ -180,10 +217,10 @@ type
   {$A+}
 {**
   Allocates memory for Oracle SQL Variables.
-  @param Variables a pointer to array of variables.
+  @param Variables an array of variables.
   @param Count a number of SQL variables.
 }
-procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
+procedure AllocateOracleSQLVars(var Variables: TZSQLVarDynArray; Count: Integer);
 
 {**
   Convert string Oracle field type to SQLType
@@ -195,7 +232,7 @@ function ConvertOracleTypeToSQLType(const TypeName: string;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
-  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
+  ConSettings: PZConSettings): TZSQLType;
 (*
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;*)
@@ -647,6 +684,7 @@ end;
   @param num the pointer to the oci-number
 }
 {$R-} {$Q-}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "GetOrdinalDigits" marked as inline is not inlined}{$ENDIF}
 procedure Curr2Vnu(const Value: Currency; num: POCINumber);
 var I64, IDiv100, IMul100: UInt64;
   x{$IFNDEF CPUX64}, c32, cDiv100, cMul100{$ENDIF}: Cardinal;
@@ -702,6 +740,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**  EH:
   writes a negative unscaled oracle oci number into a buffer
@@ -900,8 +939,8 @@ begin
   //find out if first halfbyte need to be multiplied by 10(padd left)
   if (NumDigit and 1 = 1) then //in case of odd precisons we usually add the values
     if not GetFirstBCDHalfByte and (
-        ((PByte(pLastNibble)^ and $0F) = 0) {in case of last byte is zero: }or
-        ((bcd.SignSpecialPlaces and 63) and 1 = 0)) {in case of odd scale: }
+        ((PByte(pLastNibble)^ and $0F) = 0) {in case of last byte is zero: } or
+        ((bcd.SignSpecialPlaces and 63) and 1 = 1)) {in case of odd scale: }
     then NotMultiplyBy10 := False //we padd the values a half byte to left
     else begin
       NotMultiplyBy10 := True;
@@ -919,7 +958,7 @@ NextDigitOrNum: //main loop without any condition
   end;
   if NotMultiplyBy10 then begin
     if Negative
-    then NumDigit := 101 - PByte(pNum)^ + NumDigit
+    then NumDigit := 101 - (PByte(pNum)^ + NumDigit)
     else NumDigit := PByte(pNum)^ + NumDigit + 1;
     PByte(pNum)^ := Byte(NumDigit);
     if (pNum < pLastNum) then
@@ -1114,20 +1153,16 @@ end;
 
 {**
   Allocates memory for Oracle SQL Variables.
-  @param Variables a pointer to array of variables.
+  @param Variables an array of variables.
   @param Count a number of SQL variables.
 }
-procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
+procedure AllocateOracleSQLVars(var Variables: TZSQLVarDynArray; Count: Integer);
 var
   Size: Integer;
 begin
-  if Variables <> nil then
-    FreeMem(Variables);
-
-  Size := SizeOf(ub4) + Max(1,Count) * SizeOf(TZSQLVar);
-  GetMem(Variables, Size);
-  FillChar(Variables^, Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-  Variables^.AllocNum := Count;
+  Size := SizeOf(TZSQLVar) * Count;
+  SetLength(Variables, Count);
+  FillChar(Variables[0], Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
 end;
 
 {**
@@ -1190,13 +1225,19 @@ end;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
-  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
+  ConSettings: PZConSettings): TZSQLType;
 label VCS;
   procedure CharacterSizeToByteSize(var DataSize: ub4; Precision: Integer);
   begin
-    //EH: Note NCHAR, NVARCHAR2, CLOB, and NCLOB columns are always character-based.
+    // EH: Note NCHAR, NVARCHAR2, CLOB, and NCLOB columns are always character-based.
+    // MShark67: Adjusted the UTF16 buffer size down to 2 times character size instead of 4.  Needs testing.
+    // The question is... can a single ansi character become two UTF16 chars (a surrogate pair.)
+	// Marsupilami79: The thing is: Oracle seens to not support surrogate pairs in NVARCHAR2 - or they count as
+	// two characters. See https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Data-Types.html :
+	// "The number of bytes can be up to two times size for AL16UTF16 encoding and three times size for UTF8 encoding."
+	// These usuall only cover the Basic Multilingual Plane on Unicode.
     if (ScaleOrCharSetForm = SQLCS_NCHAR) or (ConSettings.ClientCodePage.Encoding = ceUTF16)
-    then DataSize := Precision shl 2
+    then DataSize := Precision shl 1
     else if (ConSettings.ClientCodePage.CharWidth > 1)
       then DataSize := Precision * Byte(ConSettings.ClientCodePage.CharWidth)
       else DataSize := Precision;
@@ -1398,7 +1439,7 @@ VCS:            CharacterSizeToByteSize(DataSize, Precision);
         {DescriptorType := OCI_DTYPE_ROWID;
         DataSize := SizeOf(POCIRowid);}
         Precision := DataSize;
-        DataSize := Max(20, DataSize);
+        DataSize := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(20, DataSize);
         goto VCS;
       end;
     SQLT_NTY {NAMED DATATYPE / struct }: begin
@@ -1472,7 +1513,7 @@ VCS:            CharacterSizeToByteSize(DataSize, Precision);
         DataType := SQLT_UIN;
         DataSize := SizeOf(Word);
       end
-    //ELSE raise Exception.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
+    //ELSE raise EZSQLException.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
   end;
 end;
 (*
@@ -1913,7 +1954,7 @@ begin
         Status := Param.csform;
       end else Status := Param.Scale;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Status, ConSettings, Param.IODirection);
+        Param.DescriptorType, Param.Precision, Status, ConSettings);
       if (Param.SQLType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
         if (Param.csform = SQLCS_NCHAR) or ((Consettings.ClientCodePage.Encoding = ceUTF16) and (Param.DataType <> SQLT_LNG)) then begin
           Param.CodePage := zCP_UTF16;
@@ -2254,9 +2295,12 @@ begin
         if Param.DataType <> SQLT_CLOB then
           Param.Precision := Param.GetUb2(OCI_ATTR_CHAR_SIZE);
         Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
+        // Comment by EH: A separate Variable would be better because Scale should
+        // be empty for character fields. I (JB) agree to this.
+        Param.Scale := Param.csform;
       end;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
+        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings);
       if (Param.SQLType in [stString, stAsciiStream]) then begin
         {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
           and is different to the native db charset

@@ -108,7 +108,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcMetadata;
+uses ZSysUtils, ZDbcMetadata, ZTokenizer, ZGenericSqlAnalyser;
 
 { TZGenericTestDbcMetadata }
 
@@ -213,6 +213,7 @@ end;
 procedure TZGenericTestDbcMetadata.TestMetadataGetColumns;
 var
   Index: Integer;
+  {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "DataType.." not used} {$ENDIF}
   procedure CheckColumns(Catalog, Schema, TableName, ColumnName: string;
   DataType: SmallInt; TypeName: string; ColumnSize, BufferLength, DecimalDigits,
   Radix, Nullable: Integer; Remarks, ColumnDef: string; SqlDataType,
@@ -241,6 +242,7 @@ var
     CheckEquals(UpperCase(IsNullable), UpperCase(ResultSet.GetStringByName('IS_NULLABLE')));
     Inc(Index);
   end;
+  {$IFDEF FPC} {$POP} {$ENDIF}
 begin
   Index := 1;
   ResultSet := MD.GetColumns(Catalog, Schema, 'people', '');
@@ -529,6 +531,12 @@ type
     function GetConnectionTransaction: IZTransaction;
     procedure Commit;
     procedure Rollback;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
@@ -549,17 +557,21 @@ begin
   inherited AfterConstruction;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQL,Info" not used} {$ENDIF}
 function TDummyDbcConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Info" not used} {$ENDIF}
 function TDummyDbcConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TDummyDbcConnection.Rollback;
 begin
@@ -577,13 +589,25 @@ begin
   Result := 0;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Info" not used} {$ENDIF}
 function TDummyDbcConnection.CreateStatementWithParams(
   Info: TStrings): IZStatement;
 begin
   Result := nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TDummyDbcConnection.GetConnectionTransaction: IZTransaction;
+begin
+  Result := nil;
+end;
+
+function TDummyDbcConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := nil;
+end;
+
+function TDummyDbcConnection.GetTokenizer: IZTokenizer;
 begin
   Result := nil;
 end;
@@ -677,7 +701,7 @@ begin
     end;
   end;
  
-  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN_ID');
+  ResultSet := MD.GetSequences(Catalog, Schema, MD.AddEscapeCharToWildcards('GEN_ID'));
   PrintResultSet(ResultSet, False);
   Check(ResultSet.Next, 'There should be a sequence "GEN_ID"');
   CheckEquals(CatalogNameIndex, Resultset.FindColumn('SEQUENCE_CAT'));
@@ -699,7 +723,7 @@ begin
     Exit;
   end;
 
-  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT_RETURNING_BI');
+  ResultSet := MD.GetTriggers(Catalog, Schema, '', MD.GetConnection.GetMetadata.AddEscapeCharToWildcards('INSERT_RETURNING_BI'));
   PrintResultSet(ResultSet, False);
   Check(ResultSet.Next, 'There should be a trigger "INSERT_RETURNING_BI"');
 

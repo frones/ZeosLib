@@ -103,6 +103,7 @@ begin
   FreeMem(FBuffer, BINARY_BUFFER_SIZE);
 end;
 
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "Buffer" does not seem to be initialized}{$ENDIF}
 procedure TZTestAbstractBlobCase.TestBlob;
 var
   Blob: IZBlob;
@@ -156,7 +157,9 @@ begin
     Blob := nil;
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "Buf" does not seem to be initialized}{$ENDIF}
 procedure TZTestAbstractBlobCase.TestBlobClone;
 var
   Blob: IZBlob;
@@ -195,7 +198,9 @@ begin
     FreeAndNil(OpenLobStream);
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "Buf" does not seem to be initialized}{$ENDIF}
 procedure TZTestAbstractBlobCase.TestBlobNil;
 var
   Blob: IZBlob;
@@ -259,6 +264,7 @@ begin
     FreeAndNil(OpenLobStream);
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 { TZTestColumnInfoCase }
 

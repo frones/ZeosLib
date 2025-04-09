@@ -8,9 +8,9 @@ unit zcore;
 interface
 
 uses
-  ZClasses, ZCollections, ZCompatibility, ZExpression, ZExprParser, 
-  ZExprToken, ZFunctions, ZMatchPattern, ZMessages, ZSysUtils, ZTokenizer, 
-  ZVariables, ZVariant, ZURL, ZEncoding, ZFastCode, ZConnProperties;
+  ZClasses, ZCollections, ZCompatibility, ZEncoding, ZExpression, ZExprParser, 
+  ZExprToken, ZFastCode, ZFunctions, ZMatchPattern, ZMessages, ZSysUtils, 
+  ZTokenizer, ZVariables, ZVariant, ZBase64, ZXmlCompat;
 
 implementation
 

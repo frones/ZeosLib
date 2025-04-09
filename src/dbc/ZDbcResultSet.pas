@@ -56,15 +56,12 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
-  SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBcd,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZDbcIntfs, ZDbcLogging, ZSysUtils, ZCompatibility, ZVariant, ZClasses;
+  ZDbcIntfs, ZDbcLogging, ZSysUtils, ZCompatibility, ZVariant, ZClasses, ZExceptions;
 
 type
   {** Implements Abstract ResultSet. }
@@ -93,6 +90,7 @@ type
     FUniTemp: UnicodeString;
     LastWasNull: Boolean;
     FOpenLobStreams: TZSortedList;
+    FCursorLocation: TZCursorLocation;
 
     function CreateForwardOnlyException: EZSQLException;
     procedure CheckClosed;
@@ -101,6 +99,12 @@ type
     procedure Open; virtual;
 
     procedure AfterClose; virtual;
+    /// <summary>Maps the given <c>Metadata</c> column name to its
+    ///  <c>Metadata</c> column index. First searches with case-sensivity then,
+    ///  if nothing matches, a case.insensitive search is performed.
+    /// <param>"ColumnName" the name of the column</param>
+    /// <returns>the column index of the given column name. If the ColumnName
+    ///  was not found an EZSQLException is thrown.</returns>
     function GetColumnIndex(const ColumnName: string): Integer;
     property RowNo: Integer read FRowNo write FRowNo;
     property LastRowNo: Integer read FLastRowNo write FLastRowNo;
@@ -158,84 +162,697 @@ type
     ///  generating method. So we start from the premisse you have your own
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
+    /// <summary>get the number of columns in this <c>ResultSet</c> interface.</summary>
+    /// <returns>the number of columns</returns>
+    function GetColumnCount: Integer;
 
     //======================================================================
     // Methods for accessing results by column index
     //======================================================================
 
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Byte</c> value.The driver will
+    ///  try to convert the value if it's not a Byte value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetByte(ColumnIndex: Integer): Byte;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>ShortInt</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetShort(ColumnIndex: Integer): ShortInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Word</c> value.The driver will
+    ///  try to convert the value if it's not a Word value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetWord(ColumnIndex: Integer): Word;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>SmallInt</c> value.The driver will
+    ///  try to convert the value if it's not a SmallInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetSmall(ColumnIndex: Integer): SmallInt;
-    function GetBytes(ColumnIndex: Integer): TBytes;
-    function GetAsciiStream(ColumnIndex: Integer): TStream; virtual;
-    function GetAnsiStream(ColumnIndex: Integer): TStream; virtual;
-    function GetUnicodeStream(ColumnIndex: Integer): TStream; virtual;
-    function GetUTF8Stream(ColumnIndex: Integer): TStream; virtual;
-    function GetBinaryStream(ColumnIndex: Integer): TStream; virtual;
-    function GetDataSet(ColumnIndex: Integer): IZDataSet; virtual;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBytes</c> value.The driver will
+    ///  try to convert the value if it's not a TBytes value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>nil</c>. The value otherwise.</returns>
+    function GetBytes(ColumnIndex: Integer): TBytes; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into ASCII.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
+    function GetAsciiStream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  UTF8 encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
+    function GetAnsiStream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of UTF16 characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGNVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into UTF16
+    ///  encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
+    function GetUnicodeStream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  UTF8 encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
+    function GetUTF8Stream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of a column in the current row as a stream of
+    ///  Gets the value of the designated column in the current row of this
+    ///  <c>ResultSet</c> object as a binary stream of uninterpreted bytes. The
+    ///  value can then be read in chunks from the stream. This method is
+    ///  particularly suitable for retrieving large <c>LONGVARBINARY</c> values.
+    /// </summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
+    function GetBinaryStream(ColumnIndex: Integer): TStream;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZResultSet</c> object.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>ResultSet</c> object representing the SQL
+    ///  <c>ResultSet</c> value in the specified column otherwise</returns>
+    function GetResultSet(ColumnIndex: Integer): IZResultSet; virtual;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a TZVariant record.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-Variant</c>. The variable value otherwise.</returns>
     function GetValue(ColumnIndex: Integer): TZVariant;
-    function GetDefaultExpression(ColumnIndex: Integer): String; virtual;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value. Note this method
+    ///  is obsolate. It always calls the GetTime using the TZTime overload.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTime(ColumnIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Date value. Note this method
+    ///  is obsolate. It always calls the GetDate using the TZDate overload.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDate(ColumnIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Timestamp value. Note this method
+    ///  is obsolate. It always calls the GetTimestamp using the TZTimestamp
+    ///  overload.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
 
     //======================================================================
     // Methods for accessing results by column name
     //======================================================================
 
+    /// <summary>Indicates if the value of the designated column in the current
+    ///  row of this <c>ResultSet</c> object is Null.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>true</c>. <c>false</c> otherwise.</returns>
     function IsNullByName(const ColumnName: string): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PAnsiChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver try convert the value if it's not a
+    ///  raw text value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PWideChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver will try to convert the value if it's
+    ///  not a UTF16 text value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in words.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>String</c>. This method equals to
+    ///  GetUnicodeString on Unicode-Compilers. For Raw-String compilers the
+    ///  string encoding is defined by W2A2WEncodingSource of the
+    ///  ConnectionSettings record. The driver will try to convert the
+    ///  value if it's necessary.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetStringByName(const ColumnName: string): String;
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>AnsiString</c>. The driver will
+    ///  try to convert the value if it's not a raw value in operating system
+    ///  encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UTF8String</c>. The driver will
+    ///  try to convert the value if it's not a raw value in UTF8 encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     {$ENDIF}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>RawByteString</c>.
+    ///  The driver will try to convert the value if it's not a raw value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UnicodeString</c> in
+    ///  the pascal programming language. The driver will try to convert the
+    ///  value if it's not a value in UTF16 encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUnicodeStringByName(const ColumnName: string): UnicodeString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Boolean</c> value.The driver will
+    ///  try to convert the value if it's not a Boolean value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>False</c>. The value otherwise.</returns>
     function GetBooleanByName(const ColumnName: string): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Byte</c> value.The driver will
+    ///  try to convert the value if it's not a Byte value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetByteByName(const ColumnName: string): Byte;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>ShortInt</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetShortByName(const ColumnName: string): ShortInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Word</c> value.The driver will
+    ///  try to convert the value if it's not a Byte value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetWordByName(const ColumnName: string): Word;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>SmallInt</c> value.The driver will
+    ///  try to convert the value if it's not a SmallInt value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetSmallByName(const ColumnName: string): SmallInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Cardinal</c> value.The driver will
+    ///  try to convert the value if it's not a Cardinal value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetUIntByName(const ColumnName: string): Cardinal;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Integer</c> value.The driver will
+    ///  try to convert the value if it's not a Integer value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetIntByName(const ColumnName: string): Integer;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UInt64</c> value.The driver will
+    ///  try to convert the value if it's not a UInt64 value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetULongByName(const ColumnName: string): UInt64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Int64</c> value.The driver will
+    ///  try to convert the value if it's not a Int64 value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetLongByName(const ColumnName: string): Int64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Single</c> value.The driver will
+    ///  try to convert the value if it's not a Single value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetFloatByName(const ColumnName: string): Single;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Double</c> value.The driver will
+    ///  try to convert the value if it's not a Double value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDoubleByName(const ColumnName: string): Double;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Currency</c> value.The driver will
+    ///  try to convert the value if it's not a Currency value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetCurrencyByName(const ColumnName: string): Currency;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBCD</c> value.The driver will
+    ///  try to convert the value if it's not a TBCD value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Resuls" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TGUID</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-UID</c>. The value otherwise.</param>
     procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
-    function GetBytesByName(const ColumnName: string): TBytes;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBytes</c> value.The driver will
+    ///  try to convert the value if it's not a TBytes value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>nil</c>. The value otherwise.</returns>
+    function GetBytesByName(const ColumnName: string): TBytes; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PByte</c> binary reference.
+    ///  Live time is per call. It's not guaranteed the address is valid after
+    ///  the row position changed, or another column of same row has been
+    ///  accessed. It is an error to write into the buffer. The driver will try
+    ///  to convert the value if it's not a binary value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
+    function GetBytesByName(const ColumnName: string; out Len: NativeUInt): PByte; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PByte</c> binary reference.
+    ///  Live time is per call. It's not guaranteed the address is valid after
+    ///  the row position changed, or another column of same row has been
+    ///  accessed. It is an error to write into the buffer. The driver will try
+    ///  to convert the value if it's not a binary value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetDateByName(const ColumnName: string): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Date value. Note this method
+    ///  is obsolate. It always calls the GetDate using the TZDate overload.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     procedure GetDateByName(const ColumnName: string; var Result: TZDate); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value. Note this method
+    ///  is obsolate. It always calls the GetTime using the TZTime overload.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimeByName(const ColumnName: string): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTime</c>. The value otherwise.</returns>
     procedure GetTimeByName(const ColumnName: string; Var Result: TZTime); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Timestamp value. Note this method
+    ///  is obsolate. It always calls the GetTimestamp using the TZTimestamp
+    ///  overload.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestampByName(const ColumnName: string): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTimestamp</c> value. The driver
+    ///  will try to convert the value if it's not a Timestamp value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTimestamp</c>. The value otherwise.</param>
     procedure GetTimeStampByName(const ColumnName: string; var Result: TZTimeStamp); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into ASCII.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetAsciiStreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  operating system encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetAnsiStreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  UTF8 encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetUTF8StreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of UTF16 characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGNVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into UTF16
+    ///  encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of a column in the current row as a stream of
+    ///  Gets the value of the designated column in the current row of this
+    ///  <c>ResultSet</c> object as a binary stream of uninterpreted bytes. The
+    ///  value can then be read in chunks from the stream. This method is
+    ///  particularly suitable for retrieving large <c>LONGVARBINARY</c> values.
+    /// </summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetBinaryStreamByName(const ColumnName: string): TStream;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZBlob</c> object.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>Blob</c> object representing the SQL <c>BLOB</c> value in
+    ///  the specified column otherwise</returns>
     function GetBlobByName(const ColumnName: string; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    function GetDataSetByName(const ColumnName: String): IZDataSet;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZResultSet</c> object.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>ResultSet</c> object representing the SQL
+    ///  <c>ResultSet</c> value in the specified column otherwise</returns>
+    function GetResultSetByName(const ColumnName: String): IZResultSet;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a TZVariant record.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-Variant</c>. The variable value otherwise.</returns>
     function GetValueByName(const ColumnName: string): TZVariant;
+    /// <summary>Gets the DefaultExpression value of the designated column in
+    /// the current row of this <c>ResultSet</c> object as a <c>String</c>.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the DefaultExpression value</returns>
+    function GetDefaultExpressionByName(const ColumnName: string): string;
 
     //=====================================================================
     // Advanced features:
     //=====================================================================
 
     function GetWarnings: EZSQLWarning; virtual;
-    procedure ClearWarnings; virtual;
 
+    procedure ClearWarnings; virtual;
+    /// <summary>Not yet implpemented. Gets the name of the SQL cursor used by
+    ///  this <c>ResultSet</c> object. In SQL, a result table is retrieved
+    ///  through a cursor that is named. The current row of a result set can be
+    ///  updated or deleted using a positioned update/delete statement that
+    ///  references the cursor name. To insure that the cursor has the proper
+    ///  isolation level to support update, the cursor's <c>select</c> statement
+    ///  should be of the form 'select for update'. If the 'for update' clause
+    ///  is omitted, the positioned updates may fail.
+    ///  The ZDBC API supports this SQL feature by providing the name of the
+    ///  SQL cursor used by a <c>ResultSet</c> object. The current row of a
+    ///  <c>ResultSet</c> object is also the current row of this SQL cursor.
+    ///  <B>Note:</B> If positioned update is not supported, a
+    ///  <c>EZSQLException</c> is thrown.</summary>
+    /// <returns>the SQL name for this <c>ResultSet</c> object's cursor</returns>
     function GetCursorName: String; virtual;
+    /// <summary>Retrieves the IZResultSetMetadata interface containing all
+    ///  Informations of the <c>ResultSet</c> object's columns.</summary>
+    /// <returns>the description interface of this <c>ResultSet</c> object's
+    /// columns.</returns>
     function GetMetaData: IZResultSetMetaData; virtual;
-    function FindColumn(const ColumnName: string): Integer; virtual;
+    /// <summary>Maps the given <c>Metadata</c> column name to its
+    ///  <c>Metadata</c> column index. First searches with case-sensivity then,
+    ///  if nothing matches, a case.insensitive search is performed.
+    /// <param>"ColumnName" the name of the column</param>
+    /// <returns>the column index of the given column name or an
+    ///  InvalidDbcIndex if nothing was found</returns>
+    function FindColumn(const ColumnName: string): Integer;
 
     //---------------------------------------------------------------------
     // Traversal/Positioning
@@ -341,6 +958,13 @@ type
     // Properties
     //---------------------------------------------------------------------
 
+    /// <summary>Gives a hint as to the direction in which the rows in this
+    ///  <c>ResultSet</c> object will be processed. Default is fdForward.
+    ///  The initial value is determined by the
+    ///  <c>Statement</c> object
+    ///  that produced this <c>ResultSet</c> object.
+    ///  The fetch direction may be changed at any time.</summary>
+    /// <param>"Value" one of <c>fdForward, fdReverse, fdUnknown</c>.</param>
     procedure SetFetchDirection(Direction: TZFetchDirection); virtual;
     function GetFetchDirection: TZFetchDirection; virtual;
 
@@ -349,6 +973,10 @@ type
 
     function GetType: TZResultSetType; virtual;
     function GetConcurrency: TZResultSetConcurrency; virtual;
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the cursortype of this resultset</returns>
+    function GetCursorLocation: TZCursorLocation;
 
     function GetPostUpdates: TZPostUpdatesMode;
     function GetLocateUpdates: TZLocateUpdatesMode;
@@ -419,9 +1047,9 @@ type
     procedure MoveToCurrentRow; virtual;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs): Integer; virtual;
+      const CompareFuncs: TZCompareFuncs; NullsFirst: Boolean = false): Integer; virtual;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs; virtual;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs; virtual;
 
     function GetStatement: IZStatement; virtual;
 
@@ -435,6 +1063,7 @@ type
     function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetString(ColumnIndex: Integer): String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
+    function GetDefaultExpression(ColumnIndex: Integer): string;
   public //setter
     procedure UpdateNull(ColumnIndex: Integer);
     procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
@@ -451,7 +1080,29 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
+    /// <summary>Updates the designated column with a <c>PAnsiChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in bytes.</param>
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
+    /// <summary>Updates the designated column with a <c>PWideChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in words.</param>
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt); overload;
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -468,6 +1119,16 @@ type
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
     procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+    /// <summary>Updates the designated column with a binary stream value.
+    ///  The <c>updateXXX</c> methods are used to update column values in the
+    ///  current row or the insert row. The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database. </summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the new column value</param>
     procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
@@ -526,6 +1187,11 @@ type
     //FRawTemp: RawByteString; //place holder for PAnsiChar
     //FUniTemp: UnicodeString; //place holder for PWideChar
     function CreateBinaryException: EZSQLException;
+    /// <summary>Creates a lob stream</summary>
+    /// <param>"CodePage" the lob codepage. 0 means it's a binary stream</param>
+    /// <param>"LobStreamMode" the stream mode on open the lob. It's one of
+    ///  <c>lsmRead, lsmWrite, lsmReadWrite</c></param>
+    /// <returns>a TStream object</returns>
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; virtual; abstract;
   public //the string implementation
     function GetRawByteString(CodePage: Word): RawByteString;
@@ -561,6 +1227,7 @@ type
     procedure AfterConstruction; override;
   public //might be obsolete in future
     function IsClob: Boolean;
+    function IsCached:  Boolean;
     function Length: Integer; virtual; abstract;
   public
     function IsEmpty: Boolean; virtual; abstract;
@@ -568,7 +1235,7 @@ type
     procedure SetUpdated(Value: Boolean); virtual;
     procedure Clear; virtual; abstract;
     procedure Open(LobStreamMode: TZLobStreamMode); virtual;
-  public //add an update notify handle for the datasets oslt
+  public //add an update notify handle for the ResultSets oslt
     procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);
   public //bin implementation
     function GetString: RawByteString;
@@ -709,7 +1376,7 @@ type
     FInConstructionState: Boolean;
     FOpenLobStreams: TZSortedList;
   protected
-    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer; override;
   protected
     procedure FlushMemToStream(Buf: Pointer; Len: NativeUInt; Stream: TStream); virtual;
     procedure ReadStreamToMem(var Buf: Pointer; var Len: NativeUint; Stream: TStream); virtual;
@@ -723,7 +1390,7 @@ type
   {** EH: implements a codepage conversion stream helper to read data only}
   TZCodePageConversionROStream = class(TZCodePageConversionStream)
   protected
-    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer; override;
   end;
 
   TZVarVarLenDataRefStream = class(TMemoryStream)
@@ -735,7 +1402,7 @@ type
     FOwner: IZLob; //this keeps data alive while the stream is underway
     FOpenLobStreams: TZSortedList;
   protected
-    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer; override;
   public
     Constructor Create(const Owner: IZLob; CodePage: Word;
       VarLenDataRef: PZVarLenDataRef; LobStreamMode: TZLobStreamMode;
@@ -800,10 +1467,10 @@ type
   TZMemoryReferencedCLob = class(TZMemoryReferencedLob, IZBlob, IZClob);
 
 
-{$IFDEF USE_SYNCOMMONS}
+{$IF defined(USE_SYNCOMMONS) or defined(MORMOT2)}
 const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
-{$ENDIF USE_SYNCOMMONS}
+{$IFEND}
 
 implementation
 
@@ -811,152 +1478,152 @@ uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, Math;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameters not used intentionally
-function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, dataset ...
+function CompareNothing(V1, V2: Pointer): Integer; //emergency exit for complex types we can't sort quickly like arrays, ResultSet ...
 begin
   Result := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VBoolean)-Ord(TZVariant(V2).VBoolean);
+  Result := Ord(PZVariant(V1)^.VBoolean)-Ord(PZVariant(V2)^.VBoolean);
 end;
 
-function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBoolean_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBoolean_Asc(V1, V2);
 end;
 
-function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareInt64_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VInteger > TZVariant(V2).VInteger)-Ord(TZVariant(V1).VInteger < TZVariant(V2).VInteger);
+  Result := Ord(PZVariant(V1)^.VInteger > PZVariant(V2)^.VInteger)-Ord(PZVariant(V1)^.VInteger < PZVariant(V2)^.VInteger);
 end;
 
-function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareInt64_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareInt64_Asc(Null1, Null2, V1, V2);
+  Result := -CompareInt64_Asc(V1, V2);
 end;
 
-function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUInt64_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VUInteger > TZVariant(V2).VUInteger)-Ord(TZVariant(V1).VUInteger < TZVariant(V2).VUInteger);
+  Result := Ord(PZVariant(V1)^.VUInteger > PZVariant(V2)^.VUInteger)-Ord(PZVariant(V1)^.VUInteger < PZVariant(V2)^.VUInteger);
 end;
 
-function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUInt64_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUInt64_Asc(V1, V2);
 end;
 
-function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDouble_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(CompareValue(TZVariant(V1).VDouble, TZVariant(V2).VDouble));
+  Result := Ord(CompareValue(PZVariant(V1)^.VDouble, PZVariant(V2)^.VDouble));
 end;
 
-function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDouble_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
+  Result := -CompareDouble_Asc(V1, V2);
 end;
 
-function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareCurrency_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VCurrency > TZVariant(V2).VCurrency)-Ord(TZVariant(V1).VCurrency < TZVariant(V2).VCurrency);
+  Result := Ord(PZVariant(V1)^.VCurrency > PZVariant(V2)^.VCurrency)-Ord(PZVariant(V1)^.VCurrency < PZVariant(V2)^.VCurrency);
 end;
 
-function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareCurrency_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
+  Result := -CompareCurrency_Asc(V1, V2);
 end;
 
-function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBigDecimal_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZBCDCompare(PBCD(@TZVariant(V1).VBigDecimal.Precision)^, PBCD(@TZVariant(V2).VBigDecimal.Precision)^);
+  Result := ZBCDCompare(PBCD(@PZVariant(V1)^.VBigDecimal.Precision)^, PBCD(@PZVariant(V2)^.VBigDecimal.Precision)^);
 end;
 
-function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBigDecimal_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBigDecimal_Asc(V1, V2);
 end;
 
-function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDateTime_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZCompareDateTime(TZVariant(V1).VDateTime, TZVariant(V2).VDateTime);
+  Result := ZCompareDateTime(PZVariant(V1)^.VDateTime, PZVariant(V2)^.VDateTime);
 end;
 
-function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareTimeStamp_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
+  Result := ZCompareTimeStamp(PZVariant(V1)^.VTimeStamp, PZVariant(V2)^.VTimeStamp);
 end;
 
-function CompareBytes_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDateTime_Desc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1 else
-  begin
-    Result := Length(TZVariant(V1).VRawByteString) - Length(TZVariant(V2).VRawByteString); //overflow save!
-    if Result = 0 then
-      Result := ZMemLComp(Pointer(TZVariant(V1).VRawByteString), Pointer(TZVariant(V2).VRawByteString),
-        Length(TZVariant(V1).VRawByteString));
-  end;
+  Result := -CompareDateTime_Asc(V1, V2);
 end;
 
-function CompareBytes_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareTimeStamp_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBytes_Asc(Null1, Null2, V1, V2);
+  Result := -CompareTimeStamp_Asc(V1, V2);
+end;
+
+function CompareDate_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareDate(PZVariant(V1)^.VDate, PZVariant(V2)^.VDate);
+end;
+
+function CompareDate_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareDate_Asc(V1, V2);
+end;
+
+function CompareTime_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareTime(PZVariant(V1)^.VTime, PZVariant(V2)^.VTime);
+end;
+
+function CompareTime_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareDateTime_Asc(V1, V2);
+end;
+
+function CompareBytes_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Length(PZVariant(V1)^.VRawByteString) - Length(PZVariant(V2)^.VRawByteString); //overflow save!
+  if Result = 0 then
+    Result := ZMemLComp(Pointer(PZVariant(V1)^.VRawByteString), Pointer(PZVariant(V2)^.VRawByteString),
+      Length(PZVariant(V1)^.VRawByteString));
+end;
+
+function CompareBytes_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareBytes_Asc(V1, V2);
 end;
 
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-function CompareRawByteString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}
+function CompareRawByteString_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-    AnsiStrComp(PAnsiChar(TZVariant(V1).VRawByteString), PAnsiChar(TZVariant(V2).VRawByteString));
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+    AnsiStrComp(PAnsiChar(PZVariant(V1)^.VRawByteString), PAnsiChar(PZVariant(V2)^.VRawByteString));
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
-function CompareRawByteString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareRawByteString_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareRawByteString_Asc(Null1, Null2, V1, V2);
+  Result := -CompareRawByteString_Asc(V1, V2);
 end;
 {$ENDIF}
 
-function CompareUnicodeString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeString_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
   {$IFDEF UNICODE}
-  else Result := AnsiCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+  Result := AnsiCompareStr(PZVariant(V1)^.VUnicodeString, PZVariant(V2)^.VUnicodeString);
   {$ELSE}
-  else Result := WideCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+  Result := WideCompareStr(PZVariant(V1)^.VUnicodeString, PZVariant(V2)^.VUnicodeString);
   {$ENDIF}
 end;
 
-function CompareUnicodeString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeString_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicodeString_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUnicodeString_Asc(V1, V2);
 end;
 
 { TZLocalMemCLob }
@@ -1248,10 +1915,6 @@ begin
   FClosed := False;
 end;
 
-{**
-  Resets cursor position of this recordset and
-  the overrides should reset the prepared handles.
-}
 procedure TZAbstractResultSet.ResetCursor;
 begin
   if not FClosed then begin
@@ -1306,15 +1969,6 @@ end;
 // Methods for accessing results by column index
 //======================================================================
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetByte(ColumnIndex: Integer): Byte;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1323,15 +1977,6 @@ begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(ColumnIndex);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetShort(ColumnIndex: Integer): ShortInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1340,15 +1985,6 @@ begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetInt(ColumnIndex);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>word</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetWord(ColumnIndex: Integer): Word;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1357,15 +1993,6 @@ begin
   Result := Word(IZResultSet(FWeakIZResultSetPtr).GetInt(ColumnIndex));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1374,27 +2001,6 @@ begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetInt(ColumnIndex);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a stream of ASCII characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <char>LONGVARCHAR</char> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into ASCII.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream of one-byte ASCII characters; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetAsciiStream(ColumnIndex: Integer): TStream;
 var Blob: IZBlob;
     Clob: IZCLob;
@@ -1422,28 +2028,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  as a stream of Unicode characters.
-  The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large<code>LONGNVARCHAR</code>values.  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be UTF16.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream in Java UTF16 byte format; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
 var Blob: IZBlob;
     CLob: IZCLob;
@@ -1463,26 +2047,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of a column in the current row as a stream of
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a binary stream of
-  uninterpreted bytes. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGVARBINARY</code> values.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream of uninterpreted bytes;
-    if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetBinaryStream(ColumnIndex: Integer): TStream;
 var Blob: IZBlob;
 begin
@@ -1500,30 +2064,13 @@ begin
   end;
 end;
 
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>IZResultSet</code> object
-  in the Java programming language.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return a <code>IZResultSet</code> object representing the SQL
-    <code>IZResultSet</code> value in the specified column
-}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // base class - parameter not used intentionally
-function TZAbstractResultSet.GetDataSet(ColumnIndex: Integer): IZDataSet;
+function TZAbstractResultSet.GetResultSet(ColumnIndex: Integer): IZResultSet;
 begin
   Result := nil;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Variant</code> object.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return a <code>Variant</code> object representing the SQL
-    any value in the specified column
-}
 function TZAbstractResultSet.GetValue(ColumnIndex: Integer): TZVariant;
 var
   Metadata: TZAbstractResultSetMetadata;
@@ -1590,109 +2137,39 @@ begin
     Result.VType := vtNull;
 end;
 
-{**
-  Gets the DefaultExpression value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code>.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the DefaultExpression value
-}
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly dataset - parameter not used intentionally
-function TZAbstractResultSet.GetDefaultExpression(ColumnIndex: Integer): string;
+function TZAbstractResultSet.GetDefaultExpressionByName(
+  const ColumnName: string): string;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stString);
-{$ENDIF}
-  Result := '';
+  Result := IZResultSet(FWeakIZResultSetPtr).GetDefaultExpression(GetColumnIndex(ColumnName));
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
+
 
 //======================================================================
 // Methods for accessing results by column name
 //======================================================================
 
-{**
-  Indicates if the value of the designated column in the current row
-  of this <code>ResultSet</code> object is Null.
-
-  @param columnName the SQL name of the column
-  @return if the value is SQL <code>NULL</code>, the
-    value returned is <code>true</code>. <code>false</code> otherwise.
-}
 function TZAbstractResultSet.IsNullByName(const ColumnName: string): Boolean;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).IsNull(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnName the SQL name of the column
-  @param Len the length in bytes
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string;
   out Len: NativeUInt): PAnsiChar;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(GetColumnIndex(ColumnName), Len);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PWideChar</code> in the Delphi programming language.
-
-  @param columnName the SQL name of the column
-  @param Len the Length of th UCS2 string in codepoints
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string;
   out Len: NativeUInt): PWideChar;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetPWideChar(GetColumnIndex(ColumnName), Len);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetStringByName(const ColumnName: string): String;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetString(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a stream of ASCII characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <char>LONGVARCHAR</char> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into single byte
-  raw format depending to operating system.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream of one-byte characters; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetAnsiStream(ColumnIndex: Integer): TStream;
 var Blob: IZBlob;
   CLob: IZCLob;
@@ -1712,43 +2189,12 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a stream of
-  Unicode characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGVARCHAR</code> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  do any necessary conversion from the database format into single byte
-  raw format depending to operating system.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
-  stream may return <code>0</code> when the method <code>available</code>
-  is called whether there is data available or not.
-
-  @param columnName the SQL name of the column
-  @return a Java input stream that delivers the database column value
-    as a stream of one byte characters.
-    If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
-}
 function TZAbstractResultSet.GetAnsiStreamByName(
   const ColumnName: string): TStream;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetAnsiStream(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>AnsiString</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 {$IFNDEF NO_ANSISTRING}
 function TZAbstractResultSet.GetAnsiStringByName(const ColumnName: string): AnsiString;
 begin
@@ -1756,29 +2202,6 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  as a stream of Unicode characters.
-  The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large<code>LONGVARCHAR</code>values.  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be UTF-8,
-  as specified in the Java virtual machine specification.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream in Java UTF-8 byte format; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetUTF8Stream(ColumnIndex: Integer): TStream;
 var Blob: IZBlob;
     CLob: IZCLob;
@@ -1787,8 +2210,8 @@ begin
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
   Result := nil;
-  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex) then
-    LastWasNull := True
+  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex)
+  then LastWasNull := True
   else begin
     Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
@@ -1798,43 +2221,12 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a stream of
-  Unicode characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGVARCHAR</code> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be Java UTF-8,
-  as defined in the Java virtual machine specification.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
-  stream may return <code>0</code> when the method <code>available</code>
-  is called whether there is data available or not.
-
-  @param columnName the SQL name of the column
-  @return a Java input stream that delivers the database column value
-    as a stream of two-byte Unicode characters.
-    If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
-}
 function TZAbstractResultSet.GetUTF8StreamByName(
   const ColumnName: string): TStream;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUTF8Stream(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UTF8String</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 {$IFNDEF NO_UTF8STRING}
 function TZAbstractResultSet.GetUTF8StringByName(const ColumnName: string): UTF8String;
 begin
@@ -1842,170 +2234,62 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>RawByteString</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetRawByteStringByName(const ColumnName: string): RawByteString;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetRawByteString(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UnicodeString</code> in the Object Pascal programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetUnicodeStringByName(const ColumnName: string):
   UnicodeString;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUnicodeString(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>boolean</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>false</code>
-}
 function TZAbstractResultSet.GetBooleanByName(const ColumnName: string): Boolean;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetBoolean(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetByteByName(const ColumnName: string): Byte;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetShortByName(const ColumnName: string): ShortInt;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetInt(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>word</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetWordByName(const ColumnName: string): Word;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>small</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetSmallByName(const ColumnName: string): SmallInt;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetInt(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  an <code>uint</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetUIntByName(const ColumnName: string): Cardinal;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  an <code>int</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetIntByName(const ColumnName: string): Integer;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetInt(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>ulong</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetULongByName(const ColumnName: string): UInt64;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetULong(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>long</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetLongByName(const ColumnName: string): Int64;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetLong(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>float</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetFloatByName(const ColumnName: string): Single;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetFloat(GetColumnIndex(ColumnName));
@@ -2017,58 +2301,21 @@ begin
   IZResultSet(FWeakIZResultSetPtr).GetGUID(GetColumnIndex(ColumnName), Result);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>double</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetDoubleByName(const ColumnName: string): Double;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetDouble(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>currency</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractResultSet.GetCurrencyByName(const ColumnName: string): Currency;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetCurrency(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.math.BigDecimal</code> in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
 begin
   IZResultSet(FWeakIZResultSetPtr).GetBigDecimal(GetColumnIndex(ColumnName), Result);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var P: PByte;
   L: NativeUInt;
@@ -2082,16 +2329,12 @@ begin
     Result := nil;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
+function TZAbstractResultSet.GetBytesByName(const ColumnName: string;
+  out Len: NativeUInt): PByte;
+begin
+  Result := IZResultSet(FWeakIZResultSetPtr).GetBytes(GetColumnIndex(ColumnName), Len);
+end;
 
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetBytesByName(const ColumnName: string): TBytes;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetBytes(GetColumnIndex(ColumnName));
@@ -2107,44 +2350,17 @@ begin
     Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZAbstractResultSet.GetDateByName(const ColumnName: string;
   var Result: TZDate);
 begin
   IZResultSet(FWeakIZResultSetPtr).GetDate(GetColumnIndex(ColumnName), Result);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetDateByName(const ColumnName: string): TDateTime;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetDate(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>,
-    the value returned is <code>null</code>
-}
 {$IFDEF FPC}
   {$PUSH}
   {$WARN 5057 off : Local variable "T" does not seem to be initialized}
@@ -2161,30 +2377,12 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>,
-    the value returned is <code>null</code>
-}
 procedure TZAbstractResultSet.GetTimeByName(const ColumnName: string;
   var Result: TZTime);
 begin
   IZResultSet(FWeakIZResultSetPtr).GetTime(GetColumnIndex(ColumnName), Result);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>,
-    the value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetTimeByName(const ColumnName: string): TDateTime;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetTime(GetColumnIndex(ColumnName));
@@ -2206,140 +2404,43 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Timestamp</code> object.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZAbstractResultSet.GetTimestampByName(const ColumnName: string;
   var Result: TZTimeStamp);
 begin
   IZResultSet(FWeakIZResultSetPtr).GetTimestamp(GetColumnIndex(ColumnName), Result);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Timestamp</code> object.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetTimestampByName(const ColumnName: string): TDateTime;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetTimestamp(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a stream of
-  ASCII characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGVARCHAR</code> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into ASCII.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
-  stream may return <code>0</code> when the method <code>available</code>
-  is called whether there is data available or not.
-
-  @param columnName the SQL name of the column
-  @return a Java input stream that delivers the database column value
-    as a stream of one-byte ASCII characters.
-    If the value is SQL <code>NULL</code>,
-    the value returned is <code>null</code>.
-}
 function TZAbstractResultSet.GetAsciiStreamByName(const ColumnName: string): TStream;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetAsciiStream(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a stream of
-  Unicode characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGNVARCHAR</code> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be Java UTF16.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
-  stream may return <code>0</code> when the method <code>available</code>
-  is called whether there is data available or not.
-
-  @param columnName the SQL name of the column
-  @return a Java input stream that delivers the database column value
-    as a stream of two-byte UTF16 characters.
-    If the value is SQL <code>NULL</code>, the value returned is <code>null</code>.
-}
 function TZAbstractResultSet.GetUnicodeStreamByName(const ColumnName: string): TStream;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetUnicodeStream(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a stream of uninterpreted
-  <code>byte</code>s.
-  The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGVARBINARY</code>
-  values.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream. Also, a
-  stream may return <code>0</code> when the method <code>available</code>
-  is called whether there is data available or not.
-
-  @param columnName the SQL name of the column
-  @return a Java input stream that delivers the database column value
-    as a stream of uninterpreted bytes;
-    if the value is SQL <code>NULL</code>, the result is <code>null</code>
-}
 function TZAbstractResultSet.GetBinaryStreamByName(const ColumnName: string): TStream;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetBinaryStream(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Blob</code> object
-  in the Java programming language.
-
-  @param colName the name of the column from which to retrieve the value
-  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
-    the specified column
-}
 function TZAbstractResultSet.GetBlobByName(const ColumnName: string;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetBlob(GetColumnIndex(ColumnName), LobStreamMode);
 end;
 
-function TZAbstractResultSet.GetDataSetByName(const ColumnName: string): IZDataSet;
+function TZAbstractResultSet.GetResultSetByName(const ColumnName: string): IZResultSet;
 begin
-  Result := IZResultSet(FWeakIZResultSetPtr).GetDataSet(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetResultSet(GetColumnIndex(ColumnName));
 end;
 
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Variant</code> object.
-
-  @param colName the name of the column from which to retrieve the value
-  @return a <code>Blob</code> object representing the SQL <code>Any</code>
-    value in the specified column
-}
 function TZAbstractResultSet.GetValueByName(const ColumnName: string): TZVariant;
 begin
   Result := IZResultSet(FWeakIZResultSetPtr).GetValue(GetColumnIndex(ColumnName));
@@ -2382,50 +2483,27 @@ procedure TZAbstractResultSet.ClearWarnings;
 begin
 end;
 
-{**
-  Gets the name of the SQL cursor used by this <code>ResultSet</code>
-  object.
-
-  <P>In SQL, a result table is retrieved through a cursor that is
-  named. The current row of a result set can be updated or deleted
-  using a positioned update/delete statement that references the
-  cursor name. To insure that the cursor has the proper isolation
-  level to support update, the cursor's <code>select</code> statement should be
-  of the form 'select for update'. If the 'for update' clause is
-  omitted, the positioned updates may fail.
-
-  <P>The JDBC API supports this SQL feature by providing the name of the
-  SQL cursor used by a <code>ResultSet</code> object.
-  The current row of a <code>ResultSet</code> object
-  is also the current row of this SQL cursor.
-
-  <P><B>Note:</B> If positioned update is not supported, a
-  <code>SQLException</code> is thrown.
-
-  @return the SQL name for this <code>ResultSet</code> object's cursor
-}
 function TZAbstractResultSet.GetCursorName: String;
 begin
   Result := '';
 end;
 
-{**
-  Retrieves the  number, types and properties of
-  this <code>ResultSet</code> object's columns.
-  @return the description of this <code>ResultSet</code> object's columns
-}
+function TZAbstractResultSet.GetCursorLocation: TZCursorLocation;
+begin
+  Result := FCursorLocation;
+end;
+
 function TZAbstractResultSet.GetMetaData: IZResultSetMetaData;
 begin
   Result := TZAbstractResultSetMetadata(FMetadata);
 end;
 
-{**
-  Maps the given <code>ResultSet</code> column name to its
-  <code>ResultSet</code> column index.
+function TZAbstractResultSet.GetColumnCount: Integer;
+begin
+  CheckClosed;
+  Result := TZAbstractResultSetMetadata(FMetadata).GetColumnCount;
+end;
 
-  @param columnName the name of the column
-  @return the column index of the given column name
-}
 function TZAbstractResultSet.GetColumnIndex(const ColumnName: string): Integer;
 begin
   Result := FindColumn(ColumnName);
@@ -2434,13 +2512,6 @@ begin
     raise EZSQLException.Create(Format(SColumnWasNotFound, [ColumnName]));
 end;
 
-{**
-  Maps the given <code>ResultSet</code> column name to its
-  <code>ResultSet</code> column index.
-
-  @param columnName the name of the column
-  @return the column index of the given column name
-}
 function TZAbstractResultSet.FindColumn(const ColumnName: string): Integer;
 begin
   CheckClosed;
@@ -2476,11 +2547,6 @@ begin
   Result := {(FLastRowNo > 0) and} (FRowNo = FLastRowNo);
 end;
 
-{**
-  Moves the cursor to the front of
-  this <code>ResultSet</code> object, just before the
-  first row. This method has no effect if the result set contains no rows.
-}
 procedure TZAbstractResultSet.BeforeClose;
 begin
   ResetCursor;
@@ -2518,7 +2584,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH}
-  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5024 off : Parameter "Row" not used}
   {$WARN 5033 off : Function result does not seem to be set}
 {$ENDIF}
 function TZAbstractResultSet.MoveAbsolute(Row: Integer): Boolean;
@@ -2556,14 +2622,6 @@ begin
   Result := FFetchDirection;
 end;
 
-{**
-  Gives a hint as to the direction in which the rows in this
-  <code>ResultSet</code> object will be processed.
-  The initial value is determined by the
-  <code>Statement</code> object
-  that produced this <code>ResultSet</code> object.
-  The fetch direction may be changed at any time.
-}
 procedure TZAbstractResultSet.SetFetchDirection(Direction: TZFetchDirection);
 begin
   if Direction <> fdForward then
@@ -3386,7 +3444,6 @@ var ImmediatelyReleasable: IImmediatelyReleasable;
   i: Integer;
 begin
   if not FClosed and Assigned(Statement){virtual RS ! } then begin
-    FColumnsInfo.Clear;
     FClosed := True;
     FRowNo := 0;
     FLastRowNo := 0;
@@ -3399,6 +3456,7 @@ begin
     if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    AfterClose;
   end;
 end;
 
@@ -3456,12 +3514,14 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs;
+  NullsFirst: Boolean = false): Integer;
 var
   I: Integer;
   ColumnIndex: Integer;
   SaveRowNo: Integer;
   Value1, Value2: TZVariant;
+  IsNull1, IsNull2: Boolean;
 begin
   Result := 0;
   SaveRowNo := RowNo;
@@ -3472,9 +3532,21 @@ begin
 
       MoveAbsolute(Row1);
       Value1 := GetValue(ColumnIndex);
+      IsNull1 := (Value1.VType = vtNull);
       MoveAbsolute(Row2);
       Value2 := GetValue(ColumnIndex);
-      Result := CompareFuncs[i]((Value1.VType = vtNull), (Value2.VType = vtNull), Value1, Value2);
+      IsNull2 := (Value2.VType = vtNull);
+      if IsNull1 xor IsNull2 then begin
+        if IsNull1 then
+          Result := 1
+        else
+          Result := -1;
+        if NullsFirst then
+          Result := Result * (-1);
+      end else if IsNull1 and IsNull2 then
+        Result := 0
+      else
+        Result := CompareFuncs[i](@Value1, @Value2);
       if Result <> 0 then Break;
     end;
   finally
@@ -3483,7 +3555,7 @@ begin
 end;
 
 function TZAbstractResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-  const CompareKinds: TComparisonKindArray): TCompareFuncs;
+  const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 var I: Integer;
 begin
   {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
@@ -3504,8 +3576,12 @@ begin
             Result[i] := CompareCurrency_Asc;
           stBigDecimal:
             Result[i] := CompareBigDecimal_Asc;
-          stDate, stTime, stTimestamp:
-            Result[i] := CompareDateTime_Asc;
+          stDate:
+            Result[i] := CompareDate_Asc;
+          stTime:
+            Result[i] := CompareTime_Asc;
+          stTimestamp:
+            Result[i] := CompareTimeStamp_Asc;
           stBytes, stBinaryStream, stGUID:
             Result[i] := CompareBytes_Asc;
           stString, stAsciiStream, stUnicodeString, stUnicodeStream:
@@ -3535,8 +3611,12 @@ begin
             Result[i] := CompareCurrency_Desc;
           stBigDecimal:
             Result[i] := CompareBigDecimal_Desc;
-          stDate, stTime, stTimestamp:
-            Result[i] := CompareDateTime_Desc;
+          stDate:
+            Result[i] := CompareDate_Desc;
+          stTime:
+            Result[i] := CompareTime_Desc;
+          stTimestamp:
+            Result[i] := CompareTimeStamp_Desc;
           stBytes, stBinaryStream, stGUID:
             Result[i] := CompareBytes_Desc;
           stString, stAsciiStream, stUnicodeString, stUnicodeStream:
@@ -3597,6 +3677,17 @@ begin
     FLastRowFetchLogged := True;
   end else result := nil;
 end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // readonly ResultSet - parameter not used intentionally
+function TZAbstractReadOnlyResultSet.GetDefaultExpression(
+  ColumnIndex: Integer): string;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  Result := '';
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -3742,17 +3833,6 @@ begin
   raise CreateReadOnlyException;;
 end;
 
-{**
-  Updates the designated column with a binary stream value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-  @param length the length of the stream
-}
 procedure TZAbstractReadOnlyResultSet.UpdateBinaryStream(ColumnIndex: Integer;
   const Value: TStream);
 begin
@@ -3954,34 +4034,12 @@ begin
   raise CreateReadOnlyException;;
 end;
 
-{**
-  Updates the designated column with a <code>PAnsiChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param value the new column value
-  @param len the length in bytes of the value
-}
 procedure TZAbstractReadOnlyResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; var Len: NativeUInt);
 begin
   raise CreateReadOnlyException;;
 end;
 
-{**
-  Updates the designated column with a <code>PAnsiChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-  @param Len the length of the value in codepointe
-}
 procedure TZAbstractReadOnlyResultSet.UpdatePWideChar(ColumnIndex: Integer;
   Value: PWideChar; var Len: NativeUInt);
 begin
@@ -4533,7 +4591,7 @@ begin
   Stream.Read(Buf^, Len); //Move data
 end;
 
-function TZCodePageConversionStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+function TZCodePageConversionStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer;
 begin
   Result := Memory;
   if FInConstructionState then begin
@@ -4733,6 +4791,11 @@ begin
 end;
 {$ENDIF NO_UTF8STRING}
 
+function TZAbstractLob.IsCached: Boolean;
+begin
+  Result := (Self is TZVarLenDataRefLob);  // True if cached.
+end;
+
 function TZAbstractLob.IsClob: Boolean;
 begin
   Result := FWeakRefOfClob <> nil
@@ -4839,8 +4902,8 @@ begin
     Len := 0;
   end else begin
     Stream := CreateLobStream(zCP_UTF16, lsmRead);
-    Len := Stream.Size shr 1;
     try
+      Len := Stream.Size shr 1;
       SetLength(ConversionBuf, Len);
       Stream.Read(Pointer(ConversionBuf)^, Stream.Size);
     finally
@@ -4858,7 +4921,7 @@ var Stream: TStream;
 begin
   Stream := CreateLobStream(FColumnCodePage, lsmWrite);
   try
-    Stream.Write(Buffer, Len)
+    Stream.Write(Buffer^, Len)
   finally
     Stream.Free;
   end;
@@ -5078,6 +5141,7 @@ begin
   if (Buffer <> nil) and (Len >0) then begin
     SetCapacity(Len);
     Move(Buffer^, FDataRefAddress.VarLenData.Data, Len);
+    FDataRefAddress.IsNotNull := 1;
   end;
 end;
 
@@ -5214,7 +5278,7 @@ var P: Pointer;
 begin
   FOwner := Owner;
   FVarLenDataRef := VarLenDataRef;
-  Assert(VarLenDataRef <> nil);
+  Assert(VarLenDataRef <> nil); //Debug only
   FColumnCodePage := CodePage;
   fLobStreamMode := LobStreamMode;
   FOpenLobStreams := OpenLobStreams;
@@ -5256,7 +5320,7 @@ begin
   FOwner := nil;
 end;
 
-function TZVarVarLenDataRefStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+function TZVarVarLenDataRefStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer;
 begin
   if (NewCapacity = 0) then begin
     if (FVarLenDataRef.VarLenData <> nil) then begin
@@ -5376,8 +5440,7 @@ end;
 
 { TZCodePageConversionROStream }
 
-function TZCodePageConversionROStream.Realloc(
-  var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+function TZCodePageConversionROStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer;
 begin
   if FInConstructionState
   then Result := inherited Realloc(NewCapacity)

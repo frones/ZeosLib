@@ -67,12 +67,11 @@ interface
   { Parameters common for all DBC's }
 const
   /// <type>String</type>
-  /// <alias>ConnProps_Username</alias>
+  /// <Alias>username</Alias>
+  /// <Associates>ConnProps_Username,ConnProps_TrustedConnection</Associates>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_UID]=userid</syntax>
-  /// <summary>
-  ///  Specifies the user ID used to log in to the database.
-  /// </summary>
+  /// <summary>Specifies the user ID used to log in to the database.</summary>
   /// <remarks>
   ///  You must always supply a user ID when connecting to a database, unless
   ///  you are using an integrated/trusted or Kerberos login.
@@ -80,11 +79,10 @@ const
   ConnProps_UID = 'UID';
   /// <type>String</type>
   /// <alias>ConnProps_UID</alias>
+  /// <Associates>ConnProps_UID,ConnProps_TrustedConnection</Associates>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_Username]=username</syntax>
-  /// <summary>
-  ///  Specifies the user name used to log in to the database.
-  /// </summary>
+  /// <summary>Specifies the user name used to log in to the database.</summary>
   /// <remarks>
   ///  You must always supply a user name when connecting to a database, unless
   ///  you are using an integrated/trusted or Kerberos login.
@@ -123,72 +121,128 @@ const
   /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_LibLocation]=filename</syntax>
-  /// <summary>
-  ///  Provides a filename for a client library.
-  /// </summary>
-  /// <remarks>
-  ///  If provided then we'll try to load the library otherwise the default
-  ///  lib-names will be used for.
+  /// <summary>Provides a filename for a client library.</summary>
+  /// <remarks>If provided then we'll try to load the library otherwise the
+  ///  default lib-names will be used for.
   /// </remarks>
   ConnProps_LibLocation = 'LibLocation';
-  // Type: STR, like CP_UTF8
-  // Codepage to interact with driver
+  /// <Type>String</Type>
+  /// <usage>Connection</usage>
+  /// <Associates>ConnProps_Charset_NONE_Alias</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_CodePage]={value}</syntax>
+  /// <summary>Specifies the character set to interact with driver.</summary>
+  /// <remarks>If you're accessing a CharacterSet "NONE" Firebird/Interbase
+  ///  database you should always use the CharacterSet "NONE" as connection
+  ///  characterset. In addition it's recommented to specify which characterset
+  ///  the "NONE" represents by adding:
+  ///  <c>Properties.Values['Charset_NONE_Alias'] := 'WIN1251'</c> f.e.
+  ///  For odbc_a and ole_db(raw longvarchar only) it's implemented as:
+  ///  set a custom characterset to notify zeos about conversion routines.
+  ///  <c>Note for ODBC_A</c>: This CodePage must be equal for all fields(ODBC).
+  ///  Otherwise use the ODBC_W driver. It's defined as:
+  ///  First place in a name as an charset alias, second add ':'+(codepage),
+  ///  third add '/'+(maximum amount of bytes per character). The definition
+  ///  must equal to database defined charset.
+  ///  Example: CharacterSet=latin1:1252/1 or CharacterSet=utf8:65001/4
+  /// </remarks>
+  ConnProps_Characterset = 'CharacterSet';
+  /// <type>String</type>
+  /// <Alias>CharacterSet</Alias>
+  /// <Associates>ConnProps_Charset_NONE_Alias</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_CodePage]={value}</syntax>
+  /// <summary>Deprecated use ConnProps_Characterset instead. Specifies the
+  ///  character set to interact with driver.</summary>
+  /// <remarks>If you're accessing a CharacterSet "NONE" Firebird/Interbase
+  ///  database you should always use the CharacterSet "NONE" as connection
+  ///  characterset. In addition it's recommented to specify which characterset
+  ///  the "NONE" represents by adding:
+  ///  <c>Properties.Values['Charset_NONE_Alias'] := 'WIN1251'</c> f.e.
+  ///  For odbc_a and ole_db(raw longvarchar only) it's implemented as:
+  ///  set a custom characterset to notify zeos about conversion routines.
+  ///  <c>Note for ODBC_A</c>: This CodePage must be equal for all fields(ODBC).
+  ///  Otherwise use the ODBC_W driver. It's defined as:
+  ///  First place in a name as an charset alias, second add ':'+(codepage),
+  ///  third add '/'+(maximum amount of bytes per character). The definition
+  ///  must equal to database defined charset.
+  ///  Example: codepage=latin1:1252/1 or codepage=utf8:65001/4
+  /// </remarks>
   ConnProps_CodePage = 'codepage';
-  // Type: BOOLEAN
-  ConnProps_Transliterate = 'Transliterate';
-  // Type: CP_UTF16 | CP_UTF8 | GET_ACP
-  // Same as ControlsCodePage property
-  ConnProps_ControlsCP = 'controls_cp'; //dreprecaded use ConnProps_RawStringEncoding  instead
-  // Type: DB_CP | CP_UTF8 | DefaultSystemCodePage
+  /// <type>Enumerator</type>
+  /// <Values>DB_CP|CP_UTF8|DefaultSystemCodePage</Values>
+  /// <Alias>RawStringEncoding</Alias>
+  /// <Associates>ConnProps_RawStringEncoding</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_ControlsCP]={value}</syntax>
+  /// <summary>dreprecaded use ConnProps_RawStringEncoding  instead;
+  ///  See ConnProps_RawStringEncoding</summary>
+  ConnProps_ControlsCP = 'controls_cp';
+  /// <type>Enumerator</type>
+  /// <Values>DB_CP|CP_UTF8|DefaultSystemCodePage</Values>
+  /// <Alias>RawStringEncoding</Alias>
+  /// <Associates>ConnProps_RawStringEncoding</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_ControlsCP]={value}</syntax>
+  /// <summary>Defines how Zeos treads the SQL and the
+  ///  <c>Get/SetString(Ansi-Compilers)</c> and <c>Get/SetRawByteString</c> for
+  ///  UTF16 columns/parameters/connections on zdbc. These enum-names are mapped
+  ///  the the W2A2WEncodingSource of the connection settings records.</summary>
   ConnProps_RawStringEncoding = 'RawStringEncoding';
-  // Type: INT
-  // The login timeout to use in seconds.
+  /// <type>Number</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_Timeout]={value}</syntax>
+  /// <summary>Defines the connection/login timeout in seconds. A value smaller
+  ///  than 1 means infinate.</summary>
   ConnProps_Timeout = 'timeout';
-  // Type: STR
-  // Format to display date, like YYYY-MM-DD
-  ConnProps_DateDisplayFormat = 'DateDisplayFormat'; //deprecated not used anymore
-  // Type: STR
-  // Format to read date
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateReadFormat]={value}</syntax>
+  /// <summary>Format to read a date from a database, like YYYY-MM-DD</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateReadFormat = 'DateReadFormat';
-  // Type: STR
-  // Format to write date
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateWriteFormat]={value}</syntax>
+  /// <summary>Format to write a date into a database, like YYYY-MM-DD</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateWriteFormat = 'DateWriteFormat';
-  // Type: STR, like HH:MM:SS
-  // Format to display time
-  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat'; //deprected not used anymore
-  // Type: STR
-  // Format to read time
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_TimeReadFormat]={value}</syntax>
+  /// <summary>Format to read a time value from a database, like HH:MM:SS.FFF</summary>
   ConnProps_TimeReadFormat = 'TimeReadFormat';
-  // Type: STR
-  // Format to write time
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_TimeReadFormat]={value}</syntax>
+  /// <summary>Format to write a time value into a database, like HH:MM:SS.FFF</summary>
   ConnProps_TimeWriteFormat = 'TimeWriteFormat';
-  // Type: STR
-  // Format to display date & time
-  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat'; //deprected not used anymore
-  // Type: STR
-  // Format to read date & time
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateTimeReadFormat]={value}</syntax>
+  /// <summary>Format to read a timestamp from database, like YYYY-MM-DD HH:NN:SS.F</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to
+  ///  use it! Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
   /// <type>String</type>
-  /// <summary>
-  ///  Format to read date & time, like YYYY-MM-DD HH:NN:SS.F
-  /// </summary>
-  /// <default>YYYY-MM-DD HH:NN:SS.FFF</default>
-  /// <remarks>
-  ///  Just simple formats are supported. ISO 8601 is prefered.
-  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to use it!
-  /// </remarks>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateTimeWriteFormat]={value}</syntax>
+  /// <summary>Format to write a timestamp into database, like YYYY-MM-DD HH:NN:SS.F</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to
+  ///  use it! Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
   /// <type>String</type>
-  /// <summary>
-  ///  Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote chars
-  ///  are relevant for Postgres dollar quoting, multi drivers like ado, odbc,
-  ///  OleDB same as SQLite whare all known identifier quotes are allowed
+  /// <summary>Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote
+  ///  chars are relevant for Postgres dollar quoting, multi drivers like ado,
+  ///  odbc, OleDB same as SQLite where all known identifier quotes are allowed
   /// </summary>
   /// <default>""</default>
-  /// <remarks>
-  ///  the quote char(s) count can contain a single char like sql standard " or
-  ///  maximum two characters
-  /// </remarks>
+  /// <remarks>the quote char(s) count can contain a single char like sql standard " or
+  ///  maximum two characters</remarks>
   ConnProps_IdentifierQuotes = 'identifier_quotes';
 
   { Parameters common for all DBC's }
@@ -216,15 +270,6 @@ const
 
   { Parameters common for several drivers }
 
-{$IF DEFINED(ENABLE_DBLIB)}
-  { Parameters that are for datasets and statements but could be set for connections
-    (see comment above) }
-
-  // Type: STR, like CP_UTF8
-  // ?
-  DSProps_ResetCodePage = 'ResetCodePage';
-{$IFEND}
-
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
@@ -234,12 +279,14 @@ const
   DSProps_InternalBufSize = 'internal_buffer_size';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES)}
-  // Type: BOOLEAN
-  // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
-  DSProps_CachedLobs = 'CachedLob';
-  // Type: INT
-{$IFEND}
+//{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES) OR DEFINED(ENABLE_MYSQL)}
+  /// <type>Enumerator</type>
+  /// <Values>None|OnLoad|OnAccess</Values>
+  /// <usage>Connection,DataSet</usage>
+  /// <syntax>Properties.Values[DSProps_LobCacheMode]={value}</syntax>
+  /// <summary>How to cache lob types. OnLoad caches lobs on record fetch. OnAccess caches lobs only when accessed.</summary>
+  DSProps_LobCacheMode = 'LobCacheMode';
+//{$IFEND}
 
 {$IF DEFINED(ENABLE_SQLITE) OR DEFINED(ENABLE_POSTGRESQL)}
   { Parameters that are for datasets and statements but could be set for connections
@@ -260,8 +307,9 @@ const
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
-  // Type: STR
-  // the ole provider
+  /// <summary>Defines the driver Provider as a String. This property is used
+  ///  for the OleDB connection only. Example:
+  ///  Properties.Values[ConnProps_Provider]=SQLNCLI11.1</summary>
   ConnProps_Provider = 'Provider';
 {$IFEND}
 
@@ -285,10 +333,10 @@ const
 
 {$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
   // Type: INT
-  // how many executions must be done to realy prepare the statement?
+  // how many executions must be done to really prepare the statement?
   // JDBC does prepare on after 4 executions.
   // A negative value means never prepare.
-  // actually default is 2 executions before prepare the stmt on the server
+  // Current default is 2 executions before preparing the statement on the server
   DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
   // Type: BOOLEAN
   // http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
@@ -466,9 +514,6 @@ const
   // http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
   // http://http://zeoslib.sourceforge.net/viewtopic.php?p=16646&sid=130
   ConnProps_CheckFieldVisibility = 'CheckFieldVisibility';
-  // Type: BOOLEAN
-  // If not set, use cached table info
-  ConnProps_NoTableInfoCache = 'NoTableInfoCache';
   // Type: STR
   // Value used in 'SET standard_conforming_strings = <Value>' query on connect,
   // refer to Postgre manual for details
@@ -478,6 +523,7 @@ const
     Refer to Postgre manual for types and acceptable values of these parameters }
   ConnProps_ApplicationName = 'application_name';
   ConnProps_RequireSSL = 'requiressl';
+  ConnProps_SSLPassword = 'sslpassword';
   ConnProps_SSLMode = 'sslmode';
   ConnProps_SSLCert = 'sslcert';
   ConnProps_SSLCompression = 'sslcompression';
@@ -508,9 +554,13 @@ const
   // fetch row by row from Server -> do not cache the results in libpq
   DSProps_SingleRowMode = 'SingleRowMode';
   // Type: BOOLEAN
-  // force binary results to be retieved from server. supported since Protocol V3
-  // except libs like pgbouncer which have no pqexecparams/pqexecprepared
+  // force binary results to be retrieved from server. supported since Protocol
+  // V3 except libs like pgbouncer which have no pqexecparams/pqexecprepared
   DSProps_BinaryWireResultMode = 'BinaryWireResultMode';
+  /// <type>Integer</type>
+  /// <summary>Sets Listener interval in milliseconds.</summary>
+  /// <default>250</default>
+  ELProps_ListernerInterval = 'ListernerInterval';
 {$ENDIF}
 
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
@@ -536,14 +586,25 @@ const
   // Type: STR, like Domain1[, Domain2, ...] (separators: "," or ";")
   // List of domains; if defined, fields of that domains will get GUID type
   ConnProps_GUIDDomains = 'GUIDDomains';
-  // Type: enum, <INET | WNET | XNET | LOCAL>
-  // can be used to define the firebird protocol to be used
-  // for FB 3.0 this will enable the construction of url style connection strings
-  // see firebird 3.0 release notes
+  /// <type>Enumerator</type>
+  /// <values>INET|WNET|XNET|LOCAL</values>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_FBProtocol]={value}</syntax>
+  /// <summary>can be used to define the firebird protocol to be used
+  /// for FB 3.0 this will enable the construction of url style connection
+  /// strings see firebird 3.0 release notes</summary>
   ConnProps_FBProtocol = 'fb_protocol';
 
-  // Type: STR
-  // identify the charset "NONE" codepage
+  /// <type>String</type>
+  /// <Associates>ConnProps_Characterset</Associates>
+  /// <protocols>firebird,interbase</protocols>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_Charset_NONE_Alias]={value}</syntax>
+  /// <summary>Specifies the character set "NONE" codepage to interact with
+  ///  driver.</summary>
+  /// <remarks>If you're accessing a CharacterSet "NONE" Firebird/Interbase
+  ///  database you should always use the CharacterSet "NONE" as connection
+  ///  characterset.</remarks>
   ConnProps_Charset_NONE_Alias = 'Charset_NONE_Alias';
 
   { Parameters that are for datasets and statements but could be set for connections
@@ -759,6 +820,10 @@ const
   /// <syntax>Properties.Values[ConnProps_SQLiteOpen_zVfs]=value</syntax>
   /// <summary>see: https://www.sqlite.org/c3ref/open.html</summary>
   ConnProps_SQLiteOpen_zVfs = 'SQLiteOpen_zVfs';
+  // <type>Boolean</type>
+  // <usage>Connection</usage>
+  // <summary>Have SQLite fetch all records after opening a result set</summary>
+  ConnProps_SQLiteFetchAll = 'SQLiteFetchAll';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}
@@ -819,9 +884,7 @@ const
   ConnProps_ASTART = 'ASTART';
   ConnProps_AutoStop = 'AutoStop';
   ConnProps_ASTOP = 'ASTOP';
-  {$IFNDEF ENABLE_ODBC}
   ConnProps_CharSet = 'CharSet';
-  {$ENDIF}
   ConnProps_CS = 'CS';
   ConnProps_CommBufferSize = 'CommBufferSize';
   ConnProps_CBSIZE = 'CBSIZE';
@@ -893,7 +956,6 @@ const
   ConnProps_RetryConnectionTimeout = 'RetryConnectionTimeout';
   ConnProps_RetryConnTO = 'RetryConnTO';
   ConnProps_ServerName = 'ServerName';
-  ConnProps_Server = 'Server';
   ConnProps_StartLine = 'StartLine';
   ConnProps_START = 'START';
   ConnProps_Unconditional = 'Unconditional';
@@ -918,15 +980,43 @@ const
 {$ENDIF}
 
 {$IFDEF ENABLE_ODBC}
-  // Type: STR, like CP_UTF8
-  // Codepage to use (same as ConnProps_CodePage)
-  ConnProps_Charset = 'characterset';
   // Type: SQL_DRIVER_COMPLETE | SQL_DRIVER_PROMPT | SQL_DRIVER_COMPLETE_REQUIRED
   // Refer to ODBC manual for details
   ConnProps_DriverCompletion = 'DriverCompletion';
   // Type: BOOLEAN
   // If set, more info about columns will be retrieved
   DSProps_EnhancedColumnInfo = 'enhanced_column_info';
+  /// <summary>Defines the driver as a String. This property is used
+  ///  for the ODBC connection only. Example:
+  ///  Properties.Values[ConnProps_DRIVER]={SQL Server Native Client 11.0}</summary>
+  ConnProps_DRIVER = 'DRIVER';
+  /// <summary>Defines the server as a String. This property is used
+  ///  for the ODBC connection only. Example:
+  ///  Properties.Values[ConnProps_Server]=(localdb)\ZeosLib</summary>
+  ConnProps_Server = 'Server';
+  // Type: Number
+  // Default is 380 which is mapped to version 3.8
+  // Also allowed is 3 which is mapped to version 3.0
+  ConnProps_ODBC_Version = 'ODBC_Version';
+{$ENDIF}
+
+{$IFNDEF ZEOS_DISABLE_PROXY}
+  /// <summary>
+  ///   Type: &lt;http | https&gt;
+  ///   Defines which protocol the Webservicde Proxy driver uses for connecting to the server.
+  ///   If empty, https will be used.
+  ///   Behavior is undefined if an undefined value is set.
+  /// </summary>
+  ConnProps_ProxyProtocol = 'ProxyProtocol';
+  /// <summary>
+  ///   Type: String;
+  ///   Enables TOFU type certificate validation.
+  ///   Defines which public keys will be accepted.
+  ///   Public keys are provided in HEX and delimited by a colon (:).
+  ///   Overrules Delphi automatic checking.
+  ///   If empty, any certificate will be accepted on the first connection.
+  /// </summary>
+  ConnProps_TofuPubKeys = 'TofuPubKeys';
 {$ENDIF}
 
 {$IFDEF ENABLE_POOLED}

@@ -66,14 +66,19 @@ type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcInterbaseCase = class(TZAbstractDbcSQLTestCase)
+  private
+    FEventsReceived: TStrings;
+    procedure OnEvent(var Event: TZEventData);
   protected
 //    function GetSupportedProtocols: string; override;
     function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
+
   published
     procedure TestConnection;
     procedure TestStatement;
     procedure TestRegularResultSet;
     procedure TestBlobs;
+    procedure TestBytes;
     procedure TestUpdateBlobs;
     procedure TestCaseSensitive;
     procedure TestDefaultValues;
@@ -94,6 +99,8 @@ type
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_DECFIXED;
     procedure Test_TIMEZONE;
+    procedure Test_IBFBEventListener;
+    procedure Test_Ping;
   end;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
@@ -102,7 +109,7 @@ implementation
 
 uses SysUtils, Types,
   ZTestConsts, ZTestCase, ZVariant, ZMessages, ZSysUtils,
-  ZDbcInterbaseFirebirdMetadata, ZDbcFirebirdInterbase;
+  ZDbcInterbaseFirebirdMetadata, ZDbcFirebirdInterbase, ZDbcLogging;
 
 { TZTestDbcInterbaseCase }
 
@@ -206,6 +213,11 @@ begin
       Stmt := nil;
     end;
   end;
+end;
+
+procedure TZTestDbcInterbaseCase.OnEvent(var Event: TZEventData);
+begin
+  FEventsReceived.Add(Event.Name)
 end;
 
 {**
@@ -373,6 +385,68 @@ begin
   end;
 end;
 
+procedure TZTestDbcInterbaseCase.TestBytes;
+const
+  B_ID_Index = FirstDbcIndex;
+  B_TEXT_Index = FirstDbcIndex+1;
+  B_IMAGE_Index = FirstDbcIndex+2;
+var
+  Connection: IZConnection;
+  PreparedStatement: IZPreparedStatement;
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  TextStream: TStream;
+  ImageStream: TMemoryStream;
+  TempStream: TStream;
+  ImageBytes: TBytes;
+  TempBytes: TBytes;
+begin
+  Connection := CreateDbcConnection;
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+
+  Statement.ExecuteUpdate('DELETE FROM BLOB_VALUES WHERE B_ID='
+    + IntToStr(TEST_ROW_ID));
+
+  TempStream := nil;
+  TextStream := TStringStream.Create('ABCDEFG');
+  ImageStream := TMemoryStream.Create;
+  ImageStream.LoadFromFile(TestFilePath('images/zapotec.bmp'));
+  try
+    PreparedStatement := Connection.PrepareStatement(
+      'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
+    PreparedStatement.SetInt(B_ID_Index, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(B_TEXT_Index, TextStream);
+    // prepare TBytes
+    SetLength(ImageBytes, ImageStream.Size);
+    ImageStream.Read(ImageBytes[0], ImageStream.Size);
+    ImageStream.Position := 0;
+    PreparedStatement.SetBytes(B_IMAGE_Index, ImageBytes);
+    CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+      + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+    CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+    TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+    CheckEquals(TextStream, TempStream);
+    //TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
+    TempBytes := ResultSet.GetBytesByName('B_IMAGE');
+    CheckEquals(ImageBytes, TempBytes);
+  finally
+    FreeAndNil(TempStream);
+    ResultSet.Close;
+
+    TextStream.Free;
+    ImageStream.Free;
+
+    Statement.Close;
+  end;
+end;
+
 procedure TZTestDbcInterbaseCase.TestUpdateBlobs;
 const
   insert_B_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
@@ -506,9 +580,10 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
@@ -552,6 +627,70 @@ begin
   end;
 end;
 
+procedure TZTestDbcInterbaseCase.Test_IBFBEventListener;
+const EventCount = 15;
+var Listener: IZEventListener;
+    EndTime: TDateTime;
+    Events: TStrings;
+    I: Integer;
+    S: String;
+    InterbaseFirebirdConnection: IZInterbaseFirebirdConnection;
+begin
+  Check(Connection <> nil);
+  Connection.Open;
+  if (Connection.GetServerProvider <> spIB_FB) or (Connection.QueryInterface(IZInterbaseFirebirdConnection, InterbaseFirebirdConnection) <> S_OK) or
+      not InterbaseFirebirdConnection.IsFirebirdLib then //Interbase until v2020 does not support EXECUTE BLOCK syntax
+    Exit;
+
+  Listener := Connection.GetEventListener(OnEvent, True, nil);
+  Events := TStringList.Create;
+  FEventsReceived := TStringList.Create;
+  try
+    Check(Listener <> nil);
+    CheckFalse(Listener.IsListening);
+    for i := 1 to EventCount do
+      Events.Add('zeostest'+IntToStr(I));;
+    Listener.Listen(Events, OnEvent);
+    Check(Listener.IsListening);
+    Sleep(10);
+    CheckEquals(0, FEventsReceived.Count, 'There should no event beeing  posted.');
+    S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[0]);
+    for i := 1 to Events.Count -1 do
+      S := S +'; POST_EVENT '+QuotedStr(Events[i]);
+    S := S+'; END';
+    Connection.ExecuteImmediat(S, lcExecute);
+    Sleep(10);
+    EndTime := IncSecond(Now, 2);
+    while (FEventsReceived.Count < Events.Count) and (EndTime > Now) do
+      Sleep(0);
+    CheckEquals(Events.Count, FEventsReceived.Count, 'Didn''t get all interbase events.');
+    S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[1]);
+    for i := 2 to Events.Count -2 do
+      S := S +'; POST_EVENT '+QuotedStr(Events[i]);
+    S := S+'; END';
+    Connection.ExecuteImmediat(S, lcExecute);
+    Sleep(10);
+    EndTime := IncSecond(Now, 2);
+    while (FEventsReceived.Count < (EventCount + EventCount-2)) and (EndTime > Now) do
+      Sleep(0);
+    Listener.Unlisten;
+    CheckFalse(Listener.IsListening);
+    CheckFalse(Connection.IsClosed);
+  finally
+    if Listener <> nil then
+      Connection.CloseEventListener(Listener);
+    FreeAndNil(Events);
+    FreeAndNil(FEventsReceived);
+  end;
+end;
+
+procedure TZTestDbcInterbaseCase.Test_Ping;
+begin
+  Connection.Open;
+  CheckFalse(Connection.IsClosed);
+  Check(Connection.PingServer = 0);
+end;
+
 procedure TZTestDbcInterbaseCase.Test_GENERATED_ALWAYS_64;
 var
   Statement: IZStatement;
@@ -561,9 +700,10 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
@@ -613,9 +753,10 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(3, 0, 6)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(3, 0, 6)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
@@ -666,9 +807,10 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try

@@ -78,7 +78,7 @@ type
     TestSF274_GotNotified: Boolean;
     procedure InternalTestSF224(Query: TZAbstractRODataset);
     procedure TestSF274_OnNotify(Sender: TObject; Event: string;
-        ProcessID: Integer; Payload: string);
+        ProcessID: Integer; Payload: string; var CancelEvents: Boolean);
   published
     procedure Test707339;
     procedure Test707337;
@@ -119,6 +119,11 @@ type
     procedure TestSF394;
     procedure TestSF460_A;
     procedure TestSF460_B;
+    procedure TestSF478;
+    procedure TestPgTruncScale;
+    procedure TestInfinityNan;
+    procedure TestSF611_1;
+    procedure TestSF611_2;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -135,10 +140,10 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
-uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
-  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils,
+uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding, ZVariant,
+  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils, ZFormatSettings,
   (*{$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}*)ZTestConfig
-  {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF};
+  {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF}, Math;
 
 { TZTestCompPostgreSQLBugReport }
 
@@ -649,6 +654,7 @@ begin
     CheckEquals('abcdef', Query.Fields[0].AsString);
     CheckEquals(123456, Query.Fields[1].AsInteger);
 
+    Query.Close;
     Query.SQL.Text := 'delete from "insert"';
     Query.ExecSQL;
   finally
@@ -1338,11 +1344,13 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender,..." not used} {$ENDIF}
 procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Event: string;
-        ProcessID: Integer; Payload: string);
+        ProcessID: Integer; Payload: string; var CancelEvents: Boolean);
 begin
   TestSF274_GotNotified := true;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZTestCompPostgreSQLBugReport.TestMarsupilami1;
 var
@@ -1529,6 +1537,177 @@ begin
     FreeAndNil(Query);
   end;
 end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF478;
+var
+  Query: TZQuery;
+  Temp: String;
+  Separator: String;
+begin
+  {$IFDEF WITH_FORMATSETTINGS}
+  Separator := FormatSettings.DecimalSeparator;
+  {$ELSE}
+  Separator := DecimalSeparator;
+  {$ENDIF}
+
+  try
+    Connection.FormatSettings.DisplayTimeFormatSettings.Format := 'hh:nn:ss.zzz';
+    Connection.FormatSettings.EditTimeFormatSettings.Format := 'hh:nn:ss.zzz';
+    Connection.FormatSettings.DisplayTimeFormatSettings.SecondFractionOption := foRightZerosTrimmed;
+    Connection.Connect;
+    Connection.ExecuteDirect('insert into date_values (d_id, d_time) values (20210307, ''2021-03-07 14:00:00'')');
+    Query := CreateQuery;
+    Query.SQL.Text := 'select d_id, d_time from date_values where d_id = 20210307';
+    Query.Open;
+    Temp := Query.FieldByName('d_time').DisplayText;
+    CheckEquals(Length(Temp), 8, 'No decimal separator is expected since there are no fractions to display. Result is >' + Temp + '<.');
+    Query.Edit;
+    Query.FieldByName('d_time').AsDateTime := EncodeTime(14, 0, 0, 123);
+    Query.Post;
+    Temp := Query.FieldByName('d_time').DisplayText;
+    CheckNotEquals(Pos(Separator , Temp), 0, 'Decimal separator expected in Result but no >' + Separator + '< found in >' + Temp + '<.');
+  finally
+    if Assigned(Query) then
+      FreeAndNil(Query);
+    if Connection.Connected then
+      Connection.ExecuteDirect('delete from date_values where d_id = 20210307');
+    Connection.FormatSettings.DisplayTimeFormatSettings.Format := '';
+    Connection.FormatSettings.EditTimeFormatSettings.Format := '';
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestPgTruncScale;
+var
+  Query: TZQuery;
+  Expected: String;
+
+  procedure enableCurrency(Field: TField);
+  begin
+    if Field is TFloatField then (Field as TFloatField).Currency := true
+    {$IF DECLARED(TSingleField)}else if Field is TSingleField then (Field as TSingleField).currency := true{$IFEND}
+    {$IF DECLARED(TExtendedField)}else if Field is TExtendedField then (Field as TExtendedField).currency := true{$IFEND}
+    else if Field is TFMTBCDField then (Field as TFMTBCDField).currency := true
+    else if Field is TBCDField then (Field as TBCDField).currency := true;
+  end;
+
+begin
+  Expected := FormatFloat('#,##0.00', 12.34);
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from PgTruncScale';
+    Query.Open;
+
+    enableCurrency(Query.FieldByName('price'));
+    Query.Append;
+    Query.FieldByName('id').AsInteger := 1;
+    Query.FieldByName('price').Text := Expected;
+    Query.Post;
+    Query.Close;
+    Query.Open;
+    CheckEquals(1, Query.FieldByName('id').AsInteger, 'Checking ID = 1');
+    CheckEquals(Expected, Query.FieldByName('price').Text, 'Checking price = ' + Expected);
+    Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestInfinityNan;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'insert into number_values (n_id, n_dprecission) values (:id, :value)';
+    Query.ParamByName('id').AsInteger := 20240217;
+    Query.ParamByName('value').AsSingle := Infinity;
+    Query.ExecSQL;
+    Query.ParamByName('id').AsInteger := 20240218;
+    Query.ParamByName('value').AsSingle := NegInfinity;
+    Query.ExecSQL;
+    Query.ParamByName('id').AsInteger := 20240219;
+    Query.ParamByName('value').AsSingle := NaN;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'select n_id, n_dprecission from number_values where n_id in (20240217, 20240218, 20240219) order by n_id';
+    Query.Open;
+
+    CheckEquals(3, Query.RecordCount, 'Three records are expected.');
+    Query.First;
+    Check(IsInfinite(Query.FieldByName('n_dprecission').AsFloat), 'infinite expected');
+    Query.Next;
+    Check(IsInfinite(Query.FieldByName('n_dprecission').AsFloat), 'infinite expected');
+    Query.Next;
+    Check(IsNan((Query.FieldByName('n_dprecission').AsFloat)), 'NAN expected');
+    Query.Close;
+  finally
+    Query.Connection.ExecuteDirect('delete from number_values where n_id in (20240217, 20240218, 20240219)');
+    FreeAndNil(Query);
+  end;
+
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF611_1;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from sf611 order by 1';
+    Query.Open;
+    CheckEquals(10, Query.RecordCount);
+    CheckEquals(0.9, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
+    Query.Next;
+    CheckEquals(9, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(20000, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(20001, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(31000000, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(31000000.1, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
+    Query.Next;
+    CheckEquals(310000000, Query.FieldByName('num').AsFloat);
+    Query.Next;
+    CheckEquals(310000000.9, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
+    Query.Next;
+    CheckEquals(310000000000, Query.FieldByName('num').AsFloat, FLOAT_COMPARE_PRECISION);
+    Query.Next;
+    CheckEquals(FloatToStr(310000000000.9), Query.FieldByName('num').AsString);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF611_2;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from sf611 order by 1';
+    Query.Open;
+    CheckEquals(10, Query.RecordCount);
+    Query.Next;
+    CheckEquals(9, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    CheckEquals(20000, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    CheckEquals(20001, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    CheckEquals( 31000000, Query.FieldByName('num').AsInteger);
+    Query.Next;//31000000.1
+    Query.Next;
+    CheckEquals( 310000000, Query.FieldByName('num').AsInteger);
+    Query.Next;
+    Query.Next;
+    CheckEquals(310000000000, TZFmtBCDField(Query.FieldByName('num')).AsLargeInt);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 
 
 initialization

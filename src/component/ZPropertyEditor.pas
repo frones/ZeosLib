@@ -226,7 +226,7 @@ implementation
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 
-uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
+uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZExceptions,
   {$IFDEF WITH_LCONVENCODING}ZEncoding,{$ENDIF}
   ZSysUtils, ZSelectSchema, ZDatasetUtils, ZPlainDriver, ZMessages
 {$IFDEF USE_METADATA}
@@ -417,7 +417,7 @@ begin
       try
         // Look for the Tables of the defined Catalog and Schema
         ResultSet := Metadata.GetTables(Catalog, Metadata.AddEscapeCharToWildcards(Schema), '', nil);
-        while ResultSet.Next do
+        while ResultSet.Next do begin
           if IsTZSqlMetadata then
             List.Add(IdentifierConverter.Quote(ResultSet.GetStringByName('TABLE_NAME'), iqTable))
           else begin
@@ -433,8 +433,9 @@ begin
               TableName := IdentifierConverter.Quote(Schema, iqSchema) + '.' + TableName;
             List.Add(TableName);
           end;
+        end;
       finally
-        ResultSet.Close;
+        //ResultSet.Close;
       end;
     end;
   end;
@@ -677,7 +678,7 @@ begin
       try
         Driver := DriverManager.GetDriver(Url.URL);
         if Driver = nil then
-          raise Exception.Create(SDriverWasNotFound);
+          raise EZSQLException.Create(SDriverWasNotFound);
         PlainDriver := Driver.GetPlainDriver(URL, False);
         if PlainDriver = nil then begin
           List.Append('No PlainDriver found');
@@ -801,7 +802,7 @@ begin
     if ((GetZComponent as TZAbstractConnection).Protocol = 'odbc_a') or
        ((GetZComponent as TZAbstractConnection).Protocol = 'odbc_w') then
       (GetZComponent as TZAbstractConnection).Database := GetConnectionString({%H-}Pointer({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF}),
-        (GetZComponent as TZAbstractConnection).Database, (GetZComponent as TZAbstractConnection).LibLocation)
+        (GetZComponent as TZAbstractConnection).Database, (GetZComponent as TZAbstractConnection).LibraryLocation)
 {$ENDIF}
     else
     begin
@@ -862,9 +863,9 @@ begin
   begin
     OD := TOpenDialog.Create(nil);
     try
-      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibLocation);
+      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibraryLocation);
       if OD.Execute then
-        (GetZComponent as TZAbstractConnection).LibLocation := OD.FileName;
+        (GetZComponent as TZAbstractConnection).LibraryLocation := OD.FileName;
     finally
       OD.Free;
     end;
@@ -1263,5 +1264,3 @@ end;
 {$ENDIF}
 
 end.
-
-

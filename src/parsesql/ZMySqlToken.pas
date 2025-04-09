@@ -55,7 +55,12 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_MYSQL}
+{$IF defined(ZEOS_DISABLE_MYSQL) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZMySqlToken}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZMySqlToken}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -69,6 +74,10 @@ type
   {** Implements a MySQL-specific quote string state object. }
   TZMySQLQuoteState = class (TZQuoteState)
   public
+    /// <summary>Return a quoted string token from a string buffer. This method
+    ///  will collect characters until it sees a match to the
+    ///  character that the tokenizer used to switch to this state.</summary>
+    /// <returns>a quoted string token from a string buffer</returns>
     function NextToken(var SPos: PChar; const NTerm: PChar;
       {%H-}Tokenizer: TZTokenizer): TZToken; override;
     function EncodeString(const Value: string; QuoteChar: Char): string; override;
@@ -103,23 +112,16 @@ type
     procedure CreateTokenStates; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_MYSQL}
+{$ENDIF EMPTY_ZMySqlToken}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_MYSQL}
+{$IFNDEF EMPTY_ZMySqlToken}
 
 {$IFDEF FAST_MOVE}uses ZFastCode;{$ENDIF}
 
 { TZMySQLQuoteState }
 
-{**
-  Return a quoted string token from a reader. This method
-  will collect characters until it sees a match to the
-  character that the tokenizer used to switch to this state.
-
-  @return a quoted string token from a reader
-}
 function TZMySQLQuoteState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 const BackSlash = Char('\');
@@ -302,7 +304,7 @@ begin
   SetCharacterState('-', '-', CommentState);
 end;
 
-{$ENDIF ZEOS_DISABLE_MYSQL}
+{$ENDIF EMPTY_ZMySqlToken}
 
 end.
 

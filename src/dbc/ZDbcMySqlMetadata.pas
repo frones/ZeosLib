@@ -80,8 +80,12 @@ type
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
 
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
@@ -99,7 +103,6 @@ type
 //    function SupportsConvert: Boolean; override; -> Not implemented
 //    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
 //      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
 //    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
 //    function SupportsExpressionsInOrderBy: Boolean; override; -> Not implemented
     function SupportsOrderByUnrelated: Boolean; override;
@@ -126,7 +129,7 @@ type
 //    function SupportsSchemasInIndexDefinitions: Boolean; override; -> Not implemented
 //    function SupportsSchemasInPrivilegeDefinitions: Boolean; override; -> Not implemented
     function SupportsCatalogsInDataManipulation: Boolean; override;
-//    function SupportsCatalogsInProcedureCalls: Boolean; override; -> Not implemented
+    function SupportsCatalogsInProcedureCalls: Boolean; override;
     function SupportsCatalogsInTableDefinitions: Boolean; override;
 //    function SupportsCatalogsInIndexDefinitions: Boolean; override; -> Not implemented
 //    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override; -> Not implemented
@@ -189,8 +192,8 @@ type
 //    function UsesLocalFiles: Boolean; override; -> Not implemented
     function UsesLocalFilePerTable: Boolean; override;
 //    function StoresUpperCaseIdentifiers: Boolean; override; -> Not implemented
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
+//    function StoresLowerCaseIdentifiers: Boolean; override; -> Not implemented
+//    function StoresMixedCaseIdentifiers: Boolean; override; -> Not implemented
 //    function StoresUpperCaseQuotedIdentifiers: Boolean; override; -> Not implemented
 //    function StoresLowerCaseQuotedIdentifiers: Boolean; override; -> Not implemented
 //    function StoresMixedCaseQuotedIdentifiers: Boolean; override; -> Not implemented
@@ -221,16 +224,23 @@ type
     function isMySQL: Boolean;
     function isMariaDB: Boolean;
   end;
+
   {** Implements MySQL Database Metadata. }
   TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata, IZMySQLDatabaseMetadata)
   private
     FInfo: TStrings;
     FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
-    FBoolCachedResultSets: IZCollection;
+    FBoolCachedResultSets: TZCustomElementList;
     Flower_case_table_names: Byte;
     FKnowServerType: Boolean;
     FIsMariaDB: Boolean;
     FIsMySQL: Boolean;
+    function OldUncachedGetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: string): IZResultSet;
+    function OldUncachedGetExportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function OldUncachedGetImportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function NewUncachedGetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: string): IZResultSet;
+    function NewUncachedGetExportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function NewUncachedGetImportedKeys(const Catalog, Schema, Table: string): IZResultSet;
   protected
     procedure detectServerType;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
@@ -244,12 +254,138 @@ type
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for each table
+    ///  available in a catalog from a cache. Note that a table privilege
+    ///  applies to one or more columns in the table. It would be wrong to
+    ///  assume that this priviledge applies to all columns (this may be true
+    ///  for some systems but is not true for all.)
+    ///
+    ///  Only privileges matching the schema and table name
+    ///  criteria are returned. They are ordered by TABLE_SCHEM,
+    ///  TABLE_NAME, and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///      INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    ///
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema from
+    ///  the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a table privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of a table's primary key columns. They
+    ///  are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>KEY_SEQ</c> short => sequence number within primary key
+    ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table).  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
@@ -317,9 +453,23 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  ZFastCode, ZMessages, ZCollections, ZMatchPattern,
-  ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql;
+  ZFastCode, ZMessages, ZMatchPattern,
+  ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql, ZExceptions;
 
+
+type
+  PIZResultSet = ^IZResultSet;
+
+  TZResultSetList = class(TZCustomElementList)
+  protected
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  end;
 { TZMySQLDatabaseInfo }
 
 {**
@@ -334,10 +484,6 @@ end;
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZMySQLDatabaseInfo.GetDatabaseProductName: string;
   procedure GetFork;
   var S, F: String;
@@ -384,10 +530,6 @@ begin
   Result := FServerVersion;
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZMySQLDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for MySQL';
@@ -418,26 +560,6 @@ end;
 function TZMySQLDatabaseInfo.UsesLocalFilePerTable: Boolean;
 begin
   Result := True;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZMySQLDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
-begin
-  Result := True; //https://dev.mysql.com/doc/refman/5.7/en/identifier-case-sensitivity.html
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZMySQLDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
-begin
-  Result := False; //https://dev.mysql.com/doc/refman/5.7/en/identifier-case-sensitivity.html
 end;
 
 {**
@@ -670,7 +792,16 @@ var
   MinorVersion: Integer;
 begin
   GetVersion(MajorVersion, MinorVersion);
-  Result := ((MajorVersion = 3) and (MinorVersion >= 22)) or (MajorVersion > 3);
+  Result := (MajorVersion > 3) or ((MajorVersion = 3) and (MinorVersion >= 22));
+end;
+
+{**
+  Can a catalog name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZMySQLDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
+begin
+  Result := SupportsCatalogsInDataManipulation;
 end;
 
 {**
@@ -679,7 +810,7 @@ end;
 }
 function TZMySQLDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
 begin
-  Result := False;
+  Result := SupportsCatalogsInDataManipulation;
 end;
 
 {**
@@ -1034,7 +1165,7 @@ begin
   FInfo.Assign(Url.Properties);
 
   FInfo.Values[DSProps_UseResult] := 'True';
-  FBoolCachedResultSets := TZCollection.Create;
+  FBoolCachedResultSets := TZResultSetList.Create(SizeOF(IZResultSet), True);
 
   Flower_case_table_names := $FF;
   FIsMariaDB := false;
@@ -1048,6 +1179,7 @@ end;
 destructor TZMySQLDatabaseMetadata.Destroy;
 begin
   FreeAndNil(FInfo);
+  FreeAndNil(FBoolCachedResultSets);
   inherited Destroy;
 end;
 
@@ -1102,14 +1234,21 @@ begin
 end;
 
 procedure TZMySQLDatabaseMetadata.SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
-var I, Idx: Integer;
+var I, J: Integer;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
+  ResultSet: PIZResultSet;
 begin
   if Value <> FMySQL_FieldType_Bit_1_IsBoolean then begin
     FMySQL_FieldType_Bit_1_IsBoolean := Value;
     for i := FBoolCachedResultSets.Count -1 downto 0 do begin
-      Idx := CachedResultSets.Values.IndexOf(FBoolCachedResultSets[i]);
-      if Idx > -1 then
-        CachedResultSets.Remove(CachedResultSets.Keys[idx]);
+      ResultSet := FBoolCachedResultSets[i];
+      for J := 0 to CachedResultSets.Count -1 do begin
+        KeyAndResultSetPair := CachedResultSets[j];
+        if KeyAndResultSetPair.ResultSet = ResultSet^ then begin
+          CachedResultSets.Delete(J);
+          Break;
+        end;
+      end;
       FBoolCachedResultSets.Delete(i);
     end;
   end;
@@ -1167,6 +1306,7 @@ begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
   List := TStringList.Create;
   MySQLCon := GetConnection as IZMySQLConnection;
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   try
     GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
       iqTable, LCatalog, LTableNamePattern);
@@ -1195,7 +1335,7 @@ begin
           Result.MoveToInsertRow;
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(FirstDbcIndex, Len), Len);
-          Result.UpdateString(TableColumnsSQLType, 'TABLE');
+          Result.UpdateRawByteString(TableColumnsSQLType, 'TABLE');
           Result.InsertRow;
         end;
         Close;
@@ -1348,6 +1488,7 @@ begin
 
   TableNameList := TStringList.Create;
   AddToBoolCache := False;
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   try
     with GetTables(Catalog, SchemaPattern, TableNamePattern, nil) do begin
       while Next do
@@ -1394,7 +1535,7 @@ begin
           Result.UpdateRawByteString(TableColColumnTypeNameIndex, TypeName);
           Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
 
-          if MySQLType in [stCurrency, stBigDecimal, stString, stUnicodeString] then
+          if MySQLType in [stCurrency, stBigDecimal, stTime, stTimeStamp, stString, stUnicodeString] then
             Result.UpdateInt(TableColColumnDecimalDigitsIndex, ColumnDecimals);
 
           //Result.UpdateNull(TableColColumnNumPrecRadixIndex);
@@ -1500,40 +1641,12 @@ begin
       end;
     end;
     if AddToBoolCache then
-      FBoolCachedResultSets.Add(Result);
+      PIZResultSet(TZResultSetList(FBoolCachedResultSets).Add(NativeInt(Len)))^ := Result;
   finally
     TableNameList.Free;
   end;
 end;
 
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
 function TZMySQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 const
@@ -1611,38 +1724,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
 function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 const
@@ -1670,7 +1751,7 @@ begin
   else
     SchemaCondition := ConstructNameCondition(Catalog,'db');
   TableNameCondition := ConstructNameCondition(TableNamePattern,'table_name');
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   PrivilegesList := TStringList.Create;
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
@@ -1712,28 +1793,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of a table's primary key columns.  They
-  are ordered by COLUMN_NAME.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within primary key
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @exception SQLException if a database access error occurs
-}
 function TZMySQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
@@ -1744,13 +1803,13 @@ var
   ColumnIndexes : Array[1..3] of integer;
 begin
   if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
     iqTable, LCatalog, LTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     Format('SHOW KEYS FROM %s.%s',
     [IC.Quote(LCatalog, iqCatalog),
@@ -1777,75 +1836,8 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
-function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
+function TZMySQLDatabaseMetadata.OldUncachedGetImportedKeys(const Catalog,
+  Schema, Table: string): IZResultSet;
 var
   I: Integer;
   KeySeq: Integer;
@@ -1854,9 +1846,6 @@ var
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..2] of integer;
 begin
-  if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-
   Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
@@ -1869,7 +1858,11 @@ begin
       Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
       [IC.Quote(LCatalog, iqCatalog), LTable])) do
     begin
-      ColumnIndexes[1] := FindColumn('Type');
+      ColumnIndexes[1] := FindColumn('Engine');
+      // MySQL versions 4.0 and before called that column 'Type', so let's look
+      // for it, if there is no 'Engine column'.
+      if ColumnIndexes[1] = InvalidDbcIndex then
+        ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
       while Next do
       begin
@@ -1985,8 +1978,33 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
+
+function TZMySQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
+  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
+  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
+Var
+  tmpPCat, tmpFcat: String;
+begin
+  if PrimaryTable = '' then
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
+
+  if PrimaryCatalog = '' then
+    tmpPCat := FDatabase
+  else
+    tmpPCat := PrimaryCatalog;
+
+  if ForeignCatalog = '' then
+    tmpFCat := FDatabase
+  else
+    tmpFCat := ForeignCatalog;
+
+  If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
+    Result := NewUncachedGetCrossReference(tmpPCat, PrimarySchema, PrimaryTable, tmpFCat, ForeignSchema, ForeignTable)
+  Else
+    Result := OldUncachedGetCrossReference(tmpPCat, PrimarySchema, PrimaryTable, tmpFCat, ForeignSchema, ForeignTable)
+end;
+
+Function TZMySQLDatabaseMetadata.OldUncachedGetExportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
 var
   I: Integer;
   Len: NativeUInt;
@@ -1996,14 +2014,11 @@ var
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
 begin
-  if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-
   Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
     iqTable, LCatalog, LTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   KeyList := TStringList.Create;
   CommentList := TStringList.Create;
   try
@@ -2011,7 +2026,11 @@ begin
       Format('SHOW TABLE STATUS FROM %s',
       [IC.Quote(LCatalog, iqCatalog)])) do
     begin
-      ColumnIndexes[1] := FindColumn('Type');
+      ColumnIndexes[1] := FindColumn('Engine');
+      // MySQL versions 4.0 and before called that column 'Type', so let's look
+      // for it, if there is no 'Engine column'.
+      if ColumnIndexes[1] = InvalidDbcIndex then
+        ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
       ColumnIndexes[3] := FindColumn('Name');
       while Next do
@@ -2131,9 +2150,9 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZMySQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
-  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
-  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
+function TZMySQLDatabaseMetadata.OldUncachedGetCrossReference(
+  const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
+  ForeignSchema, ForeignTable: string): IZResultSet;
 var
   I: Integer;
   KeySeq: Integer;
@@ -2142,9 +2161,6 @@ var
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
 begin
-  if PrimaryTable = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
 
@@ -2160,7 +2176,11 @@ begin
       Format('SHOW TABLE STATUS FROM %s',
       [IC.Quote(LForeignCatalog, iqCatalog)])) do
     begin
-      ColumnIndexes[1] := FindColumn('Type');
+      ColumnIndexes[1] := FindColumn('Engine');
+      // MySQL versions 4.0 and before called that column 'Type', so let's look
+      // for it, if there is no 'Engine column'.
+      if ColumnIndexes[1] = InvalidDbcIndex then
+        ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
       ColumnIndexes[3] := FindColumn('Name');
       while Next do
@@ -2395,6 +2415,7 @@ var
     Len: NativeUInt;
     ColumnIndexes : Array[1..7] of integer;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       'SHOW INDEX FROM '+IC.Quote(Catalog)+'.'+IC.Quote(Table)) do begin
       ColumnIndexes[1] := FindColumn('Table');
@@ -2409,7 +2430,7 @@ var
         Result.UpdateString(CatalogNameIndex, Catalog);
         //Result.UpdateNull(SchemaNameIndex);
         Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), Len);
-        Result.UpdateString(IndexInfoColNonUniqueIndex, LowerCase(BoolStrs[GetInt(ColumnIndexes[2]) = 0]));
+        Result.UpdateBoolean(IndexInfoColNonUniqueIndex, (GetInt(ColumnIndexes[2]) = 1));
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
         Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), Len);
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
@@ -2616,8 +2637,8 @@ var
 begin
   // I do check the server version because I don't know how to check for the server type.
   // MariaDB 10 supports the information_schema too, so we can use it there too.
-  RequiresInformationSchema := isMySQL and (GetConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0));
-
+  RequiresInformationSchema := (isMySQL   and (GetConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0))) or
+                               (isMariaDB and (GetConnection.GetHostVersion >= EncodeSQLVersioning(10,0,0)));
   if RequiresInformationSchema
   then Result := GetProcedureColumnsFromInformationSchema(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern)
   else Result := GetProcedureColumnsFromProcTable(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
@@ -2729,7 +2750,7 @@ begin
     ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
     ' from mysql.proc p where 1=1'+ AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition)+
     ' ORDER BY p.db, p.name';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
     begin
@@ -2979,7 +3000,7 @@ begin
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern, 'P.SPECIFIC_NAME');
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   SQL := '(select '
        + '  SPECIFIC_CATALOG as PROCEDURE_CAT, '
        + '  SPECIFIC_SCHEMA as PROCEDURE_SCHEM, '
@@ -3013,7 +3034,7 @@ begin
         Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(myProcColProcedureNameIndex, Len), Len);
       //ProcColColumnNameIndex
       if not IsNull(myProcColColumnNameIndex) then
-        Result.UpdateString(ProcColColumnNameIndex, GetString(myProcColColumnNameIndex));
+        Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiChar(myProcColColumnNameIndex, Len), Len);
       //ProcColColumnTypeIndex
       Result.UpdateShort(ProcColColumnTypeIndex, GetShort(myProcColColumnTypeIndex));
       //ProcColDataTypeIndex
@@ -3135,7 +3156,7 @@ begin
   ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
 
   Result:=inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if SchemaCondition <> '' then
   begin
     if TableNamePattern <> '' then
@@ -3223,7 +3244,7 @@ function TZMySQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHu
 var
   SQL: string;
 begin
-  SQL := 'SELECT CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.CHARACTER_SETS';
+  SQL := 'SELECT CHARACTER_SET_NAME, null FROM INFORMATION_SCHEMA.CHARACTER_SETS';
 
   Result := CopyToVirtualResultSet(
     GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL),
@@ -3254,6 +3275,189 @@ function TZMySQLDatabaseMetadata.isMySQL: Boolean;
 begin
   if not FKnowServerType then detectServerType;
   result := FIsMySQL;
+end;
+
+Function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string; const Schema: string; const Table: string): IZResultSet;
+Var
+  tmpcat: String;
+begin
+  if Table = '' then
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
+
+  if Catalog = '' then
+    tmpcat := FDatabase
+  else
+    tmpcat := Catalog;
+
+  If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
+    Result := NewUncachedGetExportedKeys(tmpcat, Schema, Table)
+  Else
+    Result := OldUncachedGetExportedKeys(tmpcat, Schema, Table);
+end;
+
+function TZMySQLDatabaseMetadata.NewUncachedGetCrossReference(
+  const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
+  ForeignSchema, ForeignTable: string): IZResultSet;
+Var
+  query, cond, LPCatalog, LPTable, LFCatalog, LFTable: String;
+begin
+  GetCatalogAndNamePattern(PrimaryCatalog, PrimarySchema, PrimaryTable, iqTable, LPCatalog, LPTable);
+  GetCatalogAndNamePattern(ForeignCatalog, ForeignSchema, ForeignTable, iqTable, LFCatalog, LFTable);
+
+  query := 'SELECT' + sLineBreak +
+    '  KEY_COLUMN_USAGE.CONSTRAINT_CATALOG PKTABLE_CAT, KEY_COLUMN_USAGE.REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.REFERENCED_COLUMN_NAME PKCOLUMN_NAME, KEY_COLUMN_USAGE.TABLE_CATALOG FKTABLE_CAT, KEY_COLUMN_USAGE.TABLE_SCHEMA FKTABLE_SCHEM,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.TABLE_NAME FKTABLE_NAME, KEY_COLUMN_USAGE.COLUMN_NAME FKCOLUMN_NAME, KEY_COLUMN_USAGE.ORDINAL_POSITION KEY_SEQ, NULL UPDATE_RULE, NULL DELETE_RULE,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.CONSTRAINT_NAME FK_NAME, TABLE_CONSTRAINTS.CONSTRAINT_NAME PK_NAME, NULL DEFERRABILITY' + sLineBreak +
+    'FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE' + sLineBreak +
+    '  JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS ON TABLE_CONSTRAINTS.TABLE_SCHEMA = KEY_COLUMN_USAGE.TABLE_SCHEMA AND' + sLineBreak +
+    '    TABLE_CONSTRAINTS.TABLE_NAME = KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME AND CONSTRAINT_TYPE = ''PRIMARY KEY''';
+
+  // Conditions for primary table
+  cond := '';
+  If LPTable <> '' Then
+    cond := cond + sLineBreak + '  ' + ConstructNameCondition(LPTable, 'KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME');
+
+  If PrimarySchema <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(PrimarySchema, 'KEY_COLUMN_USAGE.CONSTRAINT_CATALOG');
+  End;
+
+  If LPCatalog <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LPCatalog, 'KEY_COLUMN_USAGE.CONSTRAINT_SCHEMA');
+  End;
+
+  // Conditions for foreign table
+
+  If (LFTable <> '') And (LFTable <> '%') Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LFTable, 'TABLE_NAME');
+  End;
+
+  If ForeignSchema <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(ForeignSchema, 'TABLE_CATALOG');
+  End;
+
+  If LFCatalog <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LPCatalog, 'TABLE_SCHEMA');
+  End;
+
+  If cond <> '' Then
+    query := query + sLineBreak + 'WHERE' + cond;
+
+  Result := CopyToVirtualResultSet(GetConnection.CreateStatement.ExecuteQuery(query),
+    ConstructVirtualResultSet(CrossRefColumnsDynArray));
+end;
+
+Function TZMySQLDatabaseMetadata.NewUncachedGetExportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
+var
+  query, cond, LCatalog, LTable: String;
+begin
+  GetCatalogAndNamePattern(Catalog, Schema, Table, iqTable, LCatalog, LTable);
+
+  query := 'SELECT' + sLineBreak +
+    '  KEY_COLUMN_USAGE.CONSTRAINT_CATALOG PKTABLE_CAT, KEY_COLUMN_USAGE.REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.REFERENCED_COLUMN_NAME PKCOLUMN_NAME, KEY_COLUMN_USAGE.TABLE_CATALOG FKTABLE_CAT, KEY_COLUMN_USAGE.TABLE_SCHEMA FKTABLE_SCHEM,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.TABLE_NAME FKTABLE_NAME, KEY_COLUMN_USAGE.COLUMN_NAME FKCOLUMN_NAME, KEY_COLUMN_USAGE.ORDINAL_POSITION KEY_SEQ, NULL UPDATE_RULE, NULL DELETE_RULE,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.CONSTRAINT_NAME FK_NAME, TABLE_CONSTRAINTS.CONSTRAINT_NAME PK_NAME, NULL DEFERRABILITY' + sLineBreak +
+    'FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE' + sLineBreak +
+    '  JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS ON TABLE_CONSTRAINTS.TABLE_SCHEMA = KEY_COLUMN_USAGE.TABLE_SCHEMA AND' + sLineBreak +
+    '    TABLE_CONSTRAINTS.TABLE_NAME = KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME AND CONSTRAINT_TYPE = ''PRIMARY KEY''';
+
+  cond := '';
+
+  If LTable <> '' Then
+    cond := cond + sLineBreak + '  ' + ConstructNameCondition(LTable, 'KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME');
+
+  If Schema <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(Schema, 'KEY_COLUMN_USAGE.CONSTRAINT_CATALOG');
+  End;
+
+  If LCatalog <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LCatalog, 'KEY_COLUMN_USAGE.CONSTRAINT_SCHEMA');
+  End;
+
+  If cond <> '' Then
+    query := query + sLineBreak + 'WHERE' + cond;
+
+  Result := CopyToVirtualResultSet(GetConnection.CreateStatement.ExecuteQuery(query),
+    ConstructVirtualResultSet(ExportedKeyColumnsDynArray));
+End;
+
+Function TZMySQLDatabaseMetadata.NewUncachedGetImportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
+Var
+  query, cond, LCatalog, LTable: String;
+Begin
+  GetCatalogAndNamePattern(Catalog, Schema, Table, iqTable, LCatalog, LTable);
+
+  query := 'SELECT' + sLineBreak +
+    '  KEY_COLUMN_USAGE.CONSTRAINT_CATALOG PKTABLE_CAT, KEY_COLUMN_USAGE.REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.REFERENCED_COLUMN_NAME PKCOLUMN_NAME, KEY_COLUMN_USAGE.TABLE_CATALOG FKTABLE_CAT, KEY_COLUMN_USAGE.TABLE_SCHEMA FKTABLE_SCHEM,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.TABLE_NAME FKTABLE_NAME, KEY_COLUMN_USAGE.COLUMN_NAME FKCOLUMN_NAME, KEY_COLUMN_USAGE.ORDINAL_POSITION KEY_SEQ, NULL UPDATE_RULE, NULL DELETE_RULE,' + sLineBreak +
+    '  KEY_COLUMN_USAGE.CONSTRAINT_NAME FK_NAME, TABLE_CONSTRAINTS.CONSTRAINT_NAME PK_NAME, NULL DEFERRABILITY' + sLineBreak +
+    'FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE' + sLineBreak +
+    '  JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS ON TABLE_CONSTRAINTS.TABLE_SCHEMA = KEY_COLUMN_USAGE.TABLE_SCHEMA AND' + sLineBreak +
+    '    TABLE_CONSTRAINTS.TABLE_NAME = KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME AND CONSTRAINT_TYPE = ''PRIMARY KEY''';
+
+  cond := sLineBreak + '  REFERENCED_TABLE_NAME IS NOT NULL';
+
+  If LTable <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(LTable, 'KEY_COLUMN_USAGE.TABLE_NAME');
+
+  If Schema <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(Schema, 'KEY_COLUMN_USAGE.TABLE_CATALOG');
+
+  If LCatalog <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(LCatalog, 'KEY_COLUMN_USAGE.TABLE_SCHEMA');
+
+  query := query + sLineBreak + 'WHERE' + cond;
+
+  Result := CopyToVirtualResultSet(GetConnection.CreateStatement.ExecuteQuery(query),
+    ConstructVirtualResultSet(ImportedKeyColumnsDynArray));
+End;
+
+function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string; const Schema: string; const Table: string): IZResultSet;
+Var
+  tmpcat: String;
+begin
+  if Table = '' then
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
+
+  if Catalog = '' then
+    tmpcat := FDatabase
+  else
+    tmpcat := Catalog;
+
+  If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
+    Result := NewUncachedGetImportedKeys(tmpcat, Schema, Table)
+  Else
+    Result := OldUncachedGetImportedKeys(tmpcat, Schema, Table);
 end;
 
 {**
@@ -3292,6 +3496,14 @@ begin
       else Result := Value
   else
     Result := inherited Quote(Value, Qualifier);
+end;
+
+{ TZResultSetList }
+
+procedure TZResultSetList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if Action = lnDeleted then
+    PIZResultSet(Ptr)^ := nil;
 end;
 
 initialization

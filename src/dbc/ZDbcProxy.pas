@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainProxyDriver, ZPlainProxyDriverIntf,
@@ -81,6 +81,7 @@ type
     function GetPlainDriver: IZProxyPlainDriver;
     function GetConnectionInterface: IZDbcProxy;
     function GetDbInfoStr: ZWideString;
+    function GetPublicKeys: ZWideString;
   end;
 
   {** Implements DBC Proxy Database Connection. }
@@ -94,19 +95,15 @@ type
     FConnIntf: IZDbcProxy;
     FDbInfo: ZWideString;
 
-    //shadow properties - the just mirror the values that are set on the server
+    //shadow properties - they just mirror the values that are set on the server
     FCatalog: String;
     FServerProvider: TZServerProvider;
-
-    {$IFDEF ZEOS73UP}
-    FStartTransactionUsed: Boolean;
-    {$ENDIF}
   protected
-    procedure AfterConstruction; override;
     procedure transferProperties(PropName, PropValue: String);
     procedure applyProperties(const Properties: String);
     function encodeProperties(PropName, PropValue: String): String;
   public
+    procedure AfterConstruction; override;
     {$IFNDEF ZEOS73UP}
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings): IZPreparedStatement; override;
@@ -184,6 +181,7 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
+    function GetTransactionLevel: Integer; override;
     {$ENDIF}
 
     procedure Open; override;
@@ -216,22 +214,37 @@ type
     function GetConnectionInterface: IZDbcProxy;
 
     function GetServerProvider: TZServerProvider; override;
-
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function GetDbInfoStr: ZWideString;
+
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
+
+    /// <summary>
+    ///   Gets the public keys from a dbc proxy server in TOFU mode.
+    /// </summary>
+    function GetPublicKeys: ZWideString;
   end;
 
 var
   {** The common driver manager object. }
   ProxyDriver: IZDriver;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 implementation
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
 uses
-  ZSysUtils, ZFastCode,
-  ZDbcProxyMetadata, ZDbcStatement, ZDbcProxyStatement,
-  ZMessages, Typinfo
+  ZSysUtils, ZFastCode, ZEncoding,
+  ZDbcProxyMetadata, ZDbcProxyStatement, ZDbcProperties,
+  ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
+  ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
+  ZOracleAnalyser, ZOracleToken, ZGenericSqlToken,
+  ZMessages, Typinfo, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 const
@@ -327,12 +340,12 @@ end;
   Constructs this object and assignes the main properties.
 }
 procedure TZDbcProxyConnection.AfterConstruction;
-var
-  PlainDrv: IZProxyPlainDriver;
 begin
+  FTransactionLevel := 0;
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
-  if not assigned(FConnIntf) then raise Exception.Create(GetPlainDriver.GetLastErrorStr);
+  if not assigned(FConnIntf) then
+    raise EZSQLException.Create(String(GetPlainDriver.GetLastErrorStr));
   inherited AfterConstruction;
 end;
 
@@ -341,26 +354,43 @@ end;
 }
 procedure TZDbcProxyConnection.Open;
 var
-  LogMessage: RawByteString;
+  LogMessage: String;
   PropList: WideString;
   MyDbInfo: WideString;
+  WsUrl: String; // Webservice URL
+  TofuPubKeys: String;
 begin
   if not Closed then
     Exit;
 
-  {$IFDEF ZEOS73UP}
-  FStartTransactionUsed := false;
-  {$ENDIF}
+  WsUrl := URL.Properties.Values[ConnProps_ProxyProtocol];
+  if WsUrl = '' then
+    WsUrl := 'https';
+  WsUrl := WsUrl + '://' + HostName;
+  if Port <> 0 then
+    WsUrl := WsUrl + ':' + ZFastCode.IntToStr(Port);
+  WsUrl := WsUrl + '/services/IZeosProxy';
 
   LogMessage := 'CONNECT TO "'+ URL.Database + '" AS USER "' + URL.UserName + '"';
 
-  PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
-  FConnIntf.Connect(User, Password, HostName, Database, PropList, MyDbInfo);
+  PropList := WideString(encodeProperties('autocommit', BoolToStr(GetAutoCommit, True)));
+
+  if URL.Properties.IndexOfName(ConnProps_TofuPubKeys) >= 0 then begin
+    TofuPubKeys := URL.Properties.Values[ConnProps_TofuPubKeys];
+    PropList := PropList + LineEnding + 'TofuPubKeys=' + TofuPubKeys;
+  end;
+
+  FConnIntf.Connect(WideString(User), WideString(Password), WideString(WsUrl), WideString(Database), PropList, MyDbInfo);
 
   DriverManager.LogMessage(lcConnect, URL.Protocol , LogMessage);
   FDbInfo := MyDbInfo;
   inherited Open;
-  applyProperties(PropList);
+  applyProperties(String(PropList));
+  New(ConSettings.ClientCodePage);
+  ConSettings.ClientCodePage.Name := 'UTF16';
+  ConSettings.ClientCodePage.Encoding := ceUTF16;
+  ConSettings.ClientCodePage.CharWidth := 2;
+  ConSettings.ClientCodePage.CP := zCP_UTF16;
 end;
 
 {$IFNDEF ZEOS73UP}
@@ -453,7 +483,10 @@ end;
 {$IFDEF ZEOS73UP}
 function TZDbcProxyConnection.PrepareCallWithParams(const SQL: string; Info: TStrings): IZCallableStatement;
 begin
-  raise Exception.Create('PrepareCallWithParams is not supported!');
+  {$IFDEF FPC}
+  Result := nil;
+  {$ENDIF}
+  raise EZSQLException.Create('PrepareCallWithParams is not supported!');
 end;
 {$ENDIF}
 
@@ -462,14 +495,10 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Commit;
-      {$IFDEF ZEOS73UP}
-      if FStartTransactionUsed then begin
-        SetAutoCommit(True);
-        FStartTransactionUsed := false;
-      end;
-      {$ENDIF}
+      Dec(FTransactionLevel);
+      AutoCommit := FTransactionLevel = 0;
     end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+      raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
 
 procedure TZDbcProxyConnection.Rollback;
@@ -477,34 +506,25 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Rollback;
-      {$IFDEF ZEOS73UP}
-      if FStartTransactionUsed then begin
-        SetAutoCommit(True);
-        FStartTransactionUsed := false;
-      end;
-      {$ENDIF}
+      Dec(FTransactionLevel);
+      AutoCommit := FTransactionLevel = 0;
     end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+      raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
 
 {$IFDEF ZEOS73UP}
-// for now we don't support nested transactions.
-// Todo: Integrate changes for nested transactions support.
 function TZDbcProxyConnection.StartTransaction: Integer;
 begin
-  if FStartTransactionUsed or not GetAutoCommit then
-    raise EZSQLException.Create('The proxy driver does not support nested transactions.');
-  FStartTransactionUsed := True;
-  SetAutoCommit(False);
-  Result := 1;
+  Result := FConnIntf.StartTransaction;
+  AutoCommit := False;
+  FTransactionLevel := Result;
 end;
 
-(*
-function TZDbcProxyConnection.GetConnectionTransaction: IZTransaction;
+function TZDbcProxyConnection.GetTransactionLevel: Integer;
 begin
-  raise Exception.Create('Unsupported');
+  Result := FTransactionLevel;
 end;
-*)
+
 {$ENDIF}
 
 {**
@@ -518,7 +538,7 @@ end;
 }
 procedure TZDbcProxyConnection.InternalClose;
 var
-  LogMessage: RawByteString;
+  LogMessage: String;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
@@ -528,6 +548,7 @@ begin
 
   if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
     DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
+  Dispose(ConSettings.ClientCodePage);
 end;
 
 function TZDbcProxyConnection.GetClientVersion: Integer;
@@ -544,6 +565,10 @@ begin
   if Value <> GetAutoCommit then begin
     if not Closed then
       FConnIntf.SetAutoCommit(Value);
+      if Value then
+        FTransactionLevel := 0
+      else
+        FTransactionLevel := 1;
     inherited;
   end;
 end;
@@ -644,13 +669,13 @@ end;
 
 procedure TZDbcProxyConnection.transferProperties(PropName, PropValue: String);
 var
-  PropList: String;
+  PropList: ZWideString;
 begin
   if not Closed then begin
-    PropList := encodeProperties(PropName, PropValue);
+    PropList := ZWideString(encodeProperties(PropName, PropValue));
     PropList := FConnIntf.SetProperties(PropList);
   end;
-  applyProperties(PropList);
+  applyProperties(String(PropList));
 end;
 
 procedure TZDbcProxyConnection.SetCatalog(const Catalog: string);
@@ -684,9 +709,56 @@ begin
   Result := FServerProvider;
 end;
 
+function TZDbcProxyConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  case FServerProvider of
+    //spUnknown, spMSSQL, spMSJet,
+    spOracle: Result := TZOracleStatementAnalyser.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseStatementAnalyser.Create;
+    spPostgreSQL: Result := TZPostgreSQLStatementAnalyser.Create;
+    spIB_FB: Result := TZInterbaseStatementAnalyser.Create;
+    spMySQL: Result := TZMySQLStatementAnalyser.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericStatementAnalyser.Create;
+  end;
+end;
+
+function TZDbcProxyConnection.GetTokenizer: IZTokenizer;
+begin
+  case FServerProvider of
+    //spUnknown, spMSJet,
+    spOracle: Result := TZOracleTokenizer.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseTokenizer.Create;
+    spPostgreSQL: Result := TZPostgreSQLTokenizer.Create;
+    spIB_FB: Result := TZInterbaseTokenizer.Create;
+    spMySQL: Result := TZMySQLTokenizer.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericSQLTokenizer.Create;
+  end;
+end;
+
 function TZDbcProxyConnection.GetDbInfoStr: ZWideString;
 begin
   Result := FDbInfo;
+end;
+
+procedure TZDbcProxyConnection.ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory);
+var
+  Statement: IZStatement;
+begin
+  Statement := CreateStatementWithParams(nil);
+  try
+    Statement.Execute(SQL);
+  finally
+    Statement.Close;
+  end;
+end;
+
+function TZDbcProxyConnection.GetPublicKeys: ZWideString;
+begin
+  Result := FConnIntf.GetPublicKeys;
 end;
 
 initialization
@@ -697,5 +769,5 @@ finalization
     DriverManager.DeregisterDriver(ProxyDriver);
   ProxyDriver := nil;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 end.

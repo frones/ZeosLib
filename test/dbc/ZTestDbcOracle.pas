@@ -80,6 +80,7 @@ type
     procedure TestLargeBlob;
     procedure TestDateWithTime;
     procedure TestFKError;
+    procedure TestRowID;
 (*
     procedure TestDefaultValues;
 *)
@@ -233,6 +234,22 @@ begin
 
   Statement.Close;
   Connection.Close;
+end;
+
+procedure TZTestDbcOracleCase.TestRowID;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('select CARGO.*, ROWID from CARGO');
+    while ResultSet.Next do ;
+  finally
+    Statement.Close;
+    Connection.Close;
+  end;
 end;
 
 {**
@@ -478,6 +495,7 @@ end;
   Test number datatype reading
 }
 
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestDbcOracleCase.TestNumbers;
 const
   number_values_n_id_Index = FirstDbcIndex;
@@ -585,6 +603,7 @@ begin
   CheckEquals(922337203685477.5807, ResultSet.GetCurrency(number_values_n_money_Index));
   CheckFalse(ResultSet.Next, 'There is no row');
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test the large amount data in blob

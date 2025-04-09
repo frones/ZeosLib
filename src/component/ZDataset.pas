@@ -55,7 +55,8 @@ interface
 
 {$I ZComponent.inc}
 
-uses ZAbstractRODataset, ZAbstractDataset, ZAbstractTable {$IFDEF OLDFPC}, DB {$ENDIF};
+uses ZAbstractRODataset, ZAbstractDataset, ZAbstractTable, ZMemTable
+  {$IFDEF OLDFPC}, DB {$ENDIF};
 
 type
 
@@ -76,10 +77,11 @@ type
     property LinkedFields; {renamed by bangfauzan}
     property IndexFieldNames; {bangfauzan addition}
     property Options default [doPreferPrepared];
+    property Transaction;
   end;
 
   {** Implements an universal SQL query for read/write data access. }
-  TZQuery = class (TZAbstractDataSet)
+  TZQuery = class (TZAbstractRWTxnUpdateObjDataSet)
   published
     property Active;
     property ReadOnly default False;
@@ -99,6 +101,8 @@ type
     property WhereMode;
     property Sequence;
     property SequenceField;
+    property TryKeepDataOnDisconnect default False;
+    property Options default [doCalcDefaults, doPreferPrepared, doCheckRequired];
   end;
 
   {** Implements an universal SQL query for single table access. }
@@ -119,10 +123,23 @@ type
     property UpdateMode;
     property WhereMode;
     property Sequence;
-    property SequenceField;
+    property TryKeepDataOnDisconnect default False;
   end;
 
+  /// <author>EgonHugeist.</author>
+  /// <summary>Implements an InMemory Table object.</summary>
+  TZMemTable = class(TZAbstractMemTable)
+  published
+    property IndexFieldNames; {bangfauzan addition}
+    property Options default [doCheckRequired];
+  end;
+
+const
+  Zeos80 = true;
+
 implementation
+
+{ TZMemTable }
 
 end.
 

@@ -124,13 +124,16 @@ type
     procedure TestBigIntError;
     procedure TestBCD_Refresh_p156227;
     procedure TestTicket265;
+    //test for https://zeoslib.sourceforge.io/viewtopic.php?t=199899
+    procedure TestForum199899;
+    procedure TestForum199899_2;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
 implementation
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 
-uses ZTestCase, ZDbcMySQL, ZSysUtils, ZDbcProperties, ZDbcMySqlMetadata;
+uses ZTestCase, ZDbcMySQL, ZSysUtils, ZDbcProperties, ZDbcMySqlMetadata, ZStoredProcedure;
 
 { TZTestCompMySQLBugReport }
 
@@ -974,10 +977,16 @@ begin
     // Query.RequestLive := True;
     Query.Open;
     CheckEquals(0, Query.RecordCount);
+    (* EH: just prepared ->uncomment this if the fieldtype
+      ftAutoInc should be supported
+    {$IFDEF WITH_TAUTOREFRESHFLAG}
+    if (Query.Fields[0].AutoGenerateValue = arAutoInc) then
+      CheckEquals(ftAutoInc, Query.Fields[0].DataType) else
+    {$ENDIF}*)
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[0].DataType));
 
     Query.Append;
-    CheckEquals(True, Query.Fields[0].IsNull);
+    Check(Query.Fields[0].IsNull);
     Query.Post;
 
     Query.Refresh;
@@ -1293,8 +1302,6 @@ begin
   try
     UpdateSql := TZUpdateSQL.Create(nil);
     try
-      // Query.RequestLive := True;
-
       Query.SQL.Text := 'delete from `Table 938705`';
       Query.ExecSQL;
 
@@ -1332,13 +1339,11 @@ begin
 
       Query.Open;
       CheckEquals(True, Query.IsEmpty);
-
-      Query.SQL.Text := 'delete from `Table 938705`';
-      Query.ExecSQL;
     finally
       UpdateSql.Free;
     end;
   finally
+    Query.Connection.ExecuteDirect('delete from `Table 938705`');
     Query.Free;
   end;
 end;
@@ -1741,6 +1746,7 @@ begin
     Query.Open;
     CheckEquals(TEST_ROW_ID, Query.FieldByName('b_id').AsInteger);
     CheckEquals('c:\test.jpg', Query.FieldByName('b_text').AsString);
+    Query.Close;
 
     { Remove newly created record }
     Query.SQL.Text := 'DELETE FROM blob_values WHERE b_id=:id';
@@ -1994,6 +2000,78 @@ begin
   end;
 end;
 
+procedure TZTestCompMySQLBugReport.TestForum199899;
+var
+  Proc: TZStoredProc;
+begin
+  Proc := TZStoredProc.Create(nil);
+  try
+    Proc.Connection := Connection;
+    Proc.StoredProcName := 'forum199899';
+    Proc.ParamByName('somevalue').AsString := '';
+    Proc.Open;
+
+    CheckEquals(1, Proc.RecordCount, 'Record Count');
+    Check(not Proc.Fields[0].IsNull, 'Result must not be null');
+    CheckEquals(0, Proc.Fields[0].AsInteger, 'String length');
+  finally
+    FreeAndNil(Proc);
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestForum199899_2;
+var
+  Proc: TZStoredProc;
+  val: String;
+begin
+  Proc := TZStoredProc.Create(nil);
+  try
+    Proc.Connection := Connection;
+
+    //############################
+    //test storedfunction<1>
+    //############################
+    Proc.Close;
+    Proc.StoredProcName :='FncForumT199899_1';
+    Proc.Params[1].value :='test_zeos';
+    Proc.Prepare;
+    Proc.Open;
+    val := Proc.Params[0].value;
+    CheckEquals('select * from test_zeos', val);
+    Proc.Close;
+
+    //############################
+    //test storedfunction<2>
+    //############################
+    Proc.Close;
+    Proc.StoredProcName :='FncForumT199899_2';
+    Proc.Params[1].asinteger :=0;
+    Proc.Params[2].asstring :='db_master_';
+    Proc.Prepare;
+    Proc.Open;
+    val:=Proc.Params[0].value;
+    CheckEquals('select * from db_master_zeos', val);
+    Proc.Close;
+
+    //############################
+    //test storedfunction<3>
+    //############################
+    Proc.StoredProcName :='ProcForumT199899_3';
+    Proc.Params[0].value :='TblForumT199899_1';
+    CheckEquals(2, Proc.Params.Count, 'Parameter count');
+    CheckEquals(0, Proc.ParamByName('in_tablename').Index);
+    CheckEquals(1, Proc.ParamByName('out_pcname').Index);
+    Proc.Prepare;
+    Proc.Open;
+    CheckEquals('desktop1', Proc.Params[1].AsString);
+    Proc.Close;
+  finally
+    FreeAndNil(Proc);
+  end;
+end;
+
+
+
 procedure TZTestCompMySQLBugReport.TestTicket304;
 var
   qy: TZquery;
@@ -2044,7 +2122,7 @@ begin
     except
     end;
   finally
-    qy.SQL.Text := 'delete from TableTicket304';
+    qy.Connection.ExecuteDirect('delete from TableTicket304');
     qy.ExecSQL;
     qy.Free;
   end;
@@ -2079,7 +2157,7 @@ begin
     qy.FieldByName('infofield').value := 'test';
     qy.Post;
   finally
-    qy.SQL.Text := 'delete from TableMS56OBER9357';
+    qy.Connection.ExecuteDirect('delete from TableMS56OBER9357');
     qy.ExecSQL;
     qy.Free;
   end;

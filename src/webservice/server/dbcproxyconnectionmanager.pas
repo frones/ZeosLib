@@ -1,3 +1,54 @@
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{                WebService Proxy Server                  }
+{                                                         }
+{         Originally written by Jan Baumgarten            }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2020 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
 unit DbcProxyConnectionManager;
 
 {$mode delphi}{$H+}
@@ -10,6 +61,16 @@ uses
 type
   TDbcProxyConnectionList = TList<TDbcProxyConnection>;
 
+  TDbcProxyConnectionInfo = record
+    SessionNr: Int64;
+    Database: String;
+    User: String;
+    Created: TDateTime;
+    LastAccess: TDateTime;
+  end;
+
+  TDbcProxyConnectionInfos = Array of TDbcProxyConnectionInfo;
+
   TDbcProxyConnectionManager = class
   protected
     Synchronizer: TMultiReadExclusiveWriteSynchronizer;
@@ -18,15 +79,19 @@ type
     function GetConnectionCount: SizeInt;
     function FindConnection(ID: String): TDbcProxyConnection;
     function GetConnection(Index: SizeInt): TDbcProxyConnection;
-    function AddConnection(Connection: IZConnection): String;
+    function AddConnection(Connection: IZConnection; const DatabaseName, OriginalUser: String): String;
     procedure RemoveConnection(ID: String);
     function LockConnection(ID: String): TDbcProxyConnection; overload;
     function LockConnection(Index: SizeInt): TDbcProxyConnection; overload;
     constructor Create;
     destructor Destroy; override;
+    function GetConnectionInfoList: TDbcProxyConnectionInfos;
   end;
 
 implementation
+
+uses
+  ZExceptions;
 
 constructor TDbcProxyConnectionManager.Create;
 begin
@@ -67,7 +132,7 @@ begin
   Result := Nil;
   Synchronizer.Beginread;
   try
-    if List.Count >= Index then
+    if Index >= List.Count then
       Result := Nil
     else
       Result := List.Items[Index];
@@ -79,20 +144,22 @@ end;
 function TDbcProxyConnectionManager.LockConnection(ID: String): TDbcProxyConnection;
 begin
   Result := FindConnection(ID);
-  if Assigned(Result) then Result.Lock else raise Exception.Create('No connection with ID ' + ID + ' was found!');
+  if Assigned(Result) then Result.Lock else raise EZSQLException.Create('No connection with ID ' + ID + ' was found!');
 end;
 
 function TDbcProxyConnectionManager.LockConnection(Index: SizeInt): TDbcProxyConnection;
 begin
   Result := GetConnection(Index);
-  if Assigned(Result) then Result.Lock else raise Exception.Create('No connection with Index ' + IntToStr(Index) + ' was found!');
+  if Assigned(Result) then Result.Lock else raise EZSQLException.Create('No connection with Index ' + IntToStr(Index) + ' was found!');
 end;
 
-function TDbcProxyConnectionManager.AddConnection(Connection: IZConnection): String;
+function TDbcProxyConnectionManager.AddConnection(Connection: IZConnection; const DatabaseName, OriginalUser: String): String;
 var
   ProxyConn: TDbcProxyConnection;
 begin
   ProxyConn := TDbcProxyConnection.Create(Connection);
+  ProxyConn.DatabaseName := DatabaseName;
+  ProxyConn.OriginalUser := OriginalUser;
   Result := ProxyConn.ID;
   Synchronizer.Beginwrite;
   try
@@ -121,7 +188,7 @@ begin
   end;
 
   if Assigned(Conn) then
-    Conn := nil;
+    FreeAndNil(Conn);
 end;
 
 function TDbcProxyConnectionManager.GetConnectionCount: SizeInt;
@@ -134,5 +201,28 @@ begin
   end;
 end;
 
-end.
+function TDbcProxyConnectionManager.GetConnectionInfoList: TDbcProxyConnectionInfos;
+var
+  Len, x: Integer;
+  Connection: TDbcProxyConnection;
+begin
+  Synchronizer.Beginread;
+  try
+    Len := List.Count;
 
+    SetLength(Result, Len);
+    for x := 0 to len - 1 do begin
+      Connection := List.Items[x];
+      Result[x].Created := Connection.CreationTime;
+      Result[x].Database := Connection.DatabaseName;
+      Result[x].SessionNr := Connection.Nr;
+      Result[x].LastAccess := Connection.LastAccessTime;
+      Result[x].User := Connection.OriginalUser;
+    end;
+  finally
+    Synchronizer.Endread;
+  end;
+end;
+
+
+end.

@@ -80,7 +80,7 @@ uses ZTestConsts, Variants;
 
 function TZAbstactTransactionTestCase.CreateTransaction: TZTransaction;
 begin
-  Result := TZTransaction.Create(nil);
+  Result := TZTransaction.Create(Connection);
   Result.Connection := Connection;
 end;
 

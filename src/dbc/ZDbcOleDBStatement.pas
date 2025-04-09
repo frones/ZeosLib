@@ -72,22 +72,23 @@ uses
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZSysUtils, ZPlainOleDBDriver, ZCollections, ZClasses,
   ZDbcLogging, ZDbcStatement, ZDbcIntfs, ZVariant, ZDbcProperties, ZDbcUtils,
-  ZDbcOleDB, ZDbcOleDBUtils;
+  ZDbcOleDB, ZDbcOleDBUtils, ZExceptions;
 
 type
+  /// <summary>Defines an OleDB specific statement interface</summary>
   IZOleDBPreparedStatement = Interface(IZStatement)
     ['{42A4A633-C63D-4EFA-A8BC-CF755237D0AD}']
     function GetInternalBufferSize: Integer;
     function GetMoreResultsIndicator: TZMoreResultsIndicator;
     procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
-    function GetNewRowSet(var RowSet: IRowSet): Boolean;
   End;
 
   {** Implements Prepared ADO Statement. }
-  TZAbstractOleDBStatement = class(TZUTF16ParamDetectPreparedStatement,
+  TZAbstractOleDBStatement = class(TZUTF16ParamCountPreparedStatement,
     IZOleDBPreparedStatement)
   private
     FMultipleResults: IMultipleResults;
+    FRowSet: IRowSet;
     FZBufferSize, fStmtTimeOut: Integer;
     FCommand: ICommandText;
     FRowSize: NativeUInt;
@@ -109,7 +110,8 @@ type
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
     destructor Destroy; override;
-
+    /// <summary>Do tasks after the statement was closed. For example
+    ///  dispose statement handles.</summary>
     procedure AfterClose; override;
 
     procedure Prepare; override;
@@ -167,12 +169,13 @@ type
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
-  protected //interface based!
-    function CreateResultSet(const RowSet: IRowSet): IZResultSet; virtual;
+  protected
+    function CreateResultSet: IZResultSet;
+    function CreateOutParamResultSet: IZResultSet; virtual;
+  public { implement IZOleDBPreparedStatement }
     function GetInternalBufferSize: Integer;
     function GetMoreResultsIndicator: TZMoreResultsIndicator;
     procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
-    function GetNewRowSet(var RowSet: IRowSet): Boolean;
   end;
 
   EZOleDBConvertError = class(EZSQLException);
@@ -204,6 +207,7 @@ type
     procedure InternalBindDbl(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure SetBindOffsets;
   protected
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -212,9 +216,9 @@ type
     procedure SetBindCapacity(Capacity: Integer); override;
     function CreateOleDBConvertErrror(Index: Integer; WType: Word; SQLType: TZSQLType): EZOleDBConvertError;
     procedure RaiseExceeded(Index: Integer);
-    function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
+    function CreateOutParamResultSet: IZResultSet; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -237,43 +241,248 @@ type
   public //setters
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
+
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: Integer; {%H-}SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(Index: Integer; Value: Boolean);
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(Index: Integer; Value: Byte);
+    /// <summary>Sets the designated parameter to a <c>ShortInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetShort(Index: Integer; Value: ShortInt);
+    /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetWord(Index: Integer; Value: Word);
+    /// <summary>Sets the designated parameter to a <c>SmallInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetSmall(Index: Integer; Value: SmallInt);
+    /// <summary>Sets the designated parameter to a <c>Cardinal</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUInt(Index: Integer; Value: Cardinal);
+    /// <summary>Sets the designated parameter to a <c>Integer</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetInt(Index: Integer; Value: Integer);
+    /// <summary>Sets the designated parameter to a <c>UInt64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetULong(Index: Integer; const Value: UInt64);
+    /// <summary>Sets the designated parameter to a <c>Int64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetLong(Index: Integer; const Value: Int64);
+    /// <summary>Sets the designated parameter to a <c>Single</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetFloat(Index: Integer; Value: Single);
+    /// <summary>Sets the designated parameter to a <c>Double</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDouble(Index: Integer; const Value: Double);
+    /// <summary>Sets the designated parameter to a <c>Currency</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
-    procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>String</c> value.
+    ///  This method equals to SetUnicodeString on Unicode-Compilers. For
+    ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
+    ///  the ConnectionSettings record. The driver will convert the string to
+    ///  the Client-Characterset.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Sets the designated parameter to a <c>RawByteString</c> value.
+    ///  The string must be UTF8 encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUTF8String(Index: Integer; const Value: UTF8String); reintroduce;
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be GET_ACP encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>UnicodeString</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
-
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
-
+    /// <summary>Sets the designated parameter to a <c>TZDate</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>Time(TDateTime)</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the <c>SetTime(Index: Integer; Value: TZtime)</c>
+    ///  overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>TDateTime</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the
+    ///  <c>SetTimestamp(Index: Integer; Value: TZTimestamp)</c>overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>byte array</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>ByteArray reference</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value reference.</param>
+    /// <param>"Len" the Length of the bytes buffer.</param>
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>TGUID</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
+    /// <summary>Sets the designated parameter to the given blob wrapper object.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" defines the lob constent. Valid values are:
+    ///  stAsciiStream(raw encoded text), stUnicodeStream(UTF16 encoded text)
+    ///  and stBinaryStream(binary data), stJSON, stXML</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
-
+    /// <summary>Sets the designated parameter to a data array value. This
+    ///  method usually initializes the BatchArray DML mode unless the parameter
+    ///  was registered as a PLSQLTable ( in (?) )before.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter array value to be set. Note we just
+    ///  reference the array address. We do not increment the Array-Refcount.
+    ///  Means you need to keep the arrays alive until the statement has been
+    ///  excuted.</param>
+    /// <param>"SQLType" the SQLType of the array</param>
+    /// <param>"VariantType" the VariantType of the array. It is used as a
+    ///  subtype like:
+    ///  (SQLType = stString, VariantType = vtUTF8String) or
+    ///  (SQLType = stDate, VariantType = vtDate or vtDateTime) </param>
     procedure SetDataArray(ParameterIndex: Integer; const Value;
       const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
-
+    /// <summary>Register the parameter properties. This method is required for
+    ///  all InOut, Out or Result parameters to access them afterwards. It's not
+    ///  requiered to register In params.</summary>
+    /// <param>"ParameterIndex" the first parameter is 0, the second is 1, ...
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the parameters SQLType.</param>
+    /// <param>"ParamType" the TZProcedureColumnType of the parameter.</param>
+    /// <param>"PrecisionOrSize" either the Precision for Numeric types or the
+    ///  Length for strings or bytes. The value is ignored for all other types.</param>
+    /// <param>"Scale" the numeric or second-fraction scale of the parameter.</param>
     procedure RegisterParameter(Index: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
@@ -287,6 +496,10 @@ type
   TZOleDBCallableStatementMSSQL = class(TZAbstractCallableStatement_W,
     IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -321,7 +534,7 @@ begin
     Status := FCommand.Cancel;
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommand.Cancel'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommand.Cancel'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
   end else
     inherited Cancel;
@@ -331,10 +544,12 @@ procedure TZAbstractOleDBStatement.ClearCallResultCache;
 var I: Integer;
   RS: IZResultSet;
 begin
-  for I := 0 to FCallResultCache.Count -1 do
-    if Supports(FCallResultCache[i], IZResultSet, RS) then
-      RS.Close;
-  FreeAndNil(FCallResultCache);
+  if Assigned(FCallResultCache) then begin
+    for I := 0 to FCallResultCache.Count -1 do
+      if Supports(FCallResultCache[i], IZResultSet, RS) then
+        RS.Close;
+    FreeAndNil(FCallResultCache);
+  end;
 end;
 
 constructor TZAbstractOleDBStatement.Create(const Connection: IZConnection;
@@ -352,15 +567,20 @@ begin
   DatabaseInfo := nil;
 end;
 
-function TZAbstractOleDBStatement.CreateResultSet(const RowSet: IRowSet): IZResultSet;
+function TZAbstractOleDBStatement.CreateOutParamResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+function TZAbstractOleDBStatement.CreateResultSet: IZResultSet;
 var
   CachedResolver: IZCachedResolver;
   NativeResultSet: TZOleDBResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   Result := nil;
-  if Assigned(RowSet) then begin
-    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, RowSet, FZBufferSize);
+  if Assigned(FRowSet) then begin
+    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, @FRowSet, FZBufferSize);
     if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
       if (Connection.GetServerProvider = spMSSQL) and (Self.GetResultSetConcurrency = rcUpdatable)
       then CachedResolver := TZOleDBMSSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData)
@@ -414,7 +634,7 @@ begin
     Status := FCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
   end;
   if FCallResultCache <> nil then
@@ -470,59 +690,55 @@ begin
 end;
 
 function TZAbstractOleDBStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  FRowSet: IRowSet;
-  Status: HResult;
+var Status: HResult;
 begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
   RestartTimer;
-  try
-    FRowsAffected := DB_COUNTUNAVAILABLE;
-    FRowSet := nil;
-    if Assigned(FOpenResultSet) then
-      Result := IZResultSet(FOpenResultSet)
-    else begin
-      if FSupportsMultipleResultSets then begin
-        Status := FCommand.Execute(nil, IID_IMultipleResults, FDBParams,
-          @FRowsAffected,@FMultipleResults);
+  if Assigned(FOpenResultSet) then begin
+    Result := IZResultSet(FOpenResultSet);
+    Status := FCommand.Execute(nil, IID_IRowset, FDBParams, @FRowsAffected, @FRowSet);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+  end else begin
+    if FSupportsMultipleResultSets then begin
+      Status := FCommand.Execute(nil, IID_IMultipleResults, FDBParams,
+        @FRowsAffected,@FMultipleResults);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+      if Assigned(FMultipleResults) then begin
+        //don't use DBRESULTFLAG_ROWSET see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=129214
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+          IID_IRowset, @FRowsAffected, @FRowSet);
         if Failed(Status) then
           FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
-        if Assigned(FMultipleResults) then begin
-          //don't use DBRESULTFLAG_ROWSET see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=129214
-          Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-            IID_IRowset, @FRowsAffected, @FRowSet);
-          if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-              SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-        end;
-      end else begin
-        Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
-        if Failed(Status) then
-          FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
       end;
-      if DriverManager.HasLoggingListener then
-         DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
-      if BindList.HasOutOrInOutOrResultParam then begin
-        FetchCallResults(FRowSet);
-        Result := GetFirstResultSet;
-      end else if FRowSet <> nil
-        then Result := CreateResultSet(FRowSet)
-        else Result := nil;
-      LastUpdateCount := FRowsAffected;
-      if not Assigned(Result) then
-        while GetMoreResults do
-          if (LastResultSet <> nil) then begin
-            Result := LastResultSet;
-            FLastResultSet := nil;
-            Break;
-          end;
+    end else begin
+      Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
     end;
-  finally
-    FRowSet := nil;
+    if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
+    if BindList.HasOutOrInOutOrResultParam then begin
+      FetchCallResults(FRowSet);
+      Result := GetFirstResultSet;
+    end else if FRowSet <> nil
+      then Result := CreateResultSet
+      else Result := nil;
+    LastUpdateCount := FRowsAffected;
+    if not Assigned(Result) then
+      while GetMoreResults do
+        if (LastResultSet <> nil) then begin
+          Result := LastResultSet;
+          FLastResultSet := nil;
+          Break;
+        end;
   end;
 end;
 
@@ -544,7 +760,7 @@ begin
         DB_NULLGUID, @FRowsAffected, nil);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-          {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+          {$IFDEF ZEOSDEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
           IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     end;
   end else begin
@@ -556,7 +772,7 @@ begin
   if DriverManager.HasLoggingListener then
      DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
   if BindList.HasOutOrInOutOrResultParam then
-    FOutParamResultSet := CreateResultSet(nil);
+    FOutParamResultSet := CreateOutParamResultSet;
   LastUpdateCount := FRowsAffected;
   Result := LastUpdateCount;
 end;
@@ -566,10 +782,10 @@ var CallResultCache: TZCollection;
 begin
   Result := RowSet <> nil;
   if (FOutParameterAvailibility = DBPROPVAL_OA_ATEXECUTE) then
-    FOutParamResultSet := CreateResultSet(nil);
+    FOutParamResultSet := CreateOutParamResultSet;
   CallResultCache := TZCollection.Create;
   if RowSet <> nil then begin
-    FLastResultSet := CreateResultSet(RowSet);
+    FLastResultSet := CreateResultSet;
     CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
     FLastResultSet.Close;
     RowSet := nil;
@@ -583,63 +799,55 @@ begin
     end else
       CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
   if (FOutParameterAvailibility = DBPROPVAL_OA_ATROWRELEASE) then
-    FOutParamResultSet := CreateResultSet(nil);
+    FOutParamResultSet := CreateOutParamResultSet;
   FCallResultCache := CallResultCache;
 end;
 
 function TZAbstractOleDBStatement.ExecutePrepared: Boolean;
-var FRowSet: IRowSet;
-    Status: HResult;
+var Status: HResult;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
   Prepare;
   RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE;
-  try
-    FRowSet := nil;
-    if FSupportsMultipleResultSets then begin
-      Status := FCommand.Execute(nil, IID_IMultipleResults,
-        FDBParams,@FRowsAffected,@FMultipleResults);
+  if FSupportsMultipleResultSets then begin
+    Status := FCommand.Execute(nil, IID_IMultipleResults,
+      FDBParams,@FRowsAffected,@FMultipleResults);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+    if Assigned(FMultipleResults) then begin
+      Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+        IID_IRowset, @FRowsAffected, @FRowSet);
       if Failed(Status) then
-        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
-      if Assigned(FMultipleResults) then begin
-        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-          IID_IRowset, @FRowsAffected, @FRowSet);
-        if Failed(Status) then
-          FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-            {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
-            IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-      end
-    end else begin
-      Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
-      if Failed(Status) then
-        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
-    end;
-    if DriverManager.HasLoggingListener then
-       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
-    if BindList.HasOutOrInOutOrResultParam then
-      if FetchCallResults(FRowSet)
-      then LastResultSet := GetFirstResultSet
-      else LastResultSet := nil
-    else if FRowSet <> nil
-      then LastResultSet := CreateResultSet(FRowSet)
-      else LastResultSet := nil;
-    LastUpdateCount := FRowsAffected;
-    Result := Assigned(LastResultSet);
-  finally
-    FRowSet := nil;
+        FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+          {$IFDEF ZEOSDEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+          IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+    end
+  end else begin
+    Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
   end;
+  if DriverManager.HasLoggingListener then
+     DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
+  if BindList.HasOutOrInOutOrResultParam then
+    if FetchCallResults(FRowSet)
+    then LastResultSet := GetFirstResultSet
+    else LastResultSet := nil
+  else if FRowSet <> nil
+    then LastResultSet := CreateResultSet
+    else LastResultSet := nil;
+  LastUpdateCount := FRowsAffected;
+  Result := Assigned(LastResultSet);
 end;
 
 function TZAbstractOleDBStatement.GetMoreResults: Boolean;
-var
-  FRowSet: IRowSet;
-  Status: HResult;
-  RS: IZResultSet;
-  AnyValue: IZAnyValue;
+var Status: HResult;
+    RS: IZResultSet;
+    AnyValue: IZAnyValue;
 begin
   if (FOpenResultSet <> nil) and (FOpenResultSet <> Pointer(FOutParamResultSet))
   then IZResultSet(FOpenResultSet).Close;
@@ -666,7 +874,7 @@ begin
       Result := Status = S_OK;
       if Result then begin
         if Assigned(FRowSet)
-        then LastResultSet := CreateResultSet(FRowSet)
+        then LastResultSet := CreateResultSet
         else LastUpdateCount := FRowsAffected;
       end {else if Status <> DB_S_NORESULT then
         CheckError(Status, lcOther)};
@@ -679,57 +887,42 @@ begin
   Result := fMoreResultsIndicator;
 end;
 
-function TZAbstractOleDBStatement.GetNewRowSet(var RowSet: IRowSet): Boolean;
-var Status: HResult;
-begin
-  RowSet := nil;
-  if Prepared then begin
-    Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@RowSet);
-    if Failed(Status) then
-      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-    Result := Assigned(RowSet);
-    if DriverManager.HasLoggingListener then
-       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
-  end else Result := False;
-end;
-
 procedure TZAbstractOleDBStatement.Unprepare;
 var
   Status: HRESULT;
   FRowSet: IRowSet;
   CommandPrepare: ICommandPrepare;
 begin
-  if Prepared then
-    try
-      inherited Unprepare;
-      if FCallResultCache <> nil then
-        ClearCallResultCache;
-      if FMultipleResults <> nil then begin
-        repeat
-          FRowSet := nil;
-          Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-            IID_IRowset, @FRowsAffected, @FRowSet);
-        until Failed(Status) or (Status = DB_S_NORESULT);
-        FMultipleResults := nil;
-      end;
-      if (FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK) and
-         not fDEFERPREPARE then begin
-        try
-          Status := CommandPrepare.UnPrepare;
-          if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, SQL,
-              IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-          if DriverManager.HasLoggingListener then
-            LogPrepStmtMessage(lcUnprepStmt);
-        finally
-          CommandPrepare := nil;
-        end;
-      end;
-    finally
-      FCommand := nil;
+  if Prepared then try
+    inherited Unprepare;
+    FRowSet := nil;
+    if FCallResultCache <> nil then
+      ClearCallResultCache;
+    if FMultipleResults <> nil then begin
+      repeat
+        FRowSet := nil;
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+          IID_IRowset, @FRowsAffected, @FRowSet);
+      until Failed(Status) or (Status = DB_S_NORESULT);
       FMultipleResults := nil;
     end;
+    if (FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK) and
+       not fDEFERPREPARE then begin
+      try
+        Status := CommandPrepare.UnPrepare;
+        if Failed(Status) then
+          FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, SQL,
+            IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+        if DriverManager.HasLoggingListener then
+          LogPrepStmtMessage(lcUnprepStmt);
+      finally
+        CommandPrepare := nil;
+      end;
+    end;
+  finally
+    FCommand := nil;
+    FMultipleResults := nil;
+  end;
 end;
 
 procedure TZAbstractOleDBStatement.SetMoreResultsIndicator(
@@ -1142,7 +1335,7 @@ begin
       Pointer(FDBBINDSTATUSArray));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'IParameterAccessor.CreateAccessor'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'IParameterAccessor.CreateAccessor'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), FDBBINDSTATUSArray);
   end;
 end;
@@ -1173,25 +1366,19 @@ begin
     LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
 end;
 
-function TZOleDBPreparedStatement.CreateResultSet(
-  const RowSet: IRowSet): IZResultSet;
-var
-  NativeResultSet: TZOleDBParamResultSet;
-  CachedResultSet: TZCachedResultSet;
+function TZOleDBPreparedStatement.CreateOutParamResultSet: IZResultSet;
+var NativeResultSet: TZOleDBParamResultSet;
+    CachedResultSet: TZCachedResultSet;
 begin
-  Result := nil;
-  if (RowSet = nil) and BindList.HasOutOrInOutOrResultParam then begin
-    NativeResultSet := TZOleDBParamResultSet.Create(Self, FParamsBuffer,
-      FDBBindingArray, FParamNamesArray);
-    if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
-      CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL,
-        TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
-      CachedResultSet.SetConcurrency(ResultSetConcurrency);
-      Result := CachedResultSet;
-    end else
-      Result := NativeResultSet;
+  NativeResultSet := TZOleDBParamResultSet.Create(Self, FParamsBuffer,
+    FDBBindingArray, FParamNamesArray);
+  if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
+    CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL,
+      TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
+    CachedResultSet.SetConcurrency(ResultSetConcurrency);
+    Result := CachedResultSet;
   end else
-    Result := inherited CreateResultSet(RowSet);
+    Result := NativeResultSet;
   FOpenResultSet := Pointer(Result);
 end;
 
@@ -1361,21 +1548,21 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
           end;
       (DBTYPE_WSTR or DBTYPE_BYREF): case SQLType of
             stFloat, stDouble: begin
-                PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 128);
+                PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 128);
                 PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, ZPPWideChar(Data)^) shl 1;
               end;
             stDate: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto DWConv;
                     end;
             stTime: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 26);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 26);
                       Data := PPointer(Data)^;
                       goto TWConv;
                     end;
             stTimeStamp: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 48);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 48);
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
@@ -1428,14 +1615,14 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value, C, Negative);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
           end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
           if Negative then
             PWord(Data)^ := Ord('-');
           IntToUnicode(C, PWideChar(Data)+Ord(Negative), L);
-          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1 + Byte(Ord(Negative));
+          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := (L + Byte(Ord(Negative))) shl 1;
         end;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_NUMERIC: begin
@@ -1483,7 +1670,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
           end else if (L shl 1 >= Bind.cbMaxLen) then
             RaiseExceeded(Index);
@@ -1529,11 +1716,12 @@ begin
 jmpRecreate:
     fBindImmediat := False;
     FCommand := FOleDBConnection.CreateCommand;
-    SetOleCommandProperties;
+    if FOleDBConnection.GetServerProvider <> spMSJet then
+      SetOleCommandProperties;
     Status := fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     if not fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
       Status := CommandPrepare.Prepare(0);
@@ -1557,6 +1745,7 @@ jmpRecreate:
   end else begin
     if FCallResultCache <> nil then
       ClearCallResultCache;
+    FRowSet := nil; //release this interface! else we can't free the command in some tests
     FMultipleResults := nil; //release this interface! else we can't free the command in some tests
     if Assigned(FParameterAccessor) and ((BatchDMLArrayCount > 0) and
        (FDBParams.cParamSets = 0)) or //new arrays have been set
@@ -1565,9 +1754,6 @@ jmpRecreate:
   end;
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZOleDBPreparedStatement.PrepareInParameters;
 var
   FNamesBuffer: PPOleStr; //we don't need this here except as param!
@@ -1590,7 +1776,7 @@ begin
       Exit;
     end else if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommandWithParameters.GetParameterInfo'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommandWithParameters.GetParameterInfo'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), FDBBINDSTATUSArray);
     try
       SetParamCount(FDBUPARAMS);
@@ -1709,7 +1895,7 @@ const ZeroBCDFraction: packed array [0..31] of Byte = (0, 0, 0, 0, 0, 0, 0, 0, 0
                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 {$ENDIF}
 procedure TZOleDBPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var Bind: PDBBINDING;
   Data: PAnsiChar;
 begin
@@ -1749,7 +1935,7 @@ begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, PWideChar(Data), '.') shl 1;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 68); //8Byte align
+                   PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 68); //8Byte align
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, ZPPWideChar(Data)^, '.') shl 1;;
                  end;
       //DBTYPE_VARNUMERIC:;
@@ -1884,27 +2070,11 @@ Fix_CLob: raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
     InitLongBind(Index, SQLType2OleDBTypeEnum[SQLType]);
 end;
 
-{**
-  Sets the designated parameter to a Java <code>boolean</code> value.
-  The driver converts this
-  to an SQL <code>BIT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZOleDBPreparedStatement.SetBoolean(Index: Integer; Value: Boolean);
 begin
   InternalBindUInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean, Ord(Value));
 end;
 
-{**
-  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
-  The driver converts this
-  to an SQL <code>BYTE</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZOleDBPreparedStatement.SetByte(Index: Integer; Value: Byte);
 begin
   InternalBindUInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte, Value);
@@ -1957,7 +2127,7 @@ begin
 end;
 
 procedure TZOleDBPreparedStatement.SetCharRec(Index: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 label set_from_tmp;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -2039,7 +2209,7 @@ begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+                   PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 48); //8Byte align
                    CurrToUnicode(Value, '.', ZPPWideChar(Data)^, @PEnd);
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PPAnsiChar(Data)^;
                  end;
@@ -2109,7 +2279,7 @@ begin
       stAsciiStream,
       stUnicodeStream,
       stBinaryStream: InitLongBind(ParameterIndex, SQLType2OleDBTypeEnum[SQLType]);
-      stUnknown, stArray, stDataSet: raise CreateOleDBConvertErrror(ParameterIndex, DBTYPE_WSTR, SQLType);
+      stUnknown, stArray, stResultSet: raise CreateOleDBConvertErrror(ParameterIndex, DBTYPE_WSTR, SQLType);
       else InitFixedBind(ParameterIndex, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType]);
     end;
   end;
@@ -2125,7 +2295,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
@@ -2175,7 +2345,7 @@ DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                           False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto DWConv;
                     end;
@@ -2217,7 +2387,8 @@ begin
   InternalBindDbl(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
 end;
 
-procedure TZOleDBPreparedStatement.SetGUID(Index: Integer; const Value: TGUID);
+procedure TZOleDBPreparedStatement.SetGUID(Index: Integer;
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var Bind: PDBBINDING;
   Data: Pointer;
 label set_uni_len, set_uid_len;
@@ -2254,7 +2425,7 @@ set_uid_len:            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 
                     goto set_raw_len;
                   end;
       (DBTYPE_STR or DBTYPE_BYREF): begin
-                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 37);
+                    PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 37);
                     GUIDToBuffer(@Value.D1, PPAnsiChar(Data)^, [guidSet0Term]);
 set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                   end; *)
@@ -2265,7 +2436,7 @@ set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                     goto set_uni_len;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 74);
+                    PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 74);
                     GUIDToBuffer(@Value.D1, ZPPWideChar(Data)^, [guidSet0Term]);
 set_uni_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 72;
                   end;
@@ -2444,14 +2615,14 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value, u64, Negative);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24); //8Byte align
             Data := PPointer(Data)^; //-9.223.372.036.854.775.808
           end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
           if Negative then
             PWord(PPointer(Data)^)^ := Ord('-');
           IntToUnicode(u64, PWideChar(Data)+Ord(Negative), L);
-          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1 + Byte(Ord(Negative));
+          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := (L + Byte(Ord(Negative))) shl 1;
         end;
       DBTYPE_NUMERIC: begin
                         PDB_NUMERIC(Data)^.precision := GetOrdinalDigits(PInt64(@Value)^, PUInt64(@PDB_NUMERIC(Data)^.val[0])^, Negative);
@@ -2470,13 +2641,6 @@ begin
   {$ENDIF}
 end;
 
-{**
-  Sets the designated parameter to SQL <code>NULL</code>.
-  <P><B>Note:</B> You must specify the parameter's SQL type.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
-}
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.SetNull(Index: Integer; SQLType: TZSQLType);
 begin
@@ -2537,31 +2701,31 @@ begin
     rgPropertySets[1].rgProperties    := @rgProviderProperties;
 
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(0, fStmtTimeOut)); //Set command time_out static!
-    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
+    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      ZVARIANT_TRUE); //force a server side cursor
     if (Provider = spMSSQL) then begin
       //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
       //http://msdn.microsoft.com/de-de/library/ms130779.aspx
       if fDEFERPREPARE
-      then SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_TRUE)
-      else SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
+      then SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, ZVARIANT_TRUE)
+      else SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, ZVARIANT_FALSE);
     end else begin
       //to avoid http://support.microsoft.com/kb/272358/de we need a
       //FAST_FORWARD(RO) server cursor
       {common sets which are NOT default: according the cursor models of
       http://msdn.microsoft.com/de-de/library/ms130840.aspx }
-      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        ZVARIANT_FALSE);
       if (Connection as IZOleDBConnection).SupportsMARSConnection then begin
-        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_FALSE);
-        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_FALSE);
+        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         ZVARIANT_FALSE);
+        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   ZVARIANT_FALSE);
       end else begin
-        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
-        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         ZVARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   ZVARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
       end;
-      SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
-      SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
-      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       ZVARIANT_TRUE);
+      SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, ZVARIANT_TRUE);
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         ZVARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  ZVARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, ZVARIANT_FALSE);
     end;
     try
       Status := FCmdProps.SetProperties(2,@rgPropertySets[0]);
@@ -2892,7 +3056,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
@@ -2948,7 +3112,7 @@ TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                         PWideChar(Data), ConSettings.WriteFormatSettings.TimeFormat, False, Value.IsNegative) shl 1
                       else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto TWConv;
                     end;
@@ -2973,7 +3137,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZOleDBPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var Bind: PDBBINDING;
   Data: PAnsichar;
   DT: TDateTime;
@@ -3040,7 +3204,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                           ConSettings.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
@@ -3049,7 +3213,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                     else InternalBindSInt(Index, stTimeStamp, 1);
     end;
   end else begin//Late binding
-    InitDateBind(Index, stTime);
+    InitDateBind(Index, stTimeStamp);
     BindList.Put(Index, Value);
   end;
 end;
@@ -3113,7 +3277,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 48); //8Byte align
             Data := PPointer(Data)^; //18.446.744.073.709.551.615
           end else if (Bind.cbMaxLen <= L shl 1) then
             RaiseExceeded(Index);
@@ -3185,14 +3349,6 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
-  The driver converts this
-  to an SQL <code>WORD</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZOleDBPreparedStatement.SetWord(Index: Integer; Value: Word);
 begin
   InternalBindUInt(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord, Value);

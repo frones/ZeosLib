@@ -75,6 +75,8 @@ type
 
   TWaitMethod = procedure of object;
 
+  TZProtectedAbstractRWTxnUpdateObjDataSet = Class(TZAbstractRWTxnUpdateObjDataSet);
+
   { TZUpdateSQLEditForm }
 
   TZUpdateSQLEditForm = class(TForm)
@@ -124,7 +126,7 @@ type
     procedure SQLMemoKeyPress(Sender: TObject; var Key: Char);
   private
     StmtIndex: Integer;
-    DataSet: TZAbstractDataset;
+    DataSet: TZProtectedAbstractRWTxnUpdateObjDataSet;
     QuoteChar: string;
     ConnectionOpened: Boolean;
     UpdateSQL: TZUpdateSQL;
@@ -198,7 +200,7 @@ implementation
 {$ENDIF}
 
 uses Dialogs, {$IFNDEF FPC}LibHelp, {$ENDIF}TypInfo, ZCompatibility, ZSqlMetadata,
-  ZDbcIntfs, ZTokenizer, ZGenericSqlAnalyser, ZSelectSchema, ZDbcMetadata;
+  ZDbcIntfs, ZTokenizer, ZGenericSqlAnalyser, ZSelectSchema, ZDbcMetadata, ZExceptions;
 
 { TZUpdateSqlEditor }
 
@@ -267,10 +269,7 @@ begin
       else
         ListBox.Selected[I] := False;
     if ListBox.Items.Count > 0 then
-    begin
-      ListBox.ItemIndex := 0;
       ListBox.TopIndex := 0;
-    end;
   finally
     ListBox.Items.EndUpdate;
   end;
@@ -282,14 +281,10 @@ var
 begin
   ListBox.Items.BeginUpdate;
   try
-    with ListBox do
-      for I := 0 to Items.Count - 1 do
-        Selected[I] := True;
+    ListBox.SelectAll;
+
     if ListBox.Items.Count > 0 then
-    begin
-      ListBox.ItemIndex := 0;
       ListBox.TopIndex := 0;
-    end;
   finally
     ListBox.Items.EndUpdate;
   end;
@@ -599,9 +594,9 @@ var
 begin
   Result := False;
   ConnectionOpened := False;
-  if Assigned(UpdateSQL.DataSet) and (UpdateSQL.DataSet is TZAbstractDataset) then
+  if Assigned(UpdateSQL.DataSet) and (UpdateSQL.DataSet is TZAbstractRWTxnUpdateObjDataSet) then
   begin
-    DataSet := TZAbstractDataset(UpdateSQL.DataSet);
+    DataSet := TZProtectedAbstractRWTxnUpdateObjDataSet(UpdateSQL.DataSet);
     DataSetName := Format('%s%s%s', [DataSet.Owner.Name, DotSep, DataSet.Name]);
     if Assigned(DataSet.Connection) and not DataSet.Connection.Connected then
     begin
@@ -733,7 +728,7 @@ var
   TableName: string;
 begin
   if (KeyFieldList.SelCount = 0) or (UpdateFieldList.SelCount = 0) then
-    raise Exception.Create(SSQLGenSelect);
+    raise EZSQLException.Create(SSQLGenSelect);
   KeyFields := TStringList.Create;
   try
     GetSelectedItems(KeyFieldList, KeyFields);
@@ -891,8 +886,8 @@ begin
 end;
 
 type
-  THackDataSet = class(TZAbstractDataset);
-  
+  THackDataSet = class(TZAbstractRWDataSet);
+
 procedure TZUpdateSQLEditForm.InitUpdateTableNames;
 var
   I: Integer;
@@ -902,34 +897,28 @@ var
   SelectSchema: IZSelectSchema;
 begin
   QuoteChar := '""';
-  if Assigned(DataSet) and Assigned(DataSet.Connection)
-    and Assigned(DataSet.Connection.DbcConnection)then
-  begin
+  if Assigned(DataSet) and Assigned(DataSet.Connection) and DataSet.Connection.Connected then begin
     QuoteChar := DataSet.Connection.DbcConnection.GetMetadata.GetDatabaseInfo.
       GetIdentifierQuoteString;
     if Length(QuoteChar) = 1 then
       QuoteChar := QuoteChar + QuoteChar;
     { Parses the Select statement and retrieves a schema object. }
-    Tokenizer := DataSet.Connection.DbcDriver.GetTokenizer;
-    StatementAnalyser := DataSet.Connection.DbcDriver.GetStatementAnalyser;
+    Tokenizer := DataSet.Connection.DbcConnection.GetTokenizer;
+    StatementAnalyser := DataSet.Connection.DbcConnection.GetStatementAnalyser;
     SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer,
       THackDataSet(DataSet).SQL.Text);
-    if Assigned(SelectSchema) then
-    begin
+    if Assigned(SelectSchema) then begin
       UpdateTableName.Clear;
       for I := 0 to SelectSchema.TableCount - 1 do
         UpdateTableName.Items.Add(SelectSchema.Tables[I].Table);//!!!Schema support
     end;
-  end
-  else
-    if Assigned(Dataset) then
-    begin
-      TableName := '';
-      if SQLText[ukModify].Count > 0 then
-        ParseUpdateSql(SQLText[ukModify].Text, QuoteChar, TableName, nil, nil);
-      if TableName <> '' then
-        UpdateTableName.Items.Add(TableName);
-    end;
+  end else if Assigned(Dataset) then begin
+    TableName := '';
+    if SQLText[ukModify].Count > 0 then
+      ParseUpdateSql(SQLText[ukModify].Text, QuoteChar, TableName, nil, nil);
+    if TableName <> '' then
+      UpdateTableName.Items.Add(TableName);
+  end;
   if UpdateTableName.Items.Count > 0 then
      UpdateTableName.ItemIndex := 0;
 end;

@@ -116,6 +116,7 @@ type
     property MasterFields;
     property MasterSource;
     property LinkedFields; {renamed by bangfauzan}
+    property Connection;
   end;
 
 implementation

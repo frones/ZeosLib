@@ -60,50 +60,87 @@ uses
   ZSysUtils, ZTokenizer;
 
 type
-
-  {** Implements an Expression-specific number state object. }
+  /// <summary>Implements an Expression-specific number state object.</summary>
   TZExpressionNumberState = class (TZNumberState)
   public
+    /// <summary>Return a number token from a string buffer.</summary>
+    /// <param>"SPos" the String position reference of the String buffer</param>
+    /// <param>"NTerm" the termination zero position reference of the String buffer</param>
+    /// <param>"Tokenizer" the Tokenizer interface which did splitt the String
+    ///  into Tokens.</param>
+    /// <returns>a number token from a character buffer</returns>
     function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
-  {** Implements an Expression-specific quote string state object. }
+  /// <summary>Implements an Expression-specific quote string state object.</summary>
   TZExpressionQuoteState = class (TZQuoteState)
   public
+    /// <summary>Return a quoted string token from a string buffer. This method
+    ///  will collect characters until it sees a match to the character that the
+    ///  tokenizer used to switch to this state.</summary>
+    /// <param>"SPos" the String position reference of the String buffer</param>
+    /// <param>"NTerm" the termination zero position reference of the String buffer</param>
+    /// <param>"Tokenizer" the Tokenizer interface which did splitt the String
+    ///  into Tokens.</param>
+    /// <returns>return a quoted string token from a string buffer</returns>
     function NextToken(var SPos: PChar; const NTerm: PChar;
-      {%H-}Tokenizer: TZTokenizer): TZToken; override;
+      Tokenizer: TZTokenizer): TZToken; override;
+    /// <summary>Encodes a string value.</summary>
+    /// <param>"Value" a string value to be encoded.</param>
+    /// <param>"QuoteChar" a string quote character.</param>
+    /// <returns>an encoded string.</returns>
     function EncodeString(const Value: string; QuoteChar: Char): string; override;
+    /// <summary>Decodes a string value.</summary>
+    /// <param>"Value" a token value to be decoded.</param>
+    /// <param>"QuoteChar" a string quote character.</param>
+    /// <returns>an decoded string.</returns>
     function DecodeToken(const Value: TZToken; QuoteChar: Char): string; override;
   end;
 
-  {**
-    This state will either delegate to a comment-handling
-    state, or return a token with just a slash in it.
-  }
+  /// <summary>Implements an Expression-specific comment state object. This
+  ///  state will either delegate to a comment-handling state, or return a token
+  ///  with just a slash in it.</summary>
   TZExpressionCommentState = class (TZCppCommentState)
   public
+    /// <summary>Gets an Expression specific comments like /* */.</summary>
+    /// <param>"SPos" the String position reference of the String buffer</param>
+    /// <param>"NTerm" the termination zero position reference of the String buffer</param>
+    /// <param>"Tokenizer" the Tokenizer interface which did splitt the String
+    ///  into Tokens.</param>
+    /// <returns>either just a slash token, or the results of delegating to a
+    ///  comment-handling state from a string buffer</returns>
     function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
-  {** Implements a symbol state object. }
+  /// <summary>Implements a symbol state object.</summary>
   TZExpressionSymbolState = class (TZSymbolState)
   public
+    /// <summary>Creates this Expression-specific symbol state object.</summary>
     constructor Create;
   end;
 
-  {** Implements a word state object. }
+  /// <summary>Implements a word state object.</summary>
   TZExpressionWordState = class (TZWordState)
   public
+    /// <summary>Constructs this Expression-specific word state object.</summary>
     constructor Create;
+    /// <summary>Gets a word tokens or special operators from a character buffer.</summary>
+    /// <param>"SPos" the String position reference of the String buffer</param>
+    /// <param>"NTerm" the termination zero position reference of the String buffer</param>
+    /// <param>"Tokenizer" the Tokenizer interface which did splitt the String
+    ///  into Tokens.</param>
+    /// <returns>a processed token</returns>.
     function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
-  {** Implements a default tokenizer object. }
+  /// <summary>Implements a default tokenizer object.</summary>
   TZExpressionTokenizer = class (TZTokenizer)
   protected
+    /// <summary>Constructs a default state table (as described in the class
+    ///  comment).</summary>
     procedure CreateTokenStates; override;
   end;
 
@@ -112,18 +149,12 @@ implementation
 uses ZCompatibility{$IFDEF FAST_MOVE},ZFastCode{$ENDIF};
 
 const
-  {** List of keywords. }
+  /// <summary>defines a List of keywords.</summary>
   Keywords: array [0..8] of string = (
-    'AND','OR','NOT','XOR','LIKE','IS','NULL','TRUE','FALSE'
-  );
+    'AND','OR','NOT','XOR','LIKE','IS','NULL','TRUE','FALSE');
 
 { TZExpressionNumberState }
 
-
-{**
-  Return a number token from a reader.
-  @return a number token from a reader
-}
 function TZExpressionNumberState.NextToken(var SPos: PChar;
   const NTerm: PChar; Tokenizer: TZTokenizer): TZToken;
 var
@@ -176,13 +207,7 @@ end;
 
 { TZExpressionSQLQuoteState }
 
-{**
-  Return a quoted string token from a reader. This method
-  will collect characters until it sees a match to the
-  character that the tokenizer used to switch to this state.
-
-  @return a quoted string token from a reader
-}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used}{$ENDIF}
 function TZExpressionQuoteState.NextToken(var SPos: PChar;
   const NTerm: PChar; Tokenizer: TZTokenizer): TZToken;
 var
@@ -209,13 +234,8 @@ begin
   end;
   Result.L := SPos-Result.P+1;
 end;
+{$IFDEF FPC} {$POP}{$ENDIF}
 
-{**
-  Decodes a string value.
-  @param Value a token value to be decoded.
-  @param QuoteChar a string quote character.
-  @returns an decoded string.
-}
 function TZExpressionQuoteState.DecodeToken(const Value: TZToken;
   QuoteChar: Char): string;
 begin
@@ -225,28 +245,16 @@ begin
   else SetString(Result, Value.P, Value.L);
 end;
 
-{**
-  Encodes a string value.
-  @param Value a string value to be encoded.
-  @param QuoteChar a string quote character.
-  @returns an encoded string.
-}
 function TZExpressionQuoteState.EncodeString(const Value: string;
   QuoteChar: Char): string;
 begin
-  if (Ord(QuoteChar) in [Ord(''''), Ord('"')]) then
-    Result := QuoteChar + EncodeCString(Value) + QuoteChar
-  else
-    Result := Value;
+  if (Ord(QuoteChar) in [Ord(''''), Ord('"')])
+  then Result := QuoteChar + EncodeCString(Value) + QuoteChar
+  else Result := Value;
 end;
 
 { TZExpressionCommentState }
 
-{**
-  Gets an Expression specific comments like /* */.
-  @return either just a slash token, or the results of
-    delegating to a comment-handling state
-}
 function TZExpressionCommentState.NextToken(var SPos: PChar;
   const NTerm: PChar; Tokenizer: TZTokenizer): TZToken;
 begin
@@ -269,9 +277,6 @@ end;
 
 { TZExpressionSymbolState }
 
-{**
-  Creates this Expression-specific symbol state object.
-}
 constructor TZExpressionSymbolState.Create;
 begin
   inherited Create;
@@ -283,9 +288,6 @@ end;
 
 { TZExpressionWordState }
 
-{**
-  Constructs this Expression-specific word state object.
-}
 constructor TZExpressionWordState.Create;
 begin
   SetWordChars(#0, #191, False);
@@ -296,10 +298,6 @@ begin
   SetWordChars('_', '_', True);
 end;
 
-{**
-  Gets a word tokens or special operators.
-  @return a processed token.
-}
 function TZExpressionWordState.NextToken(var SPos: PChar;
   const NTerm: PChar; Tokenizer: TZTokenizer): TZToken;
 var
@@ -316,9 +314,6 @@ end;
 
 { TZExpressionTokenizer }
 
-{**
-  Constructs a default state table (as described in the class comment).
-}
 procedure TZExpressionTokenizer.CreateTokenStates;
 begin
   WhitespaceState := TZWhitespaceState.Create;

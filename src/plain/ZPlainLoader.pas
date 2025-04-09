@@ -105,7 +105,8 @@ uses SysUtils,
     libc,
   {$ENDIF} *)
 {$ENDIF}
-  ZMessages;
+  ZMessages,
+  ZExceptions;
 
 { TZNativeLibraryLoader }
 
@@ -183,10 +184,14 @@ begin
 {$IF not declared(LoadLibraryEx)}
   temp := ''; //init for FPC
   try
+    {$IFDEF WINDOWS}
+    //change path to library path so dependencies can be loaded.
+    //only makes sense on Windows
     if newpath <> '' then begin
       temp := GetCurrentDir;
       SetCurrentDir(newpath);
     end;
+    {$ENDIF}
 {$IFEND}
   // AB modif END
 
@@ -216,8 +221,10 @@ begin
 {$IF not declared(LoadLibraryEx)}
   // AB modif BEGIN
   finally
+    {$IFDEF WINDOWS}
     if temp<>'' then
       SetCurrentDir(temp);
+    {$ENDIF}
   end;
 {$IFEND !LoadLibraryEx}
   // AB modif END
@@ -250,9 +257,9 @@ begin
       if Length(FLocations) = 1 then
         RaiseLastOsError
       else
-        raise Exception.Create(Format(SLibraryNotCompatible, [TriedLocations]));
+        raise EZSQLException.Create(Format(SLibraryNotCompatible, [TriedLocations]));
     end
-    else raise Exception.Create(Format(SLibraryNotFound, [TriedLocations]));
+    else raise EZSQLException.Create(Format(SLibraryNotFound, [TriedLocations]));
   Result := True;
 end;
 
@@ -260,9 +267,9 @@ function TZNativeLibraryLoader.LoadNativeLibraryStrict(const Location: String): 
 begin
   If not ZLoadLibrary(Location) then
     if FileExists(Location) then
-      raise Exception.Create(Format(SLibraryNotCompatible, [Location]))
+      raise EZSQLException.Create(Format(SLibraryNotCompatible, [Location]))
     else
-      raise Exception.Create(Format(SLibraryNotFound, [Location]));
+      raise EZSQLException.Create(Format(SLibraryNotFound, [Location]));
   Result := True;
 end;
 
@@ -289,7 +296,7 @@ begin
   Result := GetProcAddress(Handle, ProcName);
   if IsRequired and (Result = nil) then begin
     FreeLibrary(FHandle);
-    raise Exception.Create('Required method "'+String(ProcName)+'" is not exported by library. Check if the library is valid!');
+    raise EZSQLException.Create('Required method "'+String(ProcName)+'" is not exported by library. Check if the library is valid!');
   end;
 
 end;

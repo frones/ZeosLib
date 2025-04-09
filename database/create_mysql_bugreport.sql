@@ -446,6 +446,40 @@ CREATE TABLE TableTicket240 (
 );
 
 /*==============================================================*/
+/* Table for Ticket#304                                         */
+/*==============================================================*/
+CREATE TABLE IF NOT EXISTS TableTicket304 (
+  id_test BIGINT NOT NULL PRIMARY KEY,
+  LATITUDE double precision,
+  LONGITUDE double precision,
+  point_field point DEFAULT NULL,
+  geometry_field geometry DEFAULT NULL
+);
+
+delimiter //
+/*==============================================================*/
+/* trigger for Ticket#304                                       */
+/*==============================================================*/
+CREATE TRIGGER TR_UPD_TableTicket304 BEFORE UPDATE ON TableTicket304 FOR EACH ROW
+BEGIN
+  DECLARE dummy INT;
+  if not NEW.point_field <=> old.point_field then
+    SELECT point_field_changed INTO dummy FROM TableTicket304 WHERE 1=0;
+  END IF;
+  if not NEW.geometry_field <=> old.geometry_field then
+    SELECT geometry_field_changed INTO dummy FROM TableTicket304 WHERE 1=0;
+  END IF;	
+  if NEW.point_field IS NULL AND NEW.LATITUDE IS NOT NULL AND NEW.LONGITUDE IS NOT NULL then
+    SET NEW.point_field = POINT(NEW.LONGITUDE, NEW.LATITUDE); 
+  END IF;
+  if NEW.geometry_field IS NULL AND NEW.LATITUDE IS NOT NULL AND NEW.LONGITUDE IS NOT NULL then
+    SET NEW.geometry_field = POINT(NEW.LONGITUDE, NEW.LATITUDE); 
+  END IF;
+END; //
+delimiter ;
+
+
+/*==============================================================*/
 /* Tables for Ticket#389                                        */
 /*==============================================================*/
 CREATE TABLE TableTicked389 (
@@ -474,3 +508,78 @@ CREATE TABLE table_p156227 (
   `VatLow` numeric(10,2) NOT NULL, 
   PRIMARY KEY (`id`) 
   );
+
+delimiter //
+
+create procedure forum199899(in somevalue varchar(50)) 
+begin
+  select length(somevalue);
+end; //
+
+
+
+delimiter ;
+
+create table TblForumT199899_1 (
+  id int auto_increment primary key,
+  appliname varchar(100) not null default '',
+  pc_name varchar(15) not null default '',
+  contents1 varchar(200) not null default '',
+  update_stamp datetime(3) not null default current_timestamp(3) on update current_timestamp(3)
+);
+
+/*
+create table TblForumT199899_2 (
+  id int auto_increment primary key,
+  customercode varchar(6) not null default '',
+  orderflg varchar(1) not null default '0',
+  customername varchar(100) not null default '',
+  update_stamp datetime(3) not null default current_timestamp(3) on update current_timestamp(3)
+);
+*/
+
+delimiter //
+
+create function FncForumT199899_1 (
+  in_tablename varchar(100)
+)
+returns text deterministic
+begin
+  return concat('select * from ', in_tablename);
+end //
+
+create function FncForumT199899_2 (
+  in_flg int,
+  in_table_headername varchar(100)
+)
+returns text deterministic
+begin
+  declare val_sqltext_select text default "";
+  declare val_open_tablename varchar(100) default "";
+
+  set val_open_tablename = concat(in_table_headername, 'zeos');
+  if in_flg=0 then
+    set val_sqltext_select = concat('select * from ', val_open_tablename);
+  else
+    set val_sqltext_select = concat('select customercode, orderflg, customername, ',
+	                                'case when orderflg="0" then "not ordered" else "ordered" as orderflg_name ',
+									'from ', val_open_tablename);
+  end if;
+  return val_sqltext_select;
+end //
+
+create procedure ProcForumT199899_3 (
+  in in_tablename varchar(100),
+  out out_pcname varchar(100)
+)
+begin
+  set @s = concat('select pc_name into @pc_name from ', in_tablename, ' where appliname = "aaa.exe"');
+  prepare stmt1 from @s;
+  execute stmt1;
+  deallocate prepare stmt1;
+  
+  set out_pcname=@pc_name;
+end //
+
+delimiter ;
+

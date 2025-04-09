@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZCompatibility, ZTokenizer,
   ZPlainODBCDriver,
-  ZDbcIntfs, ZDbcConnection, ZGenericSqlAnalyser, ZDbcLogging;
+  ZDbcIntfs, ZDbcConnection, ZGenericSqlAnalyser, ZDbcLogging, ZExceptions;
 
 
 type
@@ -128,6 +128,8 @@ type
     /// <param>"value" true enables read-only mode; false disables read-only
     ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
+    /// <summary>Returns the Connection's current catalog name.</summary>
+    /// <returns>the current catalog name or an empty string.</returns>
     function GetCatalog: string; override;
     /// <summary>Sets a catalog name in order to select a subspace of this
     ///  Connection's database in which to work. If the driver does not support
@@ -185,12 +187,22 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
-
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; override;
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
+    /// <summary>Returns the ServicerProvider for this connection. For ODBC
+    ///  the connection must be opened to determine the provider. Otherwise
+    ///  the provider is tested against the driver names</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
   TZODBCConnectionW = class(TZAbstractODBCConnection, IZODBCConnection,
@@ -343,10 +355,13 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses
-  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
-  ZODBCToken, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
-  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZDbcProperties,
-  ZMessages {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  {$IFDEF MSWINDOWS}Windows,{$ENDIF}{$IFDEF NO_INLINE_SIZE_CHECK}Math,{$ENDIF}
+  ZSysUtils, ZEncoding, ZFastCode, ZMessages,
+  ZPlainDriver, ZODBCToken,
+  ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
+  ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
+  ZOracleAnalyser, ZOracleToken,
+  ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils, ZDbcProperties;
 
 { TZODBCDriver }
 
@@ -414,17 +429,6 @@ begin
     FMetaData := TODBCDatabaseMetadataA.Create(Self, Url, fHDBC);
   fCatalog := '';
   inherited AfterConstruction; //dec constructors RefCnt
-  if fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV) <> SQL_SUCCESS then
-    raise EZSQLException.Create('Couldn''t allocate an Environment handle');
-  //Try to SET Major Version 3 and minior Version 8
-  if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) = SQL_SUCCESS then
-    fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
-  else begin
-    //set minimum Major Version 3
-    if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
-      raise EZSQLException.Create('Failed to set minimum ODBC version 3');
-    fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
-  end;
 end;
 
 {**
@@ -473,6 +477,9 @@ begin
         fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_DBC, fHDBC);
         fHDBC := nil;
       end;
+    if Assigned(fHENV) then
+      fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
+      fHENV := nil;
     end;
   end;
 end;
@@ -504,8 +511,6 @@ end;
 destructor TZAbstractODBCConnection.Destroy;
 begin
   inherited Destroy;
-  if Assigned(fHENV) then
-    fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
   ClearWarnings;
 end;
 
@@ -578,6 +583,36 @@ begin
   Result := fServerProvider;
 end;
 
+function TZAbstractODBCConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  case FServerProvider of
+    //spUnknown, spMSSQL, spMSJet,
+    spOracle: Result := TZOracleStatementAnalyser.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseStatementAnalyser.Create;
+    spPostgreSQL: Result := TZPostgreSQLStatementAnalyser.Create;
+    spIB_FB: Result := TZInterbaseStatementAnalyser.Create;
+    spMySQL: Result := TZMySQLStatementAnalyser.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericStatementAnalyser.Create;
+  end;
+end;
+
+function TZAbstractODBCConnection.GetTokenizer: IZTokenizer;
+begin
+  case FServerProvider of
+    //spUnknown, spMSJet,
+    spOracle: Result := TZOracleTokenizer.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseTokenizer.Create;
+    spPostgreSQL: Result := TZPostgreSQLTokenizer.Create;
+    spIB_FB: Result := TZInterbaseTokenizer.Create;
+    spMySQL: Result := TZMySQLTokenizer.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZODBCTokenizer.Create;
+  end;
+end;
+
 {**
   Returns the first warning reported by calls on this Connection.
   <P><B>Note:</B> Subsequent warnings will be chained to this
@@ -640,9 +675,27 @@ begin
   Result := fODBCVersion;
 end;
 
-{**
-  Opens a connection to database server with specified parameters.
-}
+procedure AssignPropertiesToConnectionStrings(PropertyStrings, ConnectionStrings: TStrings);
+const KnownOdbcProperties: array[0..3] of String = (
+  ConnProps_DRIVER,
+  ConnProps_Server,
+  ConnProps_CharacterSet,
+  ConnProps_TrustedConnection);
+
+var ps, cs: String;
+  I: Integer;
+begin
+  if (PropertyStrings = nil) or (ConnectionStrings = nil) then Exit;
+  for i := low(KnownOdbcProperties) to high(KnownOdbcProperties) do begin
+    ps := PropertyStrings.Values[KnownOdbcProperties[i]];
+    if PS = '' then Continue;
+    cs := ConnectionStrings.Values[KnownOdbcProperties[i]];
+    if CS = '' then
+      ConnectionStrings.Values[KnownOdbcProperties[i]] := PS;
+  end;
+end;
+
+
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinal and pointers is not portable} {$ENDIF}
 procedure TZAbstractODBCConnection.Open;
 type
@@ -675,10 +728,11 @@ const
     (DriverName: 'PSQLODBC';    Provider: spPostgreSQL),
     (DriverName: 'NXODBCDRIVER';Provider: spNexusDB),
     (DriverName: 'ICLIT09B';    Provider: spInformix)
-    );
+  );
 var
   tmp, OutConnectString: String;
   TimeOut: NativeUInt;
+  iODBCVersion: SQLPointer;
   aLen: SQLSMALLINT;
   ConnectStrings: TStrings;
   DriverCompletion: SQLUSMALLINT;
@@ -687,6 +741,32 @@ var
 begin
   if not Closed then
     Exit;
+  if fHENV = nil then begin
+    tmp := Info.Values[ConnProps_ODBC_Version];
+    if tmp = '' then
+      iODBCVersion := SQL_OV_ODBC3_80
+    else begin
+      {$IFNDEF UNICODE}
+      iODBCVersion := SQLPointer(ZFastCode.{$IFDEF CPU64}RawToUInt64Def{$ELSE}RawToUInt32Def{$ENDIF}(tmp, NativeUInt(SQL_OV_ODBC3_80)));
+      {$ELSE}
+      iODBCVersion := SQLPointer(ZFastCode.{$IFDEF CPU64}UnicodeToUInt64Def{$ELSE}UnicodeToUInt32Def{$ENDIF}(tmp, NativeUInt(SQL_OV_ODBC3_80)));
+      {$ENDIF}
+      if NativeUInt(iODBCVersion) < NativeUInt(SQL_OV_ODBC3_80)
+      then iODBCVersion := SQL_OV_ODBC3
+      else iODBCVersion := SQL_OV_ODBC3_80;
+    end;
+    if fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Couldn''t allocate an Environment handle');
+    //Try to SET Major Version 3 and minior Version 8
+    if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, iODBCVersion, 0) = SQL_SUCCESS then
+      fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
+    else begin
+      //set minimum Major Version 3
+      if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
+        raise EZSQLException.Create('Failed to set minimum ODBC version 3');
+      fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
+    end;
+  end;
   DetermineAttachmentCharset; //do this by default!
   Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC);
   if Ret <> SQL_SUCCESS then
@@ -711,7 +791,11 @@ begin
     else if tmp = 'SQL_DRIVER_COMPLETE_REQUIRED' then
       DriverCompletion := SQL_DRIVER_COMPLETE_REQUIRED;
 
-  ConnectStrings := SplitString(DataBase, ';');
+  tmp := DataBase;
+  if System.Pos('=', tmp) = 0 then
+    tmp := 'DSN=' + tmp;
+  ConnectStrings := SplitString(tmp, ';');
+  AssignPropertiesToConnectionStrings(Info, ConnectStrings);
   if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
     tmp := DataBase
   else
@@ -1149,7 +1233,7 @@ var S: UnicodeString;
 begin
   S := cSavePointSyntaxW[fServerProvider][spqtSavePoint];
   if S = '' then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
   S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(AName);
   ExecuteImmediat(S, lcTransaction);
   Result := FSavePoints.Add(AName)+2;
@@ -1402,7 +1486,7 @@ var S: RawByteString;
 begin
   S := cSavePointSyntaxA[fServerProvider][spqtSavePoint];
   if S = '' then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
   S := S+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(AName);
   ExecuteImmediat(S, lcTransaction);
   Result := FSavePoints.Add(AName)+2;

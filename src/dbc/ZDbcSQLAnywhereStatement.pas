@@ -55,7 +55,7 @@ unit ZDbcSQLAnywhereStatement;
 
 interface
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZCompatibility, ZDbcLogging, ZVariant, ZClasses,
   ZDbcSQLAnywhere, ZPlainSQLAnywhere, ZCollections;
@@ -106,6 +106,7 @@ type
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     function InitDataValue(Index: Integer; SQLType: TZSQLType; Length: Tsize_t): Pa_sqlany_data_value;
   protected
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure BindInParameters; override;
@@ -115,10 +116,39 @@ type
   public
     procedure AfterConstruction; override;
   public
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(Index: Integer; Value: Boolean);
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(Index: Integer; Value: Byte);
     procedure SetShort(Index: Integer; Value: ShortInt);
+    /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetWord(Index: Integer; Value: Word);
     procedure SetSmall(Index: Integer; Value: SmallInt);
     procedure SetUInt(Index: Integer; Value: Cardinal);
@@ -128,26 +158,36 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGuid(Index: Integer; const Value: TGUID); reintroduce;
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetGuid(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
   end;
 
   TZSQLAnywhereCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcSQLAnywhereResultSet,
-  ZDbcGenericResolver, ZEncoding, ZFastCode;
+  ZDbcGenericResolver, ZEncoding, ZFastCode, ZExceptions;
 
 { TZAbstractSQLAnywhereStatement }
 
@@ -174,7 +214,7 @@ begin
 
   FSQLAnyConnection := Connection as IZSQLAnywhereConnection;
   FPlainDriver := FSQLAnyConnection.GetPlainDriver;
-  ResultSetType := rtScrollSensitive;
+  ResultSetType := rtScrollInsensitive;
   Fapi_version := FSQLAnyConnection.Get_api_version;
 end;
 
@@ -602,9 +642,6 @@ jmpVarLen:
   FBindAgain := FBindAgain or (ActType <> Result._type);
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZSQLAnywherePreparedStatement.PrepareInParameters;
 var num_params, I: Tsacapi_i32;
   Bind: Pa_sqlany_bind_param;
@@ -640,7 +677,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -701,14 +738,6 @@ begin
   PByte(data_value.buffer)^ := Byte(Value);
 end;
 
-{**
-  Sets the designated parameter to a <code>unsigned 8Bit int</code> value.
-  The driver converts this
-  to an SQL <code>BYTE</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZSQLAnywherePreparedStatement.SetByte(Index: Integer; Value: Byte);
 var data_value: Pa_sqlany_data_value;
 begin
@@ -801,7 +830,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -855,7 +884,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetGuid(Index: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -952,13 +981,6 @@ begin
   PInt64(data_value.buffer)^ := Value;
 end;
 
-{**
-  Sets the designated parameter to SQL <code>NULL</code>.
-  <P><B>Note:</B> You must specify the parameter's SQL type.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
-}
 procedure TZSQLAnywherePreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 var data_value: Pa_sqlany_data_value;
@@ -1022,7 +1044,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -1045,7 +1067,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -1102,14 +1124,6 @@ begin
   PUInt64(data_value.buffer)^ := Value;
 end;
 
-{**
-  Sets the designated parameter to <code>unsigned 16bit int</code> value.
-  The driver converts this
-  to an SQL <code>WORD</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZSQLAnywherePreparedStatement.SetWord(Index: Integer; Value: Word);
 var data_value: Pa_sqlany_data_value;
 begin
@@ -1176,5 +1190,5 @@ begin
 end;
 
 initialization
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.

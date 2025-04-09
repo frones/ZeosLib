@@ -64,12 +64,15 @@ interface
 {$ENDIF}
 
 uses Types,
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver, ZPlainLoader;
+  ZCompatibility, ZPlainDriver, ZPlainLoader;
 
 const
   IBLocalBufferLength = 512;
   IBBigLocalBufferLength = IBLocalBufferLength * 2;
   IBHugeLocalBufferLength = IBBigLocalBufferLength * 20;
+
+  IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
+  IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
 
   ISC_NULL = -1;
   ISC_NOTNULL = 0;
@@ -419,6 +422,8 @@ const
   isc_spb_version1 = byte(1);
   isc_spb_current_version = byte(2);
   isc_spb_version3 = byte(3);
+  isc_spb_user_name = isc_dpb_user_name;
+  isc_spb_password = isc_dpb_password;
   isc_spb_command_line = byte(105);
   isc_spb_dbname = byte(106);
   isc_spb_verbose = byte(107);
@@ -464,7 +469,8 @@ const
   isc_action_svc_drop_mapping = byte(28);
   isc_action_svc_display_user_adm = byte(29);
   isc_action_svc_validate = byte(30);
-  isc_action_svc_last = byte(31);
+  isc_action_svc_nfix = byte(31);
+  isc_action_svc_last = byte(32);
   { Service information items}
   isc_info_svc_svr_db_info = byte(50);
   isc_info_svc_get_license = byte(51);
@@ -1670,6 +1676,10 @@ const
   isc_truncate_warn                    = 335545266;
   isc_truncate_monitor                 = 335545267;
   isc_truncate_context                 = 335545268;
+  isc_merge_dup_update                 = 335545269;
+  isc_wrong_page                       = 335545270;
+  isc_repl_error                       = 335545271;
+  isc_ses_reset_failed                 = 335545272;
   isc_gfix_db_name                     = 335740929;
   isc_gfix_invalid_sw                  = 335740930;
   isc_gfix_incmp_sw                    = 335740932;
@@ -2149,6 +2159,7 @@ const
   isc_nbackup_user_stop                = 337117257;
   isc_nbackup_deco_parse               = 337117259;
   isc_nbackup_lostrec_guid_db          = 337117261;
+	isc_nbackup_seq_misuse               = 337117265;
   isc_trace_conflict_acts              = 337182750;
   isc_trace_act_notfound               = 337182751;
   isc_trace_switch_once                = 337182752;
@@ -2403,6 +2414,8 @@ type
   PISC_STMT_HANDLE              = ^TISC_STMT_HANDLE;
   TISC_TR_HANDLE                = LongWord;
   PISC_TR_HANDLE                = ^TISC_TR_HANDLE;
+  TISC_SVC_HANDLE                = PPointer {LongWord};
+  PISC_SVC_HANDLE                = ^TISC_SVC_HANDLE;
 
   TISC_CALLBACK = procedure (UserData: PVoid; Length: ISC_USHORT; Updated: PISC_UCHAR); cdecl;
 
@@ -2613,7 +2626,7 @@ type
 
   { Interbase event counts array }
   PARRAY_ISC_EVENTCOUNTS = ^TARRAY_ISC_EVENTCOUNTS;
-  TARRAY_ISC_EVENTCOUNTS = array[0..ISC_STATUS_LENGTH-1] of ISC_ULONG;
+  TARRAY_ISC_EVENTCOUNTS = array[0..IB_MAX_EVENT_BLOCK-1] of ISC_ULONG;
 
 const
   WINDOWSIB6_DLL_LOCATION   = 'gds32.dll';
@@ -2955,6 +2968,24 @@ type
 
     isc_get_client_version: procedure(version: PAnsiChar);
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_service_attach: function(status_vector: PISC_STATUS; UnknownZero: ISC_USHORT;
+      ServiceName: PISC_SCHAR; ServiceHandle: PISC_SVC_HANDLE; SpbLength: ISC_USHORT;
+      SpbBuffer: PISC_SCHAR): ISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_service_start: function(status_vector: PISC_STATUS; svc_handle: PISC_SVC_HANDLE;
+      reserved: Pointer; spb_length: ISC_USHORT; spb: PISC_SCHAR): ISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_service_query: function(status_vector: PISC_STATUS; svc_handle: PISC_SVC_HANDLE;
+      reserverd: Pointer; send_spb_length: ISC_USHORT; send_spb: PISC_SCHAR;
+      request_spb_length: ISC_USHORT; request_spb: PISC_SCHAR; buffer_length: ISC_USHORT;
+      Buffer: Pointer): ISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    isc_service_detach: function(status_vector: PISC_STATUS; svc_handle: PISC_SVC_HANDLE): ISC_STATUS;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   end;
 
   {** Implements a base driver for Firebird}
@@ -2966,9 +2997,6 @@ type
     IZInterbasePlainDriver)
   protected
     FPreLoader : TZNativeLibraryLoader;
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-    procedure Initialize(const Location: String = ''); Override;
-    {$ENDIF}
   public
     constructor Create;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
@@ -2977,6 +3005,9 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    {$IFDEF ENABLE_INTERBASE_CRYPT}
+    procedure Initialize(const Location: String = ''); Override;
+    {$ENDIF}
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -2993,7 +3024,7 @@ type
   protected
     procedure LoadApi; override;
   public
-    fb_get_master_interface: function: TObject{IMaster}; cdecl;
+    fb_get_master_interface: function: Pointer; cdecl;
   {$ENDIF ZEOS_DISABLE_FIREBIRD}
   end;
 
@@ -3104,6 +3135,11 @@ begin
     @isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
     @fb_cancel_operation := GetAddress('fb_cancel_operation');
     @fb_dsql_set_timeout := GetAddress('fb_dsql_set_timeout');
+
+    @isc_service_attach := GetAddress('isc_service_attach');
+    @isc_service_start  := GetAddress('isc_service_start');
+    @isc_service_query  := GetAddress('isc_service_query');
+    @isc_service_detach := GetAddress('isc_service_detach');;
   end;
 end;
 
@@ -3129,9 +3165,9 @@ begin
   AddCodePage('OCTETS', CS_BINARY, ceAnsi, zCP_Binary); {Binary character}
   AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_SHIFTJS, '', 2); {Japanese} //fixed: https://sourceforge.net/p/zeoslib/tickets/115/
   AddCodePage('UNICODE_FSS', CS_UNICODE_FSS, ceUTF8, zCP_UTF8, '', 3); {UNICODE}
-  AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI — Central European}
-  AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI — Cyrillic}
-  AddCodePage('WIN1252', CS_WIN1252, ceAnsi, zCP_WIN1252); {ANSI — Latin I}
+  AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI - Central European}
+  AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI - Cyrillic}
+  AddCodePage('WIN1252', CS_WIN1252, ceAnsi, zCP_WIN1252); {ANSI - Latin I}
   AddCodePage('WIN1253', CS_WIN1253, ceAnsi, zCP_WIN1253); {ANSI Greek}
   AddCodePage('WIN1254', CS_WIN1254, ceAnsi, zCP_WIN1254); {ANSI Turkish}
   //FB 1.5
@@ -3142,15 +3178,15 @@ begin
   AddCodePage('DOS864', CS_DOS864, ceAnsi, zCP_DOS864); {Arabic}
   AddCodePage('DOS866', CS_DOS866, ceAnsi, zCP_DOS866); {Russian}
   AddCodePage('DOS869', CS_DOS869, ceAnsi, zCP_DOS869); {Modern Greek}
-  AddCodePage('ISO8859_2', CS_ISO8859_2, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  AddCodePage('ISO8859_2', CS_ISO8859_2, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 - Latin3 - Southern European (Maltese, Esperanto)}
   AddCodePage('ISO8859_3', CS_ISO8859_3, ceAnsi, zCP_L3_ISO_8859_3); {Latin 1}
-  AddCodePage('ISO8859_4', CS_ISO8859_4, ceAnsi, zCP_L4_ISO_8859_4); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  AddCodePage('ISO8859_4', CS_ISO8859_4, ceAnsi, zCP_L4_ISO_8859_4); {Latin 4 - Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
   AddCodePage('ISO8859_5', CS_ISO8859_5, ceAnsi, zCP_L5_ISO_8859_5); {Cyrillic (Russian)}
   AddCodePage('ISO8859_6', CS_ISO8859_6, ceAnsi, zCP_L6_ISO_8859_6); {Arabic}
   AddCodePage('ISO8859_7', CS_ISO8859_7, ceAnsi, zCP_L7_ISO_8859_7); {Greek}
   AddCodePage('ISO8859_8', CS_ISO8859_8, ceAnsi, zCP_L8_ISO_8859_8); {Hebrew}
   AddCodePage('ISO8859_9', CS_ISO8859_9, ceAnsi, zCP_L5_ISO_8859_9); {Latin 5}
-  AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 — Baltic Rim}
+  AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 - Baltic Rim}
   AddCodePage('WIN1255', CS_WIN1255, ceAnsi, zCP_WIN1255); {ANSI Hebrew}
   AddCodePage('WIN1256', CS_WIN1256, ceAnsi, zCP_WIN1256); {ANSI Arabic}
   AddCodePage('WIN1257', CS_WIN1257, ceAnsi, zCP_WIN1257); {ANSI Baltic}

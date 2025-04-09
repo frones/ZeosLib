@@ -130,6 +130,15 @@ type
     procedure TestSF434;
     procedure TestSF310_JoinedUpdate_SetReadOnly;
     procedure TestSF310_JoinedUpdate_ProviderFlags;
+    procedure TestSF469;
+    procedure TestSF493;
+    procedure TestSF495;
+    procedure TestSF498;
+    procedure TestSF499;
+    procedure TestSF525;
+    procedure TestSF600;
+    // A test for https://zeoslib.sourceforge.io/viewtopic.php?t=200781
+    procedure TestForum200781;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -146,6 +155,25 @@ type
     procedure TestUnicodeChars;
   end;
 
+  TZTestCompMemTableBugReport = class(TZAbstractCompSQLTestCase)
+  protected
+    function CreateTable: TZMemTable;
+    class function GetWithConnection: Boolean; virtual; abstract;
+  published
+    procedure Test_Ticket550;
+  end;
+
+  TZTestCompMemTableBugReportWithConnnection = class(TZTestCompMemTableBugReport)
+  protected
+    class function GetWithConnection: Boolean; override;
+  end;
+
+  TZTestCompMemTableBugReportWithoutConnnection = class(TZTestCompMemTableBugReport)
+  protected
+    class function GetWithConnection: Boolean; override;
+  end;
+
+
 implementation
 
 uses
@@ -153,8 +181,8 @@ uses
   Variants,
 {$ENDIF}
   SysUtils,
-  ZSysUtils, ZEncoding,
-  ZDbcMetadata,
+  ZSysUtils, ZEncoding, ZExceptions,
+  ZDbcMetadata, ZDbcProperties,
   ZDatasetUtils, ZAbstractDataset, ZTestConsts, ZTestCase;
 
 { ZTestCompCoreBugReport }
@@ -164,8 +192,17 @@ uses
   @param DataSet a database object.
 }
 procedure ZTestCompCoreBugReport.DataSetCalcFields(Dataset: TDataSet);
+var p_calc_x: TField;
 begin
-  Dataset.FieldByName('p_calc').AsInteger := Dataset.RecNo + 100;
+  p_calc_x := Dataset.FindField('p_calc');
+  if p_calc_x <> nil then
+    Dataset.FieldByName('p_calc').AsInteger := Dataset.RecNo + 100;
+  p_calc_x := Dataset.FindField('p_calc2');
+  if p_calc_x <> nil then
+    p_calc_x.AsString := Dataset.FieldByName('p_name').AsString + ' ' + Dataset.FieldByName('p_name').AsString;
+  p_calc_x := Dataset.FindField('p_calc3');
+  if p_calc_x <> nil then
+    p_calc_x.AsInteger := Dataset.FieldByName('p_id').AsInteger;
 end;
 
 {**
@@ -535,6 +572,7 @@ begin
     end;
 
     { Remove newly created record }
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM people WHERE p_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 1;
     Query.ExecSQL;
@@ -658,6 +696,7 @@ var
   Query: TZQuery;
   FieldDefs: TFieldDefs;
   CalcField: TField;
+  S: String;
 begin
   if SkipForReason([srClosedBug{$IFDEF FPC}, srNonZeos{$ENDIF}]) then Exit;
 
@@ -667,7 +706,7 @@ begin
     Query.ReadOnly := True;
     Query.OnCalcFields := DataSetCalcFields;
 
-    Query.SQL.Text := 'SELECT p_id FROM people';
+    Query.SQL.Text := 'SELECT p_id, p_name FROM people'; //add p_name for Ticket
     FieldDefs := Query.FieldDefs;
     FieldDefs.Update;
 
@@ -680,12 +719,34 @@ begin
     CalcField.Visible := True;
     CalcField.DataSet := Query;
 
+    CalcField := TStringField.Create(nil);
+    CalcField.Size := 200;
+    CalcField.FieldName := 'p_calc2';
+    CalcField.FieldKind := fkCalculated;
+    CalcField.Visible := True;
+    CalcField.DataSet := Query;
+
+    CalcField := TIntegerField.Create(nil);
+    CalcField.FieldName := 'p_calc3';
+    CalcField.FieldKind := fkCalculated;
+    CalcField.Visible := True;
+    CalcField.DataSet := Query;
+
     Query.Open;
     while not Query.Eof do
     begin
       Check(Query.FieldByName('p_calc').AsInteger <> 0);
+      Check(Query.FieldByName('p_calc2').AsString <> '');
       Query.Next;
     end;
+    Query.SortedFields := 'p_calc2 desc, p_calc';
+    Query.First;
+    S := Query.FieldByName('p_calc2').AsString;
+    Check(StartsWith(S, 'Yan'), 'Value of Calculatet Field2');
+    Query.Next;
+    S := Query.FieldByName('p_calc2').AsString;
+    Check(StartsWith(S, 'Vasia'), 'Value of Calculatet Field2');
+    Query.SortedFields := 'p_calc2 desc, p_calc';
     Query.Close;
   finally
     Query.Free;
@@ -886,12 +947,13 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
-  Query.SQL.Text := 'select p_id, p_name, p_resume from people'
-    + ' where p_id < 4 order by p_id';
+  try
+    Query.Connection.Connect;
+    Query.SQL.Text := 'select p_id, p_name, p_resume from people'
+      + ' where p_id < 4 order by p_id';
 
-  if ConnectionConfig.Provider in [spIB_FB, spOracle] then
-  begin
-    try
+    if ConnectionConfig.Provider in [spIB_FB, spOracle] then
+    begin
       Query.Open;
       CheckEquals('P_ID', Query.Fields[0].FieldName);
       CheckEquals('P_NAME', Query.Fields[1].FieldName);
@@ -917,11 +979,7 @@ begin
       CheckEquals(3, Query.FieldByName('p_id').AsInteger);
 
       Query.Close;
-    finally
-      Query.Free;
-    end
-  end else begin
-    try
+    end else begin
       Query.Open;
       CheckEquals('p_id', Query.Fields[0].FieldName);
       CheckEquals('p_name', Query.Fields[1].FieldName);
@@ -948,10 +1006,11 @@ begin
       CheckEquals(3, Query.FieldByName('p_id').AsInteger);
 
       Query.Close;
-    finally
-      Query.Free;
     end;
-  end;  
+  finally
+    Query.Connection.Disconnect;
+    FreeAndNil(Query);
+  end;
 end;
 
 {**
@@ -1512,7 +1571,7 @@ begin
 
     Query.Append;
     Check(Query.UpdateStatus = usUnmodified);
-
+    Query.FieldByName('P_ID').AsInteger := 9998;
     Query.Post;
     Check(Query.UpdateStatus = usInserted);
 
@@ -1725,6 +1784,7 @@ begin
     CheckEquals('ab\''cd\''ef', Query.FieldByName('eq_name').AsString);
 
     { Remove newly created record }
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
     Query.ExecSQL;
@@ -1777,6 +1837,7 @@ begin
     CheckEquals('ab\''cd\''ef', Query.FieldByName('eq_name').AsString);
 
     { Remove newly created record }
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
     Query.ExecSQL;
@@ -1799,7 +1860,7 @@ begin
       Connection.StartTransaction;
     Query.Open;
     //Connection.Commit; //<- this crash with FB/IB and MSSQL(oledb,odbc,ado) only
-    Check(Query.RecordCount = 5);
+    CheckEquals(5, Query.RecordCount);
     Query.Close;
   finally
     Query.Free;
@@ -1862,6 +1923,7 @@ begin
     CheckEquals(0, Query.RecordCount, 'the record count after rollback');
     Query.Close;
   finally
+    Query.Close;
     Query.SQL.Text := 'delete from people where p_id > '+IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
     Query.Free;
@@ -1952,6 +2014,224 @@ begin
   end;
 end;
 
+{Assume the following code:
+
+Query.SQL.Text := 'select * from users where userid = :userid';
+Query.ParamByName('userid').AsString := 'abc';
+Query.SQL.Text := 'select * from users where username = :userid';
+
+It seems that the third line reinitializes the parameter values to be empty.
+This worked in the past. I am not sure, which revision introduced the change.
+}
+procedure ZTestCompCoreBugReport.TestSF469;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from users where userid = :userid';
+    Query.ParamByName('userid').AsString := 'abc';
+    CheckEquals('abc', Query.ParamByName('userid').AsString);
+    Query.SQL.Text := 'select * from users where username = :userid';
+    CheckEquals('abc', Query.ParamByName('userid').AsString);
+  finally
+    Query.Free;
+  end;
+end;
+
+(* see https://sourceforge.net/p/zeoslib/tickets/493/
+FPC/Lazarus
+
+this code generate AV on FreeAndNil(FConnection1);
+
+procedure TForm1.Button1Click(Sender: TObject);
+var
+FConnection1: TZConnection;
+begin
+FConnection1:=TZConnection.Create(Self);
+FreeAndNil(FConnection1);
+end;
+*)
+procedure ZTestCompCoreBugReport.TestSF493;
+var FConnection1: TZConnection;
+begin
+  FConnection1 := TZConnection.Create(Connection);  //need an owner for this test
+  FreeAndNil(FConnection1);
+end;
+
+procedure ZTestCompCoreBugReport.TestSF495;
+const TestRowID = 255;
+var Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Check(Query <> nil);
+    Query.Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
+    Query.SQL.Text := 'select * from people';
+    Query.TryKeepDataOnDisconnect := True;
+    Query.CachedUpdates := True;
+    Query.Open;
+    Query.FetchAll;
+    Check(Query.TryKeepDataOnDisconnect);
+    Query.Connection.Disconnect;
+    Query.Append;
+    Query.Fields[0].AsInteger := TestRowID;
+    Query.Post;
+    if Query.UpdatesPending then begin
+      if not Connection.Connected then
+        Connection.Connect;
+      Query.ApplyUpdates;
+      Query.CommitUpdates;
+      Query.Refresh;
+    end;
+  finally
+    Query.Free;
+    Connection.Connect;
+    Connection.ExecuteDirect('delete from people where p_id ='+IntToStr(TestRowID));
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF498;
+var B: Boolean;
+    Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Query.SQL.Text := 'select * from people';
+  try
+    Check(Query <> nil);
+    for B := True downto False do begin
+      if not Connection.Connected then
+        Connection.Connect;
+      if Query.Active then
+        Query.Close;
+      Query.TryKeepDataOnDisconnect := True;
+      Query.CachedUpdates := True;
+      Query.Open;
+      Query.FetchAll;
+      if B then
+        Connection.Disconnect;
+    end;
+
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF499;
+var Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Query.SQL.Text := 'select * from people';
+  try
+    if Query.Active then
+      Query.Close;
+
+    if not Connection.Connected then
+      Connection.Connect;
+
+    Query.CachedUpdates := true;
+    Query.TryKeepDataOnDisconnect := true;
+
+    Query.Open;
+    //Query.FetchAll;
+
+    if Query.Active then
+      Query.Close;
+
+    if Connection.Connected then
+      Connection.Disconnect;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF525;
+var
+  Table: TZMemTable;
+  I: Integer;
+begin
+  Table := TZMemTable.Create(nil);
+  try
+    Table.FieldDefs.Clear;
+    Table.FieldDefs.Add('ID',ftInteger);
+    Table.Open;
+    For I := 1 To 9 Do Begin
+      Table.Append;
+      Table.FieldByName('ID').Value := I;
+    End;
+    Table.Post;
+
+    Table.Locate('ID', 8, []);
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF600;
+var
+  I, rc: Integer;
+  Query: TZQuery;
+  FieldDefs: TFieldDefs;
+  CalcField: TField;
+begin
+  if SkipForReason([srClosedBug]) then Exit;
+
+  Query := CreateQuery;
+  try
+    CheckEquals(False, Query.CachedUpdates);
+    Query.ReadOnly := True;
+    Query.OnCalcFields := DataSetCalcFields;
+
+    Query.SQL.Text := 'SELECT p_id FROM people';
+    FieldDefs := Query.FieldDefs;
+    FieldDefs.Update;
+
+    for I := 0 to FieldDefs.Count - 1 do
+      FieldDefs[I].CreateField(Query).DataSet := Query;
+
+    CalcField := TIntegerField.Create(nil);
+    CalcField.FieldName := 'p_calc3';
+    CalcField.FieldKind := fkCalculated;
+    CalcField.Visible := True;
+    CalcField.DataSet := Query;
+
+    Query.Open;
+    for I := 1 to 5 do begin
+      Query.Filter := 'p_calc3='+IntToStr(i);
+      Query.Filtered := True;
+      Query.First;
+      rc := 0;
+      while not Query.Eof do
+      begin
+        Inc(rc);
+        CheckEquals(Query.FieldByName('p_id').AsInteger, Query.FieldByName('p_calc3').AsInteger);
+        Query.Next;
+      end;
+      CheckEquals(Integer(1), rc, 'the RecordCount after filtering by a calculated Field');
+    end;
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestForum200781;
+var
+  Table: TZMemTable;
+begin
+  Table := TZMemTable.Create(nil);
+  try
+    Table.FieldDefs.Clear;
+    Table.FieldDefs.Add('price', ftCurrency);
+    Table.Open;
+    CheckEquals(ftCurrency, Table.Fields[0].DataType);
+    Table.Close;
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
 procedure ZTestCompCoreBugReport.TestSF418_IndexFieldNames;
 var
   Query: TZReadOnlyQuery;
@@ -2003,7 +2283,7 @@ begin
   try
     Query.SQL.Text := 'SELECT * from people';
     Query.Open;
-    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
+    CheckEquals(5, Query.RecordCount, 'Expected to get exactly five records from the people table.');
     PersonName := Query.FieldByName('p_name').AsString;
     Query.Edit;
     Query.FieldByName('p_name').AsString := '';
@@ -2039,7 +2319,7 @@ begin
     UpdateSQL.ModifySQL.Text := 'update people set p_id = :new_p_id, p_name = :new_p_name where p_id = :old_p_id';
     Query.SQL.Text := 'SELECT p_id, p_name from people';
     Query.Open;
-    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
+    CheckEquals(5, Query.RecordCount, 'Expected to get exactly five records from the people table.');
     PersonName := Query.FieldByName('p_name').AsString;
     Query.Edit;
     Query.FieldByName('p_name').AsString := '';
@@ -2350,6 +2630,7 @@ begin
         CheckEquals(Str3, FieldByName('P_NAME'));
         {$ENDIF}
       finally
+        Close;
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -2441,24 +2722,30 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
+    Query.Close;
     if ProtocolType in [protASA, protASACAPI] then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL, 125),'%'''])
     else
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL),'%''']);
     Query.Open;
     CheckEquals(1, Query.RecordCount, 'RowCount of Str2 '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str3, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str3  '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str4, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str4 '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str5, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str5 '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str6, ttSQL),'%''']);
     Query.Open;
   finally
+    Query.Close;
     for i := TestRowID to TestRowID+RowCounter do
     begin
       Query.SQL.Text := 'delete from string_values where s_id = '+IntToStr(i);
@@ -2556,7 +2843,76 @@ begin
   end;
 end;
 
+{ TZTestCompMemTableBugReport }
+
+function TZTestCompMemTableBugReport.CreateTable: TZMemTable;
+begin
+  Result := TZMemTable.Create(nil);
+  if GetWithConnection then
+    Result.Connection := Connection;
+end;
+
+procedure TZTestCompMemTableBugReport.Test_Ticket550;
+var ZMemTable1: TZMemTable;
+    Succeeded: Boolean;
+begin
+  ZMemTable1 := CreateTable;
+  try
+    Check(ZMemTable1 <> nil, 'Component should be assigned');
+    ZMemTable1.FieldDefs.Add('ID', ftLargeInt, 0, True);
+    ZMemTable1.FieldDefs.Add('Text', ftWideString, 100, True);
+    ZMemTable1.Open;
+    ZMemTable1.Append;
+    {$IF DECLARED(TLargeIntField)}
+    // Note: In Delphi 2007 (and probably 2009) the AsLargeInt property only
+    // exists in the TLargeInfField class and not in TField.
+    (ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt := ZMemTable1.RecordCount + 1;
+    CheckEquals(1, (ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt, 'Field "ID" is different');
+    {$ELSE}
+    ZMemTable1.FieldByName('ID').AsInteger := ZMemTable1.RecordCount + 1;
+    CheckEquals(1, ZMemTable1.FieldByName('ID').AsInteger, 'Field "ID" is different');
+    {$IFEND}
+    Succeeded := False;
+    try
+      ZMemTable1.Post;
+      Succeeded := True;
+    except end;
+    Check(not Succeeded, 'The field "Text" is required and unbound. MemTable should forbit this behavior');
+    {$IF DECLARED(TLargeIntField)}
+    ZMemTable1.FieldByName('Text').AsString := IntToStr((ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt);
+    {$ELSE}
+    ZMemTable1.FieldByName('Text').AsString := IntToStr(ZMemTable1.FieldByName('ID').AsInteger);
+    {$IFEND}
+    ZMemTable1.Post;
+    CheckEquals(1, ZMemTable1.RecordCount, 'There should be one row only');
+    {$IF DECLARED(TLargeIntField)}
+    CheckEquals(1, (ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt, 'Field "ID" is different');
+    {$ELSE}
+    CheckEquals(1, ZMemTable1.FieldByName('ID').AsInteger, 'Field "ID" is different');
+    {$IFEND}
+    CheckEquals('1', ZMemTable1.FieldByName('ID').AsString, 'Field "Text" is different');
+  finally
+    ZMemTable1.Free;
+  end;
+end;
+
+{ TZTestCompMemTableBugReportWithConnnection }
+
+class function TZTestCompMemTableBugReportWithConnnection.GetWithConnection: Boolean;
+begin
+  Result := True;
+end;
+
+{ TZTestCompMemTableBugReportWithoutConnnection }
+
+class function TZTestCompMemTableBugReportWithoutConnnection.GetWithConnection: Boolean;
+begin
+  Result := False;
+end;
+
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);
   RegisterTest('bugreport',ZTestCompCoreBugReportMBCs.Suite);
+  RegisterTest('bugreport',TZTestCompMemTableBugReportWithConnnection.Suite);
+  RegisterTest('bugreport',TZTestCompMemTableBugReportWithoutConnnection.Suite);
 end.

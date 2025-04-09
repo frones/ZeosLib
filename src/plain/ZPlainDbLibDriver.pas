@@ -790,6 +790,10 @@ type
     tdsVarBinary          = 37,
     tdsIntN               = 38,
     tdsVarchar            = 39,
+    tdsMsDate             = 40, // FreeTDS calls this SYBMSDATE, but it doesn't fit into the names nicely...
+    tdsMsTime             = 41, // FreeTDS calls this SYBMSTIME, but it doesn't fit into the names nicely...
+    tdsMsDateTime2        = 42, // FreeTDS calls this SYBMSDATETIME", but it doesn't fit into the names nicely...
+    tdsMsDateTimeOffset   = 43, // FreeTDS calls this SYBMSDATETIMEOFFSET, but it doesn't fit into the names nicely...
     tdsBinary             = 45,
     tdsChar               = 47,
     tdsInt1               = 48,
@@ -943,6 +947,20 @@ type
     dttime:	DBINT;       // 300ths of a second since midnight, 25920000 unit is 1 day
   end;
 
+  TDBDATETIMEALL = packed record
+    time: UInt64;
+    date: DBINT;
+    offset: DBSMALLINT;
+    flags: Word;
+  end;
+  PDBDATETIMEALL = ^TDBDATETIMEALL;
+
+const
+  DbDateTimeAllTimePrecMask  = $0007;
+  DbDateTimeAllHasTimeMask   = $2000;
+  DbDateTimeAllHasDateMask   = $4000;
+  DbDatetimeAllHasOffsetMask = $8000;
+
 (*
  * Sybase & Microsoft use different names for the dbdaterec members.
  * Keep these two structures physically identical in memory.
@@ -951,6 +969,7 @@ type
  * Giving credit where credit is due, we can acknowledge that
  * Microsoft chose the better names here, hands down.  ("datedmonth"?!)
  *)
+type
   { FreeTDS sybdb.h }
   PTDS_DBDATEREC = ^Ttds_dbdaterec;
   Ttds_dbdaterec = packed record
@@ -988,25 +1007,28 @@ type
 type
   //EH: We need a size of 122 Bytes!
   {$IFDEF FPC}
-    {$PACKRECORDS 2}
+    {$PACKRECORDS 1}
   {$ELSE}
-    {$A2}
+    {$A1} //JBau: Does this really make sense? I didn't find documentation for anything besides $A+ and $A- about this.
   {$ENDIF}
   PZDBCOL = ^ZDBCOL;
-  ZDBCOL = record
+  ZDBCOL = packed record
    	Typ:            DBSHORT;
    	UserType:       DBINT;
    	MaxLength:      DBINT;
    	Precision:      BYTE;
    	Scale:          BYTE;
+        PAD1:           BYTE;     // JBau: These pads are necessary because otherwise we cannot get the sams memory layout as C uses :o(
+        PAD2:           BYTE;     // JBau: These pads are necessary because otherwise we cannot get the sams memory layout as C uses :o(
    	VarLength:      LongBool; { TRUE, FALSE }
    	Null:           BYTE;     { TRUE, FALSE or DBUNKNOWN }
    	CaseSensitive:  BYTE;     { TRUE, FALSE or DBUNKNOWN }
    	Updatable:      BYTE;     { TRUE, FALSE or DBUNKNOWN }
+        PAD3:           BYTE;     // JBau: These pads are necessary because otherwise we cannot get the sams memory layout as C uses :o(
    	Identity:       LongBool; { TRUE, FALSE or DBUNKNOWN }
   end;
   PDBCOL = ^DBCOL;
-  DBCOL = record
+  DBCOL = packed record
    	SizeOfStruct:   DBINT;
    	Name:           array[0..MAXCOLNAMELEN] of DBCHAR;
    	ActualName:     array[0..MAXCOLNAMELEN] of DBCHAR;
@@ -1025,7 +1047,7 @@ type
   end;
 
   PTDSDBCOL = ^TTDSDBCOL;
-  TTDSDBCOL = record
+  TTDSDBCOL = packed record
     SizeOfStruct:   DBINT;
     Name:           array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
     ActualName:     array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
@@ -1043,7 +1065,7 @@ type
     Identity:       LongBool;{ TRUE, FALSE }*)
   end;
   PTDSDBCOL2 = ^TTDSDBCOL;
-  TTDSDBCOL2 = record
+  TTDSDBCOL2 = packed record
     SizeOfStruct:   DBINT;
     Name:           array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
     ActualName:     array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
@@ -1374,6 +1396,8 @@ type
     Fdbvarylen_MS: function(Proc: PDBPROCESS; Column: Integer): LongBool; cdecl;
     Fdbvarylen_SYB: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     Fdbvarylen_stdcall: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; stdcall;
+    Fdbversion: function(): PAnsiChar; cdecl;
+    Fdbversion_stdcall: function(): PAnsiChar; stdcall;
     //Fdb12hour: function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; cdecl; //no MS
     //Fdb12hour_stdcall:          function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; stdcall; //no MS
     dberrhandle_stdcall: function(Handler: TDBERRHANDLE_PROC_stdcall): TDBERRHANDLE_PROC_stdcall; stdcall;
@@ -1433,6 +1457,7 @@ type
     function dbcmdrow(dbproc: PDBPROCESS): RETCODE;{$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcolbrowse(dbproc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     public dbcolinfo: function(pdbhandle: PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//no SYB but FreeTDS
+    public dbtablecolinfo: function(pdbhandle: PDBHANDLE; Column: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//FreeTDS only!
     function dbcollen(dbproc: PDBPROCESS; Column: Integer): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcolname(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcolsource(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -1490,6 +1515,7 @@ type
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbVersion(): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     {$ENDIF}
   public
     {$IFNDEF MSWINDOWS}
@@ -1519,6 +1545,7 @@ type
     dbcmdrow: function(dbproc: PDBPROCESS): RETCODE;cdecl;
     dbcolbrowse: function(dbproc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     dbcolinfo: function(pdbhandle: PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//no SYB but FreeTDS
+    dbtablecolinfo: function(pdbhandle: PDBHANDLE; Column: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//FreeTDS only!!!
     dbcollen: function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
     dbcolname: function(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
     dbcolsource: function(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
@@ -1577,6 +1604,7 @@ type
     dbSetOpt: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; cdecl;
     dbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
     dbvarylen: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
+    dbversion: function: PAnsiChar; cdecl;
     {$ENDIF}
   public { macros }
     function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -1680,6 +1708,12 @@ type
     procedure BeforeDestruction; override;
   end;
   {$ENDIF TEST_CALLBACK}
+
+  function TdsDateTimeAllGetPrecision(const Value: TDBDATETIMEALL): Integer;
+  function TdsDateTimeAllHasDate(const Value: TDBDATETIMEALL): Boolean;
+  function TdsDateTimeAllHasTime(const Value: TDBDATETIMEALL): Boolean;
+  function TdsDateTimeAllHasOffset(const Value: TDBDATETIMEALL): Boolean;
+
 {$ENDIF ZEOS_DISABLE_DBLIB}
 
 implementation
@@ -1693,8 +1727,10 @@ var
   OldFreeTDSMessageHandle: TDBMSGHANDLE_PROC_cdecl = nil;
   OldSybaseErrorHandle: {$IFDEF MSWINDOWS}TDBERRHANDLE_PROC_stdcall{$ELSE}TDBERRHANDLE_PROC_cdecl{$ENDIF} = nil;
   OldSybaseMessageHandle: {$IFDEF MSWINDOWS}TDBMSGHANDLE_PROC_stdcall{$ELSE}TDBMSGHANDLE_PROC_cdecl{$ENDIF} = nil;
+  {$IFDEF MSWINDOWS}
   OldMsSQLErrorHandle: TDBERRHANDLE_PROC_cdecl = nil;
   OldMsSQLMessageHandle: TDBMSGHANDLE_PROC_cdecl = nil;
+  {$ENDIF MSWINDOWS}
   ErrorCS: TCriticalSection;
   SQLErrors: TZDBLibErrorList;
   SQLMessages: TZDBLibMessageList;
@@ -2654,7 +2690,7 @@ begin
 end;
 {$ENDIF MSWINDOWS}
 
-{** Set the TDS packet size in an application’s LOGINREC structure. *}
+{** Set the TDS packet size in an application's LOGINREC structure. *}
 function TZDBLIBPLainDriver.dbSetLPacket(Login: PLOGINREC;
   packet_size: Word): RETCODE;
 begin
@@ -2672,7 +2708,7 @@ begin
   Result := dbsetLName(login, Password, DBSETPWD);
 end;
 
-{** Set the TDS packet size in an application’s LOGINREC structure. *}
+{** Set the TDS packet size in an application's LOGINREC structure. *}
 function TZDBLIBPLainDriver.dbSetLSecure(Login: PLOGINREC): RETCODE;
 begin
   if FDBLibraryVendorType = lvtMS
@@ -2761,7 +2797,7 @@ begin
   else Result := FdbUse_stdcall(dbProc, dbName);
 end;
 
-{** Determine whether the specified regular result column’s data can vary in length. *}
+{** Determine whether the specified regular result column's data can vary in length. *}
 function TZDBLIBPLainDriver.dbVaryLen(dbProc: PDBPROCESS;
   Column: Integer): DBBOOL;
 begin
@@ -2771,6 +2807,18 @@ begin
     then Result := Fdbvarylen_SYB(dbProc, Column)
     else Result := Fdbvarylen_stdcall(dbProc, Column);
 end;
+
+{** Returns the DBLIB version in use *}
+function TZDBLIBPLainDriver.dbVersion: PAnsiChar;
+begin
+  if Assigned(Fdbversion) then
+    Result := Fdbversion
+  else if Assigned(Fdbversion_stdcall) Then
+    Result := Fdbversion_stdcall
+  Else
+    Result := '';
+end;
+
 {$ENDIF MSWINDOWS}
 
 destructor TZDBLIBPLainDriver.Destroy;
@@ -3102,6 +3150,7 @@ begin
       @{$IFDEF MSWINDOWS}Fdbcmd{$ELSE}dbcmd{$ENDIF} := GetAddress('dbcmd');
       @{$IFDEF MSWINDOWS}Fdbcollen{$ELSE}dbcollen{$ENDIF} := GetAddress('dbcollen');
       @dbcolinfo := GetAddress('dbcolinfo'); //no sybase but freeTDS and MS
+      @dbtablecolinfo := GetAddress('dbtablecolinfo'); //FreeTDS only!!!
       @{$IFDEF MSWINDOWS}Fdbcolname{$ELSE}dbcolname{$ENDIF} := GetAddress('dbcolname');
       @{$IFDEF MSWINDOWS}Fdbcolsource{$ELSE}dbcolsource{$ENDIF} := GetAddress('dbcolsource'); //no FreeTDS?
       @{$IFDEF MSWINDOWS}Fdbcoltype{$ELSE}dbcoltype{$ENDIF} := GetAddress('dbcoltype');
@@ -3141,6 +3190,7 @@ begin
       @{$IFDEF MSWINDOWS}FdbSqlOk{$ELSE}dbSqlOk{$ENDIF} := GetAddress('dbsqlok');
       @{$IFDEF MSWINDOWS}FdbSqlSend{$ELSE}dbSqlSend{$ENDIF} := GetAddress('dbsqlsend');
       @{$IFDEF MSWINDOWS}Fdbuse{$ELSE}dbuse{$ENDIF} := GetAddress('dbuse');
+      @{$IFDEF MSWINDOWS}Fdbversion{$ELSE}dbversion{$ENDIF} := GetAddress('dbversion');
 
       @dbmsghandle := GetAddress('dbmsghandle');
       @dberrhandle := GetAddress('dberrhandle');
@@ -3148,8 +3198,8 @@ begin
         OldFreeTDSErrorHandle := dberrhandle(FreeTDSErrorHandle);
         OldFreeTDSMessageHandle := dbmsghandle(FreeTDSMessageHandle);
       end else begin
-        OldMsSQLErrorHandle := dberrhandle(DbLibErrorHandle);
-        OldMsSQLMessageHandle := dbmsghandle(DbLibMessageHandle);
+        {$IFDEF MSWINDOWS}OldMsSQLErrorHandle{$ELSE}OldSybaseErrorHandle{$ENDIF}  := dberrhandle(DbLibErrorHandle);
+        {$IFDEF MSWINDOWS}OldMsSQLMessageHandle{$ELSE}OldSybaseMessageHandle{$ENDIF} := dbmsghandle(DbLibMessageHandle);
       end;
       Assert(dbintit = SUCCEED, 'dbinit failed');
     end;
@@ -3356,19 +3406,27 @@ begin
 end;
 
 procedure TSybaseDBLibPLainDriver.LoadApi;
+var
+  Success: Boolean;
 begin
   inherited LoadApi;
   {$IFDEF MSWINDOWS}
   if assigned(FdbSetVersion) then begin
-    if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then
-      Assert(FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
+    if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then begin
+      Success := FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED;
+      Assert(Success , 'failed to set the TDS version')
+    end;
   end else begin
-    if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then
-      Assert(FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+    if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then begin
+      Success := FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED;
+      Assert(Success , 'failed to set the TDS version');
+    end;
   end;
   {$ELSE}
-    if dbSetVersion(TDSDBVERSION_100) = DBFAIL then
-      Assert(dbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
+    if dbSetVersion(TDSDBVERSION_100) = DBFAIL then begin
+      Success := dbSetVersion(TDSDBVERSION_46) = DBSUCCEED;
+      Assert(Success , 'failed to set the TDS version')
+    end;
   {$ENDIF}
 end;
 
@@ -3407,6 +3465,28 @@ begin
     PDBLibMessage(Ptr).SrvName  := EmptyRaw;
     PDBLibMessage(Ptr).ProcName := EmptyRaw;
   end;
+end;
+
+{ Helper functions for TDS_DATETIMEALL}
+
+function TdsDateTimeAllGetPrecision(const Value: TDBDATETIMEALL): Integer;
+begin
+  Result := Value.flags and DbDateTimeAllTimePrecMask;
+end;
+
+function TdsDateTimeAllHasDate(const Value: TDBDATETIMEALL): Boolean;
+begin
+  Result := WordBool(Value.flags and DbDateTimeAllHasDateMask)
+end;
+
+function TdsDateTimeAllHasTime(const Value: TDBDATETIMEALL): Boolean;
+begin
+  Result := WordBool(Value.flags and DbDateTimeAllHasTimeMask)
+end;
+
+function TdsDateTimeAllHasOffset(const Value: TDBDATETIMEALL): Boolean;
+begin
+  Result := WordBool(Value.flags and DbDatetimeAllHasOffsetMask)
 end;
 
 initialization

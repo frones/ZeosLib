@@ -50,6 +50,13 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+constributor(s):
+  aehimself
+  EgonHugeist
+  Martin Schreiber
+}
+
 unit ZDbcMySqlUtils;
 
 interface
@@ -194,7 +201,7 @@ procedure ReAllocMySQLColumnBuffer(OldRSCount, NewRSCount: Integer;
   var ColumnsBindingArray: PMYSQL_ColumnsBindingArray; BindOffset: PMYSQL_BINDOFFSETS);
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetFieldOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_FIELDOFFSETS;
 function GetServerStatusOffset(Version: Integer): NativeUInt;
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
@@ -203,7 +210,7 @@ implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   Math, TypInfo,
-  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZExceptions;
 
 {**
   Converts a MySQL native types into ZDBC SQL types.
@@ -322,7 +329,7 @@ begin
       // Todo: Would be nice to show as WKT.
       Result := stBinaryStream;
    else
-      raise Exception.Create('Unknown MySQL data type!');
+      raise EZSQLException.Create('Unknown MySQL data type!');
    end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -456,7 +463,7 @@ begin
         13, 88, {sjis}
         35, 90, 128..151:  {ucs2}
           begin
-            Result.Precision := (FieldLength div 4);
+            Result.Precision := (FieldLength shr 2);
             if Result.ColumnType = stString
             then Result.CharOctedLength := FieldLength
             else Result.CharOctedLength := FieldLength shr 1;
@@ -473,9 +480,9 @@ begin
         54, 55, 101..124, {utf16}
         56, 62, {utf16le}
         60, 61, 160..183, {utf32}
-        45, 46, 224..247: {utf8mb4}
+        45, 46, 224..247, 255: {utf8mb4}
           begin
-            Result.Precision := (FieldLength div 4);
+            Result.Precision := (FieldLength shr 2);
             if Result.ColumnType = stString
             then Result.CharOctedLength := FieldLength
             else Result.CharOctedLength := FieldLength shr 1;
@@ -658,6 +665,9 @@ SetLobSize:
       17..32: goto lLong;
       else goto lLongLong;
     end;
+  end else if TypeName = 'uuid' then begin
+    FieldType := stGUID;
+    ColumnSize := 16;
   end else if TypeName = 'json' then  { test it ..}
     FieldType := stAsciiStream
   else
@@ -730,9 +740,9 @@ begin
   else Result := nil
 end;
 
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetFieldOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_FIELDOFFSETS;
 begin
-  if (Version >= 50100) then
+  if (Version >= 50100) or (IsMariaDB) then
     result := @MYSQL_FIELD51_Offset
   else if (Version >= 40100) then
     Result := @MYSQL_FIELD41_Offset

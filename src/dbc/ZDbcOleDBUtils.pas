@@ -76,8 +76,8 @@ type
     DBBINDSTATUS_MULTIPLESTORAGE);
 
 const
-  VARIANT_TRUE = SmallInt(-1);
-  VARIANT_FALSE = SmallInt(0);
+  ZVARIANT_TRUE = SmallInt(-1);
+  ZVARIANT_FALSE = SmallInt(0);
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   Scale, Precision: Integer): TZSQLType; overload;
@@ -123,7 +123,7 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ActiveX, Windows, Math, TypInfo,
   ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages,
-  ZClasses;
+  ZClasses, ZExceptions;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   Scale, Precision: Integer): TZSQLType;
@@ -173,7 +173,7 @@ begin
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
     DBTYPE_XML:         Result := stUnicodeStream;
-    DBTYPE_TABLE:       Result := stDataSet;
+    DBTYPE_TABLE:       Result := stResultSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:
@@ -249,7 +249,7 @@ begin
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
     DBTYPE_XML:         Result := stAsciiStream;
-    DBTYPE_TABLE:       Result := stDataSet;
+    DBTYPE_TABLE:       Result := stResultSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:
@@ -332,7 +332,7 @@ var
       { now let's decide if we can use direct references or need space in buffer
         and a reference or if we need a external object for lob's}
       if (ParamInfoArray^[Index].dwFlags and DBPARAMFLAGS_ISOUTPUT <> 0) then
-        raise Exception.Create('RESULT/OUT/INOUT Parameter for LOB''s are currently not supported!');
+        raise EZSQLException.Create('RESULT/OUT/INOUT Parameter for LOB''s are currently not supported!');
       DBBindingArray[Index].obValue := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
       DBBindingArray[Index].wType   := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
       DBBindingArray[Index].dwPart  := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
@@ -463,7 +463,7 @@ type
     Provider: TZServerProvider;
   end;
 const
-  KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
+  KnownDriverName2TypeMap: array[0..13] of TDriverNameAndServerProvider = (
     (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
     (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
     (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
@@ -477,7 +477,8 @@ const
     (ProviderNamePrefix: 'MICROSOFT.ACE'; Provider: spMSJet),
     (ProviderNamePrefix: 'IB';            Provider: spIB_FB),
     (ProviderNamePrefix: 'POSTGRESSQL';   Provider: spPostgreSQL),
-    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID)
+    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID),
+    (ProviderNamePrefix: 'MSOLEDBSQL';    Provider: spMSSQL)
     );
 var
   I: Integer;

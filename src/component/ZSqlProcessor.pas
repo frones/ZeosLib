@@ -67,11 +67,15 @@ type
   {** Defines an error handle action. }
   TZErrorHandleAction = (eaFail, eaAbort, eaSkip, eaRetry);
 
-  {** Defines an Processor notification event. }
-  TZProcessorNotifyEvent = procedure(Processor: TZSQLProcessor;
+  {** Defines a Processor beforeexecute notification event. }
+  TZProcessorBeforeExecuteEvent = procedure(Processor: TZSQLProcessor;
     StatementIndex: Integer) of object;
 
-  {** Defines an Processor error handling event. }
+  {** Defines a Processor afterexecute notification event. }
+  TZProcessorAfterExecuteEvent = procedure(Processor: TZSQLProcessor;
+    StatementIndex, RowsAffected: Integer) of object;
+
+  {** Defines a Processor error handling event. }
   TZProcessorErrorEvent = procedure(Processor: TZSQLProcessor;
     StatementIndex: Integer; E: Exception;
     var ErrorHandleAction: TZErrorHandleAction) of object;
@@ -82,15 +86,14 @@ type
 
   { TZSQLProcessor }
 
-  TZSQLProcessor = class(TComponent)
+  TZSQLProcessor = class(TZAbstractConnectionLinkedComponent)
   private
     FParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
     FScript: TZSQLStrings;
 
     FScriptParser: TZSQLScriptParser;
-    FConnection: TZAbstractConnection;
-    FBeforeExecute: TZProcessorNotifyEvent;
-    FAfterExecute: TZProcessorNotifyEvent;
+    FBeforeExecute: TZProcessorBeforeExecuteEvent;
+    FAfterExecute: TZProcessorAfterExecuteEvent;
     FOnError: TZProcessorErrorEvent;
 
     procedure SetParams(Value: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF});
@@ -98,7 +101,6 @@ type
     procedure SetScript(Value: TStrings);
     function GetStatementCount: Integer;
     function GetStatement(Index: Integer): string;
-    procedure SetConnection(Value: TZAbstractConnection);
     function GetDelimiterType: TZDelimiterType;
     procedure SetDelimiterType(Value: TZDelimiterType);
     function GetDelimiter: string;
@@ -112,11 +114,15 @@ type
     procedure SetParamChar(Value: Char);
     procedure UpdateSQLStrings({%H-}Sender: TObject);
   protected
+    FProperties: TStringList;
+    function GetProperties: TStrings;
+    procedure SetProperties(NewStrings: TStrings);
+    procedure SetConnection(Value: TZAbstractConnection); override;
     procedure CheckConnected;
     function DoOnError(StatementIndex: Integer; E: Exception):
       TZErrorHandleAction;
     procedure DoBeforeExecute(StatementIndex: Integer);
-    procedure DoAfterExecute(StatementIndex: Integer);
+    procedure DoAfterExecute(StatementIndex, RowsAffected: Integer);
 
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -126,8 +132,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure LoadFromStream(Stream: TStream);
-    procedure LoadFromFile(const FileName: string);
+    procedure LoadFromStream(Stream: TStream{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
+    procedure LoadFromFile(const FileName: string{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
 
     procedure Execute;
     procedure Parse;
@@ -144,15 +150,16 @@ type
       default ':';
     property Params: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF} read FParams write SetParams;
     property Script: TStrings read GetScript write SetScript;
-    property Connection: TZAbstractConnection read FConnection write SetConnection;
+    property Connection;
     property DelimiterType: TZDelimiterType read GetDelimiterType
       write SetDelimiterType default dtDefault;
     property Delimiter: string read GetDelimiter write SetDelimiter;
     property CleanupStatements: Boolean read GetCleanupStatements
       write SetCleanupStatements default False; 
     property OnError: TZProcessorErrorEvent read FOnError write FOnError;
-    property AfterExecute: TZProcessorNotifyEvent read FAfterExecute write FAfterExecute;
-    property BeforeExecute: TZProcessorNotifyEvent read FBeforeExecute write FBeforeExecute;
+    property AfterExecute: TZProcessorAfterExecuteEvent read FAfterExecute write FAfterExecute;
+    property BeforeExecute: TZProcessorBeforeExecuteEvent read FBeforeExecute write FBeforeExecute;
+    property Properties: TStrings read GetProperties write SetProperties;
   end;
 
 implementation
@@ -177,6 +184,7 @@ begin
   FScriptParser.DelimiterType := dtDefault;
   FScriptParser.Delimiter := ';';
   FScriptParser.CleanupStatements := False;
+  FProperties := TStringList.Create;
 end;
 
 {**
@@ -184,11 +192,23 @@ end;
 }
 destructor TZSQLProcessor.Destroy;
 begin
+  if Assigned(FProperties) then
+    FreeAndNil(FProperties);
   FreeAndNil(FParams);
   FreeAndNil(FScript);
   FreeAndNil(FScriptParser);
   FConnection := nil;
   inherited Destroy;
+end;
+
+function TZSQLProcessor.GetProperties: TStrings;
+begin
+  Result := FProperties;
+end;
+
+procedure TZSQLProcessor.SetProperties(NewStrings: TStrings);
+begin
+  FProperties.Assign(NewStrings);
 end;
 
 {**
@@ -220,8 +240,7 @@ end;
 }
 procedure TZSQLProcessor.SetConnection(Value: TZAbstractConnection);
 begin
-  if FConnection <> Value then
-  begin
+  if FConnection <> Value then begin
     FConnection := Value;
     FScriptParser.ClearUncompleted;
   end;
@@ -335,28 +354,30 @@ end;
   Performs an action action execute a statement.
   @param StatementIndex an index of the executing statement.
 }
-procedure TZSQLProcessor.DoAfterExecute(StatementIndex: Integer);
+procedure TZSQLProcessor.DoAfterExecute(StatementIndex, RowsAffected: Integer);
 begin
   if Assigned(FAfterExecute) then
-    FAfterExecute(Self, StatementIndex);
+    FAfterExecute(Self, StatementIndex, RowsAffected);
 end;
 
 {**
   Loads a SQL Processor from the local file.
   @param FileName a name of the file.
 }
-procedure TZSQLProcessor.LoadFromFile(const FileName: string);
+procedure TZSQLProcessor.LoadFromFile(const FileName: string
+  {$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
 begin
-  FScript.LoadFromFile(FileName);
+  FScript.LoadFromFile(FileName{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}, Encoding{$ENDIF});
 end;
 
 {**
   Loads a SQL Processor from the stream.
   @param Stream a stream object.
 }
-procedure TZSQLProcessor.LoadFromStream(Stream: TStream);
+procedure TZSQLProcessor.LoadFromStream(Stream: TStream
+  {$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
 begin
-  FScript.LoadFromStream(Stream);
+  FScript.LoadFromStream(Stream{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}, Encoding{$ENDIF});
 end;
 
 {**
@@ -364,7 +385,7 @@ end;
 }
 procedure TZSQLProcessor.Execute;
 var
-  I: Integer;
+  I, J: Integer;
   Statement: IZPreparedStatement;
   Action: TZErrorHandleAction;
   SQL: TZSQLStrings;
@@ -384,15 +405,17 @@ begin
       Action := eaSkip;
       DoBeforeExecute(I);
       repeat
+        J := -1;
+
         try
           SQL.Text := GetStatement(I);
           {https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=127636}
           if SQL.StatementCount > 0 then begin
-            Statement := CreateStatement(SQL.Statements[0].SQL, nil);
+            Statement := CreateStatement(SQL.Statements[0].SQL, FProperties);
             try
               SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
                 FParams);
-              Statement.ExecuteUpdatePrepared;
+              J := Statement.ExecuteUpdatePrepared;
             finally
               Statement.Close; //see test Test1049821: if LastResultSet is assigned
               Statement := nil;
@@ -410,7 +433,7 @@ begin
           end;
         end;
       until Action <> eaRetry;
-      DoAfterExecute(I);
+      DoAfterExecute(I, J);
 
     end;
   finally
@@ -435,7 +458,7 @@ end;
 procedure TZSQLProcessor.Parse;
 begin
   CheckConnected;
-  FScriptParser.Tokenizer := Connection.DbcDriver.GetTokenizer;
+  FScriptParser.Tokenizer := Connection.DbcConnection.GetTokenizer;
 // mdaems 20060429 : Clear would reset the delimiter of the scriptparser
 //  FScriptParser.Clear;
   FScriptParser.ClearUncompleted;

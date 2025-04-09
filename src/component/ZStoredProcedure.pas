@@ -58,7 +58,7 @@ interface
 
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
-  ZDbcIntfs, ZAbstractDataset, ZCompatibility
+  ZDbcIntfs, ZAbstractRODataset, ZCompatibility
   {$IFNDEF DISABLE_ZPARAM},ZDatasetParam{$ENDIF};
 
 type
@@ -66,7 +66,7 @@ type
   {**
     Abstract dataset to access to stored procedures.
   }
-  TZStoredProc = class(TZAbstractDataset)
+  TZStoredProc = class(TZAbstractRODataset)
   private
     FMetaResultSet: IZResultset;
     function GetStoredProcName: string;
@@ -79,8 +79,8 @@ type
       DataLink: TDataLink); override;
     procedure InternalOpen; override;
   protected
-  {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
+  {$IFDEF WITH_IPROVIDER}
     procedure PSExecute; override;
     {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
@@ -102,6 +102,7 @@ type
     function BOR: Boolean;
     function EOR: Boolean;
   published
+    property Connection;
     property Active;
     property ParamCheck;
     property Params;
@@ -109,13 +110,13 @@ type
     property Options;
     property StoredProcName: string read GetStoredProcName
       write SetStoredProcName;
+    property Transaction;
   end;
 
 implementation
 
 uses
-  ZAbstractRODataset,
-  ZMessages, ZDatasetUtils, ZDbcMetadata
+  ZMessages, ZDatasetUtils, ZDbcMetadata, ZExceptions
   {$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF} ,FmtBCD
   {$IFDEF WITH_INLINE_ANSICOMPARETEXT}, Windows{$ENDIF};
 
@@ -205,6 +206,7 @@ begin
       try
         SplitQualifiedObjectName(Value, DatabaseInfo.SupportsCatalogsInProcedureCalls,
           DatabaseInfo.SupportsSchemasInProcedureCalls, Catalog, Schema, ObjectName);
+        If Catalog = '' Then Catalog := Self.Connection.Catalog;
         Schema := Metadata.AddEscapeCharToWildcards(Schema);
         ObjectName := Metadata.AddEscapeCharToWildcards(ObjectName);
         FMetaResultSet := Metadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
@@ -302,7 +304,7 @@ procedure TZStoredProc.SetResultSet(const Index: Integer);
 begin
   if Assigned(Statement) then
     if ( Index < 0 ) or ( Index > (Statement as IZCallableStatement).GetResultSetCount -1 ) then
-      raise Exception.Create(Format(SListIndexError, [Index]))
+      raise EZSQLException.Create(Format(SListIndexError, [Index]))
     else
       SetAnotherResultset((Statement as IZCallableStatement).GetResultSetByIndex(Index));
 end;
@@ -347,7 +349,6 @@ begin
   end;
 end;
 
-{$IFDEF WITH_IPROVIDER}
 {**
   Checks if dataset can execute SQL queries?
   @returns <code>True</code> if the query can execute SQL.
@@ -357,6 +358,7 @@ begin
   Result := False;
 end;
 
+{$IFDEF WITH_IPROVIDER}
 {**
   Gets the name of the stored procedure.
   @returns the name of this stored procedure.
@@ -389,4 +391,3 @@ end;
 {$ENDIF}
 
 end.
-

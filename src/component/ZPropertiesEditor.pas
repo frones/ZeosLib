@@ -63,7 +63,7 @@ uses
 
 type
   TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement,
-    pltResolver);
+    pltResolver, pltEventListener);
 
   { TfrmPropertyEditor }
 
@@ -198,7 +198,8 @@ implementation
 
 uses TypInfo, Types,
   ZSysUtils, ZCompatibility,
-  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection
+  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZTransaction,
+  ZEventListener
   {$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
 
 {$IFNDEF FPC}
@@ -308,6 +309,8 @@ begin
   end;
 end;
 
+Type
+  TZProtectedAbstractRODataSet = Class(TZAbstractRODataSet);
 { TZProperitesEditor }
 
 procedure TZProperitesEditor.Edit;
@@ -331,16 +334,22 @@ jmpProtocol:
         Component := TZAbstractTransaction(Component).Connection;
         goto jmpProtocol;
       end;
-    end else if Component.InheritsFrom(TZAbstractDataset) then begin
+    end else if Component.InheritsFrom(TZAbstractRWTxnUpdateObjDataSet) then begin
       FZPropertyLevelTypes := [pltStatement, pltResolver];
-      if TZAbstractRODataSet(Component).Connection <> nil then begin
-        Component := TZAbstractRODataSet(Component).Connection;
+      if TZProtectedAbstractRODataSet(Component).Connection <> nil then begin
+        Component := TZProtectedAbstractRODataSet(Component).Connection;
         goto jmpProtocol;
       end;
     end else if Component.InheritsFrom(TZAbstractRODataSet) then begin
       FZPropertyLevelTypes := [pltStatement];
-      if TZAbstractRODataSet(Component).Connection <> nil then begin
-        Component := TZAbstractRODataSet(Component).Connection;
+      if TZProtectedAbstractRODataSet(Component).Connection <> nil then begin
+        Component := TZProtectedAbstractRODataSet(Component).Connection;
+        goto jmpProtocol;
+      end;
+    end else if Component.InheritsFrom(TZEventListener) then begin
+      FZPropertyLevelTypes := [pltEventListener];
+      if TZEventListener(Component).Connection <> nil then begin
+        Component := TZEventListener(Component).Connection;
         goto jmpProtocol;
       end;
     end else Exit;
@@ -599,6 +608,7 @@ begin
       Current := ZPropertyArray[i];
       if ((pltConnection in FZPropertyLevelTypes) and (pltConnection in Current.LevelTypes)) or
          ((pltTransaction in FZPropertyLevelTypes) and (pltTransaction in Current.LevelTypes)) or
+         ((pltEventListener in FZPropertyLevelTypes) and (pltEventListener in Current.LevelTypes)) or
          ((pltResolver in FZPropertyLevelTypes) and (pltResolver in Current.LevelTypes)) or
          ((pltStatement in FZPropertyLevelTypes) and (pltStatement in Current.LevelTypes) and not
            ((pltConnection in FZPropertyLevelTypes) and not (pltConnection in Current.LevelTypes))) then begin
@@ -788,7 +798,7 @@ const
   ZProp_CodePage : TZProperty = (
     Name: ConnProps_CodePage;
     Purpose: 'Codepage to interact with driver'+LineEnding+
-      'for odbc_a it''s implemented as:'+LineEnding+
+      'for odbc_a/ole_db it''s implemented as:'+LineEnding+
       'set a custom codepage to notify zeos about conversion routines note: cp must be equal for all fields else use the W driver.'+LineEnding+
       'first place in a name, second use '':'' for the codepage, third use ''/'' for the maximum amount of bytes per character equal to database defined charset'+LineEnding+
       'example: codepage=latin1:1252/1 or characterset=utf8:65001/4';
@@ -951,16 +961,16 @@ const
     Protocols: (Count: 0; Items: nil);
   );
 {$IFEND}
-{$IF declared(DSProps_CachedLobs)}
+{$IF declared(DSProps_LobCacheMode)}
   const All_Oracle_IB_FB_Postgre: array[0..3] of String = ('oracle', 'firebird', 'interbase', 'postrgres');
-  ZProp_CachedLobs : TZProperty = (
-    Name: DSProps_CachedLobs;
-    Purpose: 'Cache the Lob-Streams? Used for Oracle-Lobs, All IB/FB-lob''s, '+
+  ZProp_LobCacheMode : TZProperty = (
+    Name: DSProps_LobCacheMode;
+    Purpose: 'Cache the Lob-Streams? OnLoad caches lobs on fetch.  OnAccess caches lobs when accessed. Used for Oracle-Lobs, All IB/FB-lob''s, '+
       'Postgre-OID-lob''s only. All other providers do not support a good '+
       'locator API. Servers like MySQL(real prepared), ASE do support late-fetching methods '+
       'but we need to refetch the whole row first if the cursor postion changes';
     ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
-    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Values: 'None|OnLoad|OnAccess'; Default: 'None'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 4; Items: @All_Oracle_IB_FB_Postgre);
   );
@@ -984,7 +994,7 @@ const
     ('OleDB','ADO');
   ZProp_OleDBProvider : TZProperty = (
     Name: ConnProps_Provider;
-    Purpose: 'The OleDB-Provider if not spezified in the DataBase-String.';
+    Purpose: 'The OleDB-Provider if not specified in the connection string.';
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: '';
     Providers: (Count: 0; Items: nil);
@@ -1022,11 +1032,11 @@ const
     ('odbc','OleDB');
   ZProp_DeferPrepare : TZProperty = (
     Name: DSProps_DeferPrepare;
-    Purpose: 'Defer prepare? If not set we''ll try to prepere the [update|delete'+
+    Purpose: 'Defer prepare? If not set Zeos tries to prepare the [update|delete'+
       '|insert|select] statements immediately.'+LineEnding+
-      'The more we try determine the parameter types, alloc the param-buffer '+
-      'once and do not use parameter late-bindings. Thus it''s faster if NO '+
-      'defer prepare is used'+LineEnding+
+      'Also Zeos tries to determine the parameter types, allocates the parameter buffers '+
+      'once only and does not use late binding of parameters. Thus it is faster if NO '+
+      'defer prepare is used and the statement gets used more than once.'+LineEnding+
       'Some servers might fail to prepare the statments(MS-products are master '+
       'of fails including unknown exceptions) -> turn it off on DataSet/Statement '+
       'level if you run into that issue';
@@ -1215,6 +1225,181 @@ const
     Values: cBoolEnum; Default: cBoolFalse; Alias: ConnProps_NTAuth+','+ConnProps_Secure;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+{$ENDIF}
+{$IFDEF ENABLE_POSTGRESQL}
+  const
+    AllPostgreSQL: array[0..0] of String = ('postgres');
+  const cPostgreSQLProvider: TZPropertyProvider = (
+    Provider: spMySQL; MinimumServerVersion: 8;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_PG_CheckFieldVisibility : TZProperty = (
+    Name: ConnProps_CheckFieldVisibility;
+    Purpose: 'If set, metadata query will check if fields are visible (by ''AND pg_table_is_visible (c.oid)'')';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_StdConformingStrings : TZProperty = (
+    Name: ConnProps_StdConformingStrings;
+    Purpose: 'Value used in ''SET standard_conforming_strings = <Value>'' query on connect. Refer to PostgreSQL manual for details';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_ApplicationName : TZProperty = (
+    Name: ConnProps_ApplicationName;
+    Purpose: 'Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_RequireSSL : TZProperty = (
+    Name: ConnProps_RequireSSL;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLPassword : TZProperty = (
+    Name: ConnProps_SSLPassword;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLMode : TZProperty = (
+    Name: ConnProps_SSLMode;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLCert : TZProperty = (
+    Name: ConnProps_SSLCert;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLCompression : TZProperty = (
+    Name: ConnProps_SSLCompression;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLCrl : TZProperty = (
+    Name: ConnProps_SSLCrl;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLKey : TZProperty = (
+    Name: ConnProps_SSLCrl;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLRootcert : TZProperty = (
+    Name: ConnProps_SSLRootcert;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives : TZProperty = (
+    Name: ConnProps_keepalives;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives_idle : TZProperty = (
+    Name: ConnProps_keepalives_idle;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives_interval : TZProperty = (
+    Name: ConnProps_keepalives_interval;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives_count : TZProperty = (
+    Name: ConnProps_keepalives_count;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_BindDoublesAsString : TZProperty = (
+    Name: ConnProps_BindDoublesAsString;
+    Purpose: 'Compatibility option for users who bind double values to the params even if it should by a NUMERIC complient type such as Currency or TBCD. If set, Zeos binds Doubles as string with then Unknown OID (0).';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_OidAsBlob : TZProperty = (
+    Name: DSProps_OidAsBlob;
+    Purpose: 'Is Oid type treated as Large Object handle (blob) or as a regular integer.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_ExecAsync : TZProperty = (
+    Name: DSProps_ExecAsync;
+    Purpose: 'If set, queries will be executed asyncronous.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SingleRowMode : TZProperty = (
+    Name: DSProps_SingleRowMode;
+    Purpose: 'Fetch results row by row from Server. Do not cache the results in libpq.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_BinaryWireResultMode : TZProperty = (
+    Name: DSProps_BinaryWireResultMode;
+    Purpose: 'Force binary results to be retrieved from the server. Supported since Protocol V3 except libraries like pgbouncer which have no pqexecparams/pqexecprepared.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolTrue; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_ListernerInterval : TZProperty = (
+    Name: ELProps_ListernerInterval;
+    Purpose: 'Sets event listener interval in milliseconds.';
+    ValueType: pvtNumber; LevelTypes: [pltEventListener];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
   );
 {$ENDIF}
 {$IFDEF ENABLE_MYSQL}
@@ -3207,6 +3392,34 @@ const
   );
 {$ENDIF ENABLE_FIREBIRD}
 
+{$IFDEF ENABLE_PROXY}
+  ProxyProtocol: array[0..0] of String =
+    ('WebServiceProxy');
+  ZProp_ProxyTofuPubKeys : TZProperty = (
+    Name: ConnProps_TofuPubKeys;
+    Purpose: 'List of public keys for TOFU mode certificate validation. ' +
+      'Enables TOFU type certificate validation. ' +
+      'Defines which public keys will be accepted. ' +
+      'Public keys are provided in HEX (0123456789ABCDEF) and delimited from each other by a colon (:). ' +
+      'Overrules Delphi automatic public key valildation. ' +
+      'If empty, any certificate will be accepted on the first connection.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @ProxyProtocol[0]);
+  );
+  ZProp_ProxyProtocol: TZProperty = (
+    Name: ConnProps_ProxyProtocol;
+    Purpose: 'Defines which protocol the Webservicde Proxy driver uses for connecting to the server. '+
+      'If empty, https will be used. '+
+      'Behavior is undefined if an undefined value is set.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'http|https'; Default: 'https'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @ProxyProtocol[0]);
+  );
+{$ENDIF}
+
 {$IFDEF ENABLE_SQLITE}
   cSqlite3upProvider: TZPropertyProvider = (
     Provider: spSQLite; MinimumServerVersion: 0;
@@ -3864,7 +4077,7 @@ const
     Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_Idle : TZProperty = (
-    Name: ConnProps_Host;
+    Name: ConnProps_Idle;
     Purpose: 'Specifies a connection''s idle timeout period.'+LineEnding+
       'Idle=timeout-value'+LineEnding+
       'The connection''s idle timeout period, in minutes. The minimum value '+
@@ -3980,13 +4193,67 @@ const
   ConnProps_RetryConnectionTimeout = 'RetryConnectionTimeout';
   ConnProps_RetryConnTO = 'RetryConnTO';
   ConnProps_ServerName = 'ServerName';
-  ConnProps_Server = 'Server';
   ConnProps_StartLine = 'StartLine';
   ConnProps_START = 'START';
   ConnProps_Unconditional = 'Unconditional';
   ConnProps_UNC = 'UNC';
     *)
 {$ENDIF}
+
+{$IFDEF ENABLE_ODBC}
+  cODBCProtocols: array[0..1] of String = ('odbc_a','odbc_w');
+  ZProp_Server : TZProperty = (
+    Name: ConnProps_Server;
+    Purpose: 'Specifies the name of a running database server to which you want to connect.';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+  ZProp_CharacterSet : TZProperty = (
+    Name: ConnProps_CharacterSet;
+    Purpose: 'Specifies the character set to be used on this connection. '+
+      'Syntax: characterset={ NONE | character-set }'+LineEnding+
+      'NONE   Specifying CharSet=NONE requests that the connection use the '+
+      'database CHAR character set.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_CS+','+ConnProps_CodePage;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+  ZProp_DRIVER : TZProperty = (
+    Name: ConnProps_DRIVER;
+    Purpose: 'Specifies the ODBC driver to be used on this connection.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+  ZProp_ODBC_Version : TZProperty = (
+    Name: ConnProps_ODBC_Version;
+    Purpose: 'Specifies the ODBC driver version to be used on this connection. '+
+      'The supportend versions are ODBC 3 or ODBC 3.80 (submit the value as 380)';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: '3|380'; Default: '380'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+
+{$ENDIF}
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+  PostgreOnly: array[0..0] of String = ('postrgres');
+{$ENDIF}
+
+{$IF declared(ELProps_ListernerInterval)}
+  ZProp_ListernerInterval : TZProperty = (
+    Name: ELProps_ListernerInterval;
+    Purpose: 'Sets Listener interval in milliseconds.';
+    ValueType: pvtNumber; LevelTypes: [pltEventListener];
+    Values: ''; Default: '250'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @PostgreOnly);
+  );
+{$IFEND}
 
 initialization
   prEditValuesPageIndex := 0;
@@ -4026,8 +4293,8 @@ initialization
   RegisterZProperties([@ZProp_ServerCachedStmts,@ZProp_BlobPrefetchSize,
     @ZProp_StatementCache,@ZProp_row_prefetch_size,@ZProp_OCIAuthenticateMode,@ZProp_MultiThreaded]);
 {$ENDIF}
-{$IF declared(ZProp_CachedLobs)}
-  RegisterZProperty(@ZProp_CachedLobs);
+{$IF declared(ZProp_LobCacheMode)}
+  RegisterZProperty(@ZProp_LobCacheMode);
 {$IFEND}
 {$IF declared(ZProp_UndefVarcharAsStringLength)}
   RegisterZProperty(@ZProp_UndefVarcharAsStringLength);
@@ -4067,6 +4334,9 @@ initialization
 {$ENDIF}
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperties([@ZProp_SessionIdleTimeOut, @ZProp_FirebirdAPI]);
+{$IFEND}
+{$IF declared(ZProp_ProxyProtocol)}
+  RegisterZProperties([@ZProp_ProxyTofuPubKeys, @ZProp_ProxyProtocol]);
 {$IFEND}
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperty(@ZProp_FBProtocol);
@@ -4131,10 +4401,11 @@ initialization
     @ZProp_Host, @ZProp_Idle, @ZProp_Integrated, @ZProp_INT,@ZProp_Kerberos,
     @ZProp_KRB, @ZProp_LANG, @ZProp_LazyClose, @ZProp_LCLOSE]);
 {$ENDIF}
-
-
-{$IFDEF LCL}
-//{.$i ZPropertiesEditor.lrs}
+{$IFDEF ENABLE_ODBC}
+  RegisterZProperties([@ZProp_Server, @ZProp_CharacterSet, @ZProp_DRIVER, @ZProp_ODBC_Version]);
 {$ENDIF}
 
+{$IF declared(ELProps_ListernerInterval )}
+  RegisterZProperties([@ZProp_ListernerInterval]);
+{$IFEND}
 end.

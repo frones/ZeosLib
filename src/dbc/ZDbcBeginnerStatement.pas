@@ -51,6 +51,8 @@
 
 unit ZDbcBeginnerStatement;
 
+{$INCLUDE ZDbc.inc}
+
 interface
 
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD, SysUtils,
@@ -81,7 +83,7 @@ type
     procedure SetInParamCount(const NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
-    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: String = EmptyRaw);
     function GetInParamLogValue(Value: TZVariant): RawByteString;
     function GetOmitComments: Boolean; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
@@ -139,8 +141,8 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); virtual;
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
+    procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD); virtual;
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
@@ -152,18 +154,18 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); overload; virtual;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); overload; virtual;
-    procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
+    procedure SetGUID(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload; virtual;
+    procedure SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload; virtual;
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload; virtual;
+    procedure SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload; virtual;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload; virtual;
+    procedure SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload; virtual;
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); virtual;
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
+    procedure SetValue(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant); virtual;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
@@ -209,7 +211,7 @@ type
     function GetUnicodeString(ParameterIndex: Integer): ZWideString;
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
-    //function GetCLob(ParameterIndex: Integer): IZClob;
+    function GetCLob(ParameterIndex: Integer): IZClob;
 
     procedure ClearParameters; virtual;
 
@@ -224,7 +226,7 @@ type
 implementation
 
 uses ZMessages, ZFastCode, ZSysUtils, ZEncoding,
-  ZDbcResultSet;
+  ZDbcResultSet, ZExceptions;
 {------------------------------------------------------------------------------}
 
 { TZAbstractBeginnerPreparedStatement }
@@ -381,6 +383,22 @@ begin
   Result := FClientVariantManger;
 end;
 
+function TZAbstractBeginnerPreparedStatement.GetCLob(
+  ParameterIndex: Integer): IZClob;
+var
+  Idx: Integer;
+  TempBlob: IZClob;
+begin
+  Idx := ParameterIndex - FirstDbcIndex;
+  if (Idx) >= Length(InParamValues) then
+    raise EZSQLException.Create('Paramter index exceeds parameter count.');
+  if (InParamValues[Idx].VType = vtInterface) and (Supports(InParamValues[Idx].VInterface, IZClob, TempBlob)) then begin
+    Result := TempBlob;
+  end else begin
+    EZSQLException.Create('Paramter is not an IZBlob');
+  end;
+end;
+
 {**
   Prepares eventual structures for binding input parameters.
 }
@@ -447,13 +465,13 @@ end;
   @param Msg a description message.
 }
 procedure TZAbstractBeginnerPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
-  const Msg: RawByteString = EmptyRaw);
+  const Msg: String = EmptyRaw);
 begin
   if DriverManager.HasLoggingListener then
     if msg <> EmptyRaw then
-      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
+      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FStatementId)+' : '+Msg)
     else
-      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+IntToRaw(FStatementId));
+      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FStatementId));
 end;
 
 
@@ -725,7 +743,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractBeginnerPreparedStatement.SetBigDecimal(
-  ParameterIndex: Integer; const Value: TBCD);
+  ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 begin
   SetInParam(ParameterIndex, stBigDecimal, EncodeBigDecimal(Value));
 end;
@@ -742,7 +760,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractBeginnerPreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   SetInParam(ParameterIndex, stString, EncodeCharRec(Value));
 end;
@@ -902,7 +920,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractBeginnerPreparedStatement.SetGUID(ParameterIndex: Integer; const Value: TGUID);
+procedure TZAbstractBeginnerPreparedStatement.SetGUID(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 begin
   SetInParam(ParameterIndex, stGUID, EncodeGUID(Value));
 end;
@@ -921,7 +939,7 @@ begin
   SetInParam(ParameterIndex, stDate, EncodeDateTime(Value));
 end;
 
-procedure TZAbstractBeginnerPreparedStatement.SetDate(ParameterIndex: Integer; const Value: TZDate);
+procedure TZAbstractBeginnerPreparedStatement.SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 begin
   SetInParam(ParameterIndex, stDate, EncodeZDate(Value));
 end;
@@ -940,7 +958,7 @@ begin
   SetInParam(ParameterIndex, stTime, EncodeDateTime(Value));
 end;
 
-procedure TZAbstractBeginnerPreparedStatement.SetTime(ParameterIndex: Integer; const Value: TZTime);
+procedure TZAbstractBeginnerPreparedStatement.SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 begin
   SetInParam(ParameterIndex, stTime, EncodeZTime(Value));
 end;
@@ -959,7 +977,7 @@ begin
   SetInParam(ParameterIndex, stTimestamp, EncodeDateTime(Value));
 end;
 
-procedure TZAbstractBeginnerPreparedStatement.SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp);
+procedure TZAbstractBeginnerPreparedStatement.SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 begin
   SetInParam(ParameterIndex, stTimestamp, EncodeZTimeStamp(Value));
 end;
@@ -1005,7 +1023,13 @@ begin
 
     if MyMemoryStream.Memory = nil
     then SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(PEmptyAnsiString, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings))
-    else SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(MyMemoryStream.Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings));
+    else
+      {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+      if ConSettings^.ClientCodePage^.CP = zCP_UTF16 then
+        SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(MyMemoryStream.Memory, Value.Size, DefaultSystemCodePage, ConSettings))
+      else
+      {$ENDIF}
+        SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(MyMemoryStream.Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings));
   finally
     if NeedToRelease then
       FreeAndNil(MyMemoryStream);
@@ -1078,7 +1102,7 @@ end;
   @param Value the variant value.
 }
 procedure TZAbstractBeginnerPreparedStatement.SetValue(ParameterIndex: Integer;
-  const Value: TZVariant);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
 var
   SQLType: TZSQLType;
   TempBlob: IZBlob;
@@ -1184,7 +1208,7 @@ begin
               raise EZSQLException.Create('Invalid Variant-Type for String-Array binding!');
           end;
         stArray:          raise EZSQLException.Create('Invalid SQL-Type for Array binding!');
-        stDataSet: ;
+        stResultSet: ;
       end;
     V.VType := vtArray;
     V.VArray.VArray := Pointer(Value);
@@ -1514,7 +1538,7 @@ end;
 }
 procedure TZAbstractBeginnerPreparedStatement.AddBatchPrepared;
 begin
-  raise EZSQLException.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1525,14 +1549,14 @@ end;
 function TZAbstractBeginnerPreparedStatement.GetMetaData: IZResultSetMetaData;
 begin
   Result := nil;
-  raise EZSQLException.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 function TZAbstractBeginnerPreparedStatement.CreateLogEvent(
   const Category: TZLoggingCategory): TZLoggingEvent;
 var
   I : integer;
-  LogString : RawByteString;
+  LogString : String;
 begin
   LogString := '';
   case Category of
@@ -1542,7 +1566,7 @@ begin
         else
           begin { Prepare Log Output}
             For I := 0 to InParamCount - 1 do
-              LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+              LogString := LogString + String(GetInParamLogValue(InParamValues[I])+',');
             result := CreateStmtLogEvent(Category, Logstring);
           end;
   else
@@ -1555,7 +1579,7 @@ end;
 }
 procedure TZAbstractBeginnerPreparedStatement.RaiseUnsupportedException;
 begin
-  raise EZSQLException.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractBeginnerPreparedStatement.SetASQL(const Value: RawByteString);

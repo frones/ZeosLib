@@ -58,14 +58,16 @@ interface
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses SysUtils,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  ZCompatibility, ZDbcIntfs, ZPlainODBCDriver, ZFastCode;
+  ZCompatibility, ZDbcIntfs, ZPlainODBCDriver, ZFastCode, ZDbcStatement;
 
 type
   PStrLen_or_IndArray = ^TStrLen_or_IndArray;
   TStrLen_or_IndArray = array[0..600] of SQLLEN;
 
-  PZODBCParamBind = ^TZODBCParamBind;
-  TZODBCParamBind = record
+  PZODBCBindValue = ^TZODBCBindValue;
+  TZODBCBindValue = record
+    /// <summary> the generic bindvalue record<summary>
+    BindValue: TZBindValue;
     InputOutputType: SQLSMALLINT; //the InputOutputType of the Parameter
     ValueType: SQLSMALLINT; //the C-DataType
     ParameterType: SQLSMALLINT; //the SQL-DataType
@@ -76,12 +78,9 @@ type
     Nullable: SQLSMALLINT;
     BufferLength: SQLLEN;
     ValueCount: Integer;
-    SQLType: TZSQLType;
     Described, ExternalMem: Boolean;
     ParamName: String;
   end;
-  PZODBCParamBindArray = ^TZODBCParamBindArray;
-  TZODBCParamBindArray = array[Byte] of TZODBCParamBind;
 
 function ConvertODBCTypeToSQLType(ODBCType, Scale: SQLSMALLINT; Precision: Integer; UnSigned: Boolean;
   ConSettings: PZConSettings; ODBC_CType: PSQLSMALLINT): TZSQLType;
@@ -125,7 +124,7 @@ const
 implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
-uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZDbcUtils
+uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZDbcUtils, ZExceptions
  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 function SQL_LEN_DATA_AT_EXEC(Len: SQLLEN): SQLLEN;
@@ -545,6 +544,7 @@ var
   HENV: SQLHENV;
   HDBC: SQLHDBC;
   aLen: SQLSMALLINT;
+  RetCode: Smallint;
 begin
   URL := TZURL.Create;
   URL.Protocol := {$IFDEF UNICODE}'odbc_w'{$ELSE}'odbc_a'{$ENDIF};
@@ -556,18 +556,22 @@ begin
   ODBC3BaseDriver := TZODBC3PlainDriver(PlainDriver.GetInstance);
   try
     PlainDriver.Initialize(LibraryLocation);
-    Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV) = SQL_SUCCESS, 'Couldn''t allocate an Environment handle');
+    if ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Couldn''t allocate an Environment handle');
     //Try to SET Major Version 3 and minior Version 8
     if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) <> SQL_SUCCESS then
       //set minimum Major Version 3
-      Assert(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) = SQL_SUCCESS, 'Couln''t set minimum ODBC-Version 3.0');
-    Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC) = SQL_SUCCESS, 'Couldn''t allocate a DBC handle');
+      if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
+        raise EZSQLException.Create('Couln''t set minimum ODBC-Version 3.0');
+    if ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Couldn''t allocate a DBC handle.');
     {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, 1024);
     aLen := 0;
-    if ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
+    RetCode := ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
       Pointer(InConnectionString), Length(InConnectionString), Pointer(Result),
-        Length(Result), @aLen, SQL_DRIVER_PROMPT) = SQL_SUCCESS then
+        Length(Result), @aLen, SQL_DRIVER_PROMPT);
+    if (RetCode = SQL_SUCCESS) or (RetCode = SQL_SUCCESS_WITH_INFO) then
       SetLength(Result, aLen)
     else
       Result := InConnectionString;

@@ -61,11 +61,10 @@ uses
   ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainFirebirdInterbaseDriver, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
   ZGenericSqlAnalyser, ZClasses, ZDbcFirebirdInterbase,
-  ZPlainFirebird;
+  ZPlainFirebird, ZExceptions;
 
 type
-
-  {** Implements Interbase6 Database Driver. }
+  /// <summary>Implements Firebird Database Driver.</summary>
   TZFirebirdDriver = class(TZInterbaseFirebirdDriver)
   public
     /// <summary>Constructs this object with default properties.</summary>
@@ -85,6 +84,7 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
   end;
 
+  /// <summary>Defines a special Firebird Transaction interface.</summary>
   IZFirebirdTransaction = interface(IZInterbaseFirebirdTransaction)
     ['{CBCAE412-34E8-489A-A022-EAE325F6D460}']
     /// <summary>Get the Firebird ITransaction corba interface.</summary>
@@ -92,6 +92,7 @@ type
     function GetTransaction: ITransaction;
   end;
 
+  /// <summary>Defines a special Firebird Connection interface.</summary>
   IZFirebirdConnection = interface(IZInterbaseFirebirdConnection)
     ['{C986AC0E-BC37-44B5-963F-65646333AF7C}']
     /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
@@ -111,6 +112,7 @@ type
     function GetPlainDriver: TZFirebirdPlainDriver;
   end;
 
+  /// <summary>Implements a special Firebird Transaction object.</summary>
   TZFirebirdTransaction = class(TZInterbaseFirebirdTransaction,
     IZTransaction, IZFirebirdTransaction, IZInterbaseFirebirdTransaction)
   private
@@ -188,14 +190,18 @@ type
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public { implement IZIBTransaction }
+    /// <summary>Immediat start an active transaction.</summary>
     procedure DoStartTransaction;
   public { implement IZFirebirdTransaction }
+    /// <summary>Get the underlaying OO Corba interface firebird transaction.</summary>
+    /// <returns>Returns the CORBA firebird transaction interface</returns>
     function GetTransaction: ITransaction;
   end;
 
-  { TZFirebirdConnection }
+  /// <summary>Implements a special Firebird Connection object.</summary>
   TZFirebirdConnection = class(TZInterbaseFirebirdConnection, IZConnection,
-    IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection)
+    IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection,
+    IZEventListener, IZFirebirdInterbaseEventAlerter)
   private
     FMaster: IMaster;
     FProvider: IProvider;
@@ -203,19 +209,59 @@ type
     FStatus: IStatus;
     FUtil: IUtil;
     FPlainDriver: TZFirebirdPlainDriver;
+    FReleasingSender: IImmediatelyReleasable;
   protected
+    /// <summary>Closes the connection internaly and frees all server resources</summary>
     procedure InternalClose; override;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a raw encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    class function GetEventListClass: TZFirebirdInterbaseEventListClass; override;
   public
     procedure AfterConstruction; override;
     Destructor Destroy; override;
+  public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public { IZFirebirdConnection }
+    /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
+    /// <returns>The IZFirebirdTransaction com interface.</returns>
     function GetActiveTransaction: IZFirebirdTransaction;
+    /// <summary>Get the Firebird IAttachment corba interface.</summary>
+    /// <returns>The Firebird IAttachment corba interface.</returns>
     function GetAttachment: IAttachment;
+    /// <summary>Get the Firebird IStatus corba interface.</summary>
+    /// <returns>The Firebird IStatus corba interface.</returns>
     function GetStatus: IStatus;
+    /// <summary>Get the TZFirebirdPlainDriver object.</summary>
+    /// <returns>The TZFirebirdPlainDriver object.</returns>
     function GetPlainDriver: TZFirebirdPlainDriver;
+    /// <summary>Get the Firebird IUtil corba interface.</summary>
+    /// <returns>The Firebird IUtil corba interface.</returns>
     function GetUtil: IUtil;
-  public { IZTransactionManager }
+  public { implement IZTransactionManager }
+    /// <summary>Creates a <c>Transaction</c></summary>
+    /// <param>"AutoCommit" the AutoCommit mode.</param>
+    /// <param>"ReadOnly" the ReadOnly mode.</param>
+    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of of
+    ///  <c>tiNone, tiReadUncommitted, tiReadCommitted, tiRepeatableRead,
+    ///  tiSerializable</c> isolation values with the exception of <c>tiNone</c>;
+    ///  some databases may not support other values see
+    ///  DatabaseInfo.SupportsTransactionIsolationLevel</param>
+    /// <param>"Params" a list of properties used for the transaction.</param>
+    /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
   public
@@ -269,13 +315,50 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
-  public
-    function IsFirebirdLib: Boolean; override;
-    function IsInterbaseLib: Boolean; override;
-  public
+    /// <author>firmos (initially for MySQL 27032006)</author>
+    /// <summary>Ping Current Connection's server, if client was disconnected,
+    ///  the connection is resumed.</summary>
+    /// <returns>0 if succesfull or error code if any error occurs</returns>
+    function PingServer: Integer; override;
+    /// <author>aehimself</author>
+    /// <summary>Immediately abort any kind of queries.</summary>
+    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
     function AbortOperation: Integer; override;
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; override;
+  public { implement IZInterbaseFirebirdConnection }
+    /// <summary>Determine if the Client lib-module is a Firebird lib</summary>
+    /// <returns><c>True</c>If it's a firebird client lib; <c>False</c>
+    ///  otherwise</returns>
+    function IsFirebirdLib: Boolean; override;
+    /// <summary>Determine if the Client lib-module is a Interbase lib</summary>
+    /// <returns><c>True</c>If it's a Interbase client lib; <c>False</c>
+    ///  otherwise</returns>
+    function IsInterbaseLib: Boolean; override;
+  public { implement IZEventListener}
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
   end;
+
+  TZFirebirdEventList = class(TZFirebirdInterbaseEventList)
+  public
+    procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); override;
+    procedure UnregisterEvents; override;
+  end;
+
+  TZFBEventCallback = class(IEventCallbackImpl)
+  private
+    FEventBlock: PZInterbaseFirebirdEventBlock;
+    FOwner: TZFirebirdEventList;
+    FRefCnt: integer; //for refcounting
+  public
+    constructor Create(aOwner: TZFirebirdEventList; AEventBlock: PZInterbaseFirebirdEventBlock);
+    procedure addRef;  override;
+    function release: Integer; override;
+    procedure eventCallbackFunction(length: Cardinal; events: PByte); override;
+ end;
 
 {$ENDIF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 implementation
@@ -324,7 +407,11 @@ begin
   then Result := 0
   else begin
     FAttachment.cancelOperation(FStatus, fb_cancel_abort);
-    Result := Ord((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF}) <> 0);
+
+    // This is a mess and probably doesn't work as intended. cIStatus_RESULT_OK is 0, which means it doesn't matter what
+    // getState returns, anything AND 0 will be 0. Therefore, 0 <> 0 will always return FALSE and Ord(False) is always 0.
+    // Result is always 0, so FStatus.init will never be called...
+    Result := Ord((Fstatus.getState and cIStatus_RESULT_OK) <> 0);
     if Result <> 0 then
       FStatus.init;
   end;
@@ -333,7 +420,6 @@ end;
 procedure TZFirebirdConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
-  { set default sql dialect it can be overriden }
   FMaster := IMaster(FPlainDriver.fb_get_master_interface);
   FStatus := FMaster.getStatus;
   FUtil := FMaster.getUtilInterface;
@@ -348,18 +434,6 @@ begin
   Result := TZFirebirdStatement.Create(Self, Params);
 end;
 
-{**
-  Creates a <code>Transaction</code>
-  @param AutoCommit the AutoCommit mode.
-  @param ReadOnly the ReadOnly mode.
-  @param ReadOnly the ReadOnly mode.
-  @param TransactIsolationLevel one of the TRANSACTION_* isolation values with the
-    exception of TRANSACTION_NONE; some databases may not support other values
-  @see DatabaseMetaData#supportsTransactionIsolationLevel
-  @param Value returns the Transaction object.
-  @see IZTransaction
-  @return the index in the manager list of the new transaction
-}
 function TZFirebirdConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
@@ -374,10 +448,10 @@ destructor TZFirebirdConnection.Destroy;
 begin
   inherited;
   if FStatus <> nil then begin
-    FStatus.Dispose;
+    FStatus.{$IFDEF WITH_RECORD_METHODS}Disposable.{$ENDIF}Dispose;
     FStatus := nil;
   end;
-  //How to free IStatus and IMaster?
+  //How to free IMaster?
 end;
 
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
@@ -390,16 +464,18 @@ var ZTrans: IZFirebirdTransaction;
 begin
   ZTrans := GetActiveTransaction;
   FBTrans := ZTrans.GetTransaction;
+  if DriverManager.HasLoggingListener then begin
   {$IFDEF UNICODE}
-  if DriverManager.HasLoggingListener then
     FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
   {$ENDIF}
+    DriverManager.LogMessage(LoggingCategory, 'firebird', {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
+  end;
   if LoggingCategory = lcTransaction then begin
     FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
       FDialect, nil, nil, nil, nil);
     State := Fstatus.getState;
-    if ((State and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((State and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+    if ((State and cIStatus_STATE_ERRORS) <> 0) or
+       ((State and cIStatus_STATE_WARNINGS) <> 0) then begin
       {$IFDEF UNICODE}
       if not DriverManager.HasLoggingListener then
         FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
@@ -409,8 +485,8 @@ begin
     end;
   end else begin
     Stmt := FAttachment.prepare(FStatus, FBTrans, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(SQL), FDialect, 0);
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) or
+       ((Fstatus.getState and cIStatus_STATE_WARNINGS) <> 0) then begin
       {$IFDEF UNICODE}
       if not DriverManager.HasLoggingListener then
         FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
@@ -424,8 +500,8 @@ begin
       then raise EZSQLException.Create(SStatementIsNotAllowed)
       else begin
         Stmt.execute(FStatus, FBTrans, nil, nil, nil, nil);
-        if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-           ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+        if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) or
+           ((Fstatus.getState and cIStatus_STATE_WARNINGS) <> 0) then begin
           {$IFDEF UNICODE}
           if not DriverManager.HasLoggingListener then
             FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
@@ -436,7 +512,20 @@ begin
       end;
     finally
       Stmt.free(FStatus);
-      Stmt.release;
+      try
+        if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then begin
+          {$IFDEF UNICODE}
+          if not DriverManager.HasLoggingListener then
+            FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+          {$ENDIF}
+          HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        end
+        else // free() releases intf on success
+          Stmt:= nil;
+      finally
+        if Assigned(Stmt) then
+          Stmt{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
+      end;
     end;
   end;
 end;
@@ -459,6 +548,11 @@ begin
   Result := FAttachment;
 end;
 
+class function TZFirebirdConnection.GetEventListClass: TZFirebirdInterbaseEventListClass;
+begin
+  Result := TZFirebirdEventList;
+end;
+
 function TZFirebirdConnection.GetPlainDriver: TZFirebirdPlainDriver;
 begin
   Result := FPlainDriver;
@@ -479,11 +573,19 @@ begin
   inherited InternalClose;
   if FAttachment <> nil then begin
     FAttachment.detach(FStatus);
-    FAttachment.release;
-    FAttachment := nil;
+    try
+      if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
+        HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.detach', Self)
+      else // detach releases intf on success
+        FAttachment:= nil;
+    finally
+      if Assigned(FAttachment) then
+        FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
+      FAttachment := nil;
+    end;
   end;
   if FProvider <> nil then begin
-    FProvider.release;
+    FProvider{$IFDEF WITH_RECORD_METHODS}.PluginBase.ReferenceCounted{$ENDIF}.release;
     FProvider := nil;
   end;
 end;
@@ -498,9 +600,22 @@ begin
   Result := False;
 end;
 
-{**
-  Opens a connection to database server with specified parameters.
-}
+procedure TZFirebirdConnection.Listen(const EventNames: TStrings;
+  Handler: TZOnEventHandler);
+var I: Integer;
+begin
+  if (FEventList <> nil) then begin
+    if (FEventList.Count > 0) then
+      Unlisten;
+    if IsClosed then
+      Open;
+    for i := 0 to EventNames.Count -1 do
+      FEventList.Add(EventNames[I], Handler);
+    FEventList.RegisterEvents;
+  end else
+    raise EZSQLException.Create('no events registered');
+end;
+
 procedure TZFirebirdConnection.Open;
 var
   ti: IZFirebirdTransaction;
@@ -564,12 +679,12 @@ begin
       Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
       DBCreated := True;
       FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       try
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
       finally
-        FProvider.release;
+        FProvider{$IFDEF WITH_RECORD_METHODS}.PluginBase.ReferenceCounted{$ENDIF}.release;
         FProvider := nil;
       end;
       if DriverManager.HasLoggingListener then
@@ -583,7 +698,7 @@ begin
       PrepareDPB;
       FLogMessage := Format(SConnect2AsUser, [ConnectionString, URL.UserName]);;
       FAttachment := FProvider.attachDatabase(FStatus, @FByteBuffer[0], Length(DPB), Pointer(DPB));
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcConnect, PARRAY_ISC_STATUS(FStatus.getErrors),
           FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
       { Logging connection action }
@@ -593,10 +708,10 @@ begin
     { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
     FByteBuffer[0] := isc_info_db_SQL_Dialect;
     FAttachment.getInfo(FStatus, 1, @FByteBuffer[0], SizeOf(TByteBuffer)-1, @FByteBuffer[1]);
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.getInfo', Self);
     if FByteBuffer[1] = isc_info_db_SQL_Dialect
-    then FDialect := ReadInterbase6Number(FPlainDriver, FByteBuffer[2])
+    then FDialect := ReadInterbase6Number(FPlainDriver, @FByteBuffer[2])
     else FDialect := SQL_DIALECT_V5;
     inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
     FRestartTransaction := not AutoCommit;
@@ -606,11 +721,11 @@ begin
   finally
     if Closed then begin
       if FAttachment <> nil then begin
-        FAttachment.Release;
+        FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release;
         FAttachment := nil;
       end;
       if FProvider <> nil then begin
-        FProvider.Release;
+        FProvider{$IFDEF WITH_RECORD_METHODS}.PluginBase.ReferenceCounted{$ENDIF}.Release;
         FProvider := nil;
       end;
     end;
@@ -680,18 +795,18 @@ begin
     end else if FClientCodePage = '' then
       CheckCharEncoding(DBCP);
   end;
-  if (FAttachment.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
+  if (FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted.Versioned{$ENDIF}.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
     TimeOut := StrToIntDef(Info.Values[ConnProps_StatementTimeOut], 0);
     if TimeOut > 0 then begin
       FAttachment.SetStatementTimeOut(Fstatus, TimeOut);
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           'IAttachment.SetStatmentTimeOut', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
     TimeOut := StrToIntDef(Info.Values[ConnProps_SessionIdleTimeOut], 0);
     if TimeOut > 16 then begin
       FAttachment.setIdleTimeout(Fstatus, TimeOut);
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           'IAttachment.setIdleTimeout', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
@@ -710,34 +825,15 @@ begin
   end;
 end;
 
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
+function TZFirebirdConnection.PingServer: Integer;
+begin
+  if (FAttachment <> nil) and (FStatus <> nil) then begin
+    FAttachment.Ping(FStatus);
+    Result := -Ord((Fstatus.getState and cIStatus_RESULT_OK) <> 0);
+    FStatus.init;
+  end else Result := -1;
+end;
 
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
 function TZFirebirdConnection.PrepareCallWithParams(const Name: string;
   Params: TStrings): IZCallableStatement;
 begin
@@ -751,9 +847,30 @@ function TZFirebirdConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then
     Open;
-  {if Self.FHostVersion >= 4000000
+  if Self.FHostVersion >= 4000000
   then Result := TZFirebird4upPreparedStatement.Create(Self, SQL, Params)
-  else }Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
+  else Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
+end;
+
+procedure TZFirebirdConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var
+  LPrevReleasingSender: IImmediatelyReleasable;
+begin
+  if FReleasingSender = Sender then begin
+    // prevent recursion from registered statements
+    Exit;
+  end;
+  LPrevReleasingSender:= FReleasingSender;
+  FReleasingSender:= Sender;
+  try
+    inherited;
+  finally
+    if Assigned(FAttachment) then begin
+      FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
+      FAttachment:= nil;
+    end;
+    FReleasingSender:= LPrevReleasingSender;
+  end;
 end;
 
 var
@@ -767,10 +884,10 @@ begin
     if fDoCommit
     then FTransaction.commit(FStatus)
     else FTransaction.rollback(FStatus);
-    FTransaction.release;
+    FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FTransaction := nil;
     fSavepoints.Clear;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
     FOwner.ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
@@ -779,6 +896,12 @@ end;
 
 procedure TZFirebirdTransaction.Commit;
 var S: RawByteString;
+  procedure _HandleErrorOrWarning(var AStatus: IStatus);
+  begin
+    if ((AStatus.getState and cIStatus_STATE_ERRORS) <> 0) then
+      FOwner.HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(AStatus.getErrors),
+        sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  end;
 begin
   with TZFirebirdConnection(FOwner) do
   if fSavepoints.Count > 0 then begin
@@ -786,22 +909,21 @@ begin
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else if FTransaction <> nil then try
-    if TZFirebirdConnection(FOwner).FHardCommit or
+    if FHardCommit or
       ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.commit(FStatus);
-      {$IFDEF DEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF DEBUG} = 0){$ENDIF};
+      _HandleErrorOrWarning(FStatus);
+      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
       fDoLog := False;
       FTransaction.commitRetaining(FStatus);
+      _HandleErrorOrWarning(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
-        sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
        ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection
@@ -837,7 +959,7 @@ procedure TZFirebirdTransaction.ReleaseImmediat(
 begin
   try
     if FTransaction <> nil then begin
-      FTransaction.release;
+      FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       FTransaction := nil;
     end;
   finally
@@ -859,7 +981,7 @@ begin
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.rollback(FStatus);
-      {$IFDEF DEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF DEBUG} = 0){$ENDIF};
+      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
@@ -867,7 +989,7 @@ begin
       FTransaction.rollbackRetaining(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
@@ -886,7 +1008,10 @@ begin
         FTPB := FOwner.GenerateTPB(FAutoCommit, FReadOnly, FTransactionIsolation, FProperties);
       FTransaction := FAttachment.startTransaction(FStatus,
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
-      FTransaction.AddRef;
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
+        HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
+          sGetTxn, IImmediatelyReleasable(FWeakImmediatRelPtr));
+      FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.AddRef;
       Result := Ord(not Self.FAutoCommit);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
@@ -905,20 +1030,112 @@ var I, RowNo: Integer;
 begin
   Result := False;
   for I := 0 to FOpenCursors.Count -1 do
-    if IZResultSet(FOpenCursors[i]).GetConcurrency <> rcUpdatable then
+    if IZResultSet(FOpenCursors[i]).getType = rtForwardOnly then
       Exit;
-  Result := True;
-  while FOpenCursors.Count > 0 do begin
-    P := FOpenCursors[FOpenCursors.Count-1];
+  for I := FOpenCursors.Count - 1 downto 0 do begin
+    P := FOpenCursors[I];
     RowNo := IZResultSet(P).GetRow;
     IZResultSet(P).Last; //now the pointer will be removed from the open cursor list
     IZResultSet(P).MoveAbsolute(RowNo); //restore current position
   end;
+  Result := FOpenCursors.Count = 0;
 end;
 
 function TZFirebirdTransaction.TxnIsStarted: Boolean;
 begin
   Result := FTransaction <> nil;
+end;
+
+{ TZFBEventCallback }
+
+procedure TZFBEventCallback.addRef;
+begin
+  Inc(FRefCnt);
+end;
+
+constructor TZFBEventCallback.Create(aOwner: TZFirebirdEventList;
+  AEventBlock: PZInterbaseFirebirdEventBlock);
+begin
+  inherited Create;
+  FEventBlock := AEventBlock;
+  FOwner := aOwner;
+  FRefCnt := 1;
+end;
+
+procedure TZFBEventCallback.eventCallbackFunction(length: Cardinal;
+  events: PByte);
+begin
+  if (events <> nil) and (Length > 0) then begin
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(events^, FEventBlock.result_buffer^, length);
+    FEventBlock.ProcessEvents(FEventBlock);
+    FEventBlock.AsyncQueEvents(FEventBlock);
+    FEventBlock.FirstTime := False
+  end;
+end;
+
+function TZFBEventCallback.release: Integer;
+begin
+  Dec(FRefCnt);
+  Result := FRefCnt;
+  if FRefCnt = 0 then begin
+    FEventBlock.FBEventsCallback := nil;
+    {$IFDEF AUTOREFCOUNT}
+    Destroy;
+    {$ELSE}
+    Free;
+    {$ENDIF}
+  end;
+end;
+
+{ TZFirebirdEventList }
+
+procedure TZFirebirdEventList.AsyncQueEvents(
+  EventBlock: PZInterbaseFirebirdEventBlock);
+begin
+  if EventBlock.FBEventsCallback = nil then
+    EventBlock.FBEventsCallback := TZFBEventCallback.Create(Self, EventBlock);
+  if EventBlock.FBEvent <> nil then begin
+    IEvents(EventBlock.FBEvent){$IFDEF WITH_RECORD_METHODS}^.ReferenceCounted{$ENDIF}.Release;
+    EventBlock.FBEvent := nil;
+  end;
+  with TZFirebirdConnection(Connection) do
+  {$IFDEF WITH_RECORD_METHODS}
+  EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback).AsIEventCallback,
+    EventBlock.buffer_length, PByte(EventBlock.event_buffer));
+  {$ELSE}
+  EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback),
+    EventBlock.buffer_length, PByte(EventBlock.event_buffer));
+  {$ENDIF}
+end;
+
+procedure TZFirebirdEventList.UnregisterEvents;
+var EventBlockIdx: NativeInt;
+    EventBlock: PZInterbaseFirebirdEventBlock;
+begin
+  try
+    for EventBlockIdx := 0 to High(FEventBlocks) do begin
+      EventBlock := @FEventBlocks[EventBlockIdx];
+      EventBlock.FirstTime := True;
+      try
+        if EventBlock.FBEvent <> nil then with TZFirebirdConnection(Connection) do begin
+          IEvents(EventBlock.FBEvent).Cancel(FStatus);
+          if ((FStatus.getState and cIStatus_STATE_ERRORS) <> 0) then
+            HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
+        end;
+      finally
+        if EventBlock.FBEvent <> nil then begin
+          IEvents(EventBlock.FBEvent){$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release;
+          EventBlock.FBEvent := nil;
+        end;
+        if EventBlock.FBEventsCallback <> nil then begin
+          TZFBEventCallback(EventBlock.FBEventsCallback).release;
+          EventBlock.FBEventsCallback := nil;
+        end;
+      end;
+    end;
+  finally
+    SetLength(FEventBlocks, 0)
+  end;
 end;
 
 initialization

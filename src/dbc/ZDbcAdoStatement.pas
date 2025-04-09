@@ -61,14 +61,16 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
-  {$IFNDEF FPC}ZClasses,{$ENDIF} //inlined Get method of TZCustomElementList
+  Windows,
+  ZClasses, //inlined Get method of TZCustomElementList
   ZCompatibility, ZSysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBStatement, ZDbcUtils;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$WARN 6058 off : Call to subroutine "operator:=(const source:OleVariant):AnsiString" marked as inline is not inlined}{$ENDIF}
 type
   {** Implements Prepared ADO Statement. }
-  TZAbstractAdoStatement = Class(TZUTF16ParamDetectPreparedStatement)
+  TZAbstractAdoStatement = Class(TZUTF16ParamCountPreparedStatement)
   private
     FAdoRecordSet: ZPlainAdo.RecordSet;
     FAdoCommand: ZPlainAdo.Command;
@@ -80,7 +82,14 @@ type
     fDEFERPREPARE: Boolean;
   protected
     function CreateResultSet: IZResultSet; virtual;
+    /// <summary>Removes the current connection reference from this object.</summary>
+    /// <remarks>This method will be called only if the object is garbage.</remarks>
     procedure ReleaseConnection; override;
+    /// <summary>Adds the parameter value to the SQLStringWriter as a log value</summary>
+    /// <param>"Index" The index of the parameter. First index is 0, second is 1..</param>
+    /// <param>"SQLWriter" the buffered writer which composes the log string.</param>
+    /// <param>"Result" a reference to the result string the SQLWriter flushes the buffer.</param>
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
@@ -100,6 +109,7 @@ type
     FRefreshParamsFailed, FEmulatedParams: Boolean;
   protected
     function CheckParameterIndex(Index: Integer; SQLType: TZSQLType): TDataTypeEnum; reintroduce;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     function CreateResultSet: IZResultSet; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
@@ -109,8 +119,32 @@ type
   public //setters
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
+
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: Integer; {%H-}SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(Index: Integer; AValue: Boolean); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(Index: Integer; AValue: Byte);
     procedure SetShort(Index: Integer; AValue: ShortInt);
     procedure SetWord(Index: Integer; AValue: Word); reintroduce;
@@ -122,12 +156,18 @@ type
     procedure SetFloat(Index: Integer; AValue: Single); reintroduce;
     procedure SetDouble(Index: Integer; const AValue: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const AValue: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const AValue: TBCD); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TBCD); reintroduce;
 
     procedure SetPWideChar(Index: Word; Value: PWideChar; Len: Cardinal);
     procedure SetPBytes(Index: Word; AValue: PByte; Len: Cardinal);
 
-    procedure SetCharRec(Index: Integer; const AValue: TZCharRec); reintroduce;
+    procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const AValue: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(Index: Integer; const AValue: UTF8String); reintroduce;
@@ -138,13 +178,13 @@ type
     procedure SetRawByteString(Index: Integer; const AValue: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const AValue: UnicodeString); reintroduce;
 
-    procedure SetDate(Index: Integer; const AValue: TZDate); overload;
-    procedure SetTime(Index: Integer; const AValue: TZTime); overload;
-    procedure SetTimestamp(Index: Integer; const AValue: TZTimeStamp); overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZDate); overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTime); overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTimeStamp); overload;
 
     procedure SetBytes(Index: Integer; const AValue: TBytes); reintroduce; overload;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGUID(Index: Integer; const AValue: TGUID); reintroduce;
+    procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const AValue: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
 
@@ -155,6 +195,10 @@ type
 
   TZAdoCallableStatement2 = class(TZAbstractCallableStatement_W, IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -163,10 +207,10 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, Math, {$IFNDEF FPC}Windows{inline},{$ENDIF}
+  Variants, Math,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode, ZPlainOleDBDriver,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcAdoResultSet,
+  ZDbcCachedResultSet, ZDbcResultSetMetadata, ZDbcAdoResultSet,
   ZMessages, ZDbcProperties;
 
 var DefaultPreparableTokens: TPreparablePrefixTokens;
@@ -181,6 +225,85 @@ const cParamIOs: array[TZProcedureColumnType] of ParameterDirectionEnum = (
   );
 
 { TZAbstractAdoStatement }
+
+procedure TZAbstractAdoStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
+var V: OleVariant;
+  vt: Word;
+  ValueAddr: Pointer;
+begin
+  with FAdoCommand.Parameters.Item[ParamIndex] do begin
+    V := Get_Value;
+    vt := tagVariant(V).vt;
+    if vt and VT_BYREF = VT_BYREF then begin
+      vt := vt xor VT_BYREF;
+      ValueAddr := tagVariant(V).unkVal;
+    end else if vt = VT_DECIMAL
+      then ValueAddr := @V
+      else if (vt = VT_BSTR)
+        then ValueAddr := tagVariant(V).bstrVal
+        else ValueAddr := @tagVariant(V).bVal;
+    case vt of
+      VT_NULL, VT_EMPTY: SQLWriter.AddText('(NULL)', Result);
+      VT_BOOL:          if PWordBool(ValueAddr)^
+                        then SQLWriter.AddText('(TRUE)', Result)
+                        else SQLWriter.AddText('(FALSE)', Result);
+      VT_UI1:           SQLWriter.AddOrd(PByte(ValueAddr)^, Result);
+      VT_UI2:           SQLWriter.AddOrd(PWord(ValueAddr)^, Result);
+      VT_UI4:           SQLWriter.AddOrd(PCardinal(ValueAddr)^, Result);
+      VT_UINT:          SQLWriter.AddOrd(PLongWord(ValueAddr)^, Result);
+      VT_I1:            SQLWriter.AddOrd(PShortInt(ValueAddr)^, Result);
+      VT_I2:            SQLWriter.AddOrd(PSmallInt(ValueAddr)^, Result);
+      VT_ERROR,
+      VT_I4:            SQLWriter.AddOrd(PInteger(ValueAddr)^, Result);
+      VT_INT:           SQLWriter.AddOrd(PLongInt(ValueAddr)^, Result);
+      VT_HRESULT:       SQLWriter.AddOrd(PHResult(ValueAddr)^, Result);
+      VT_UI8:           SQLWriter.AddOrd(PUInt64(ValueAddr)^, Result);
+      VT_I8:            SQLWriter.AddOrd(PInt64(ValueAddr)^, Result);
+      VT_CY:            SQLWriter.AddDecimal(PCurrency(ValueAddr)^, Result);
+      VT_DECIMAL:     begin
+                        if PDecimal(ValueAddr).scale > 0 then begin
+                          ScaledOrdinal2Bcd(UInt64(PDecimal(ValueAddr).Lo64), PDecimal(ValueAddr).scale, PBCD(FByteBuffer)^, PDecimal(ValueAddr).sign > 0);
+                          SQLWriter.AddDecimal(PBCD(FByteBuffer)^, Result);
+                        end else if PDecimal(ValueAddr).sign > 0 then
+                          SQLWriter.AddOrd(Int64(-UInt64(PDecimal(ValueAddr).Lo64)), Result)
+                        else
+                          SQLWriter.AddOrd(UInt64(PDecimal(ValueAddr).Lo64), Result);
+                      end;
+      VT_R4:          SQLWriter.AddFloat(PSingle(ValueAddr)^, Result);
+      VT_R8:          SQLWriter.AddFloat(PDouble(ValueAddr)^, Result);
+    else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
+        adGUID:      begin
+                       SQLWriter.AddChar(#39, Result);
+                       SQLWriter.{$IFNDEF UNICODE}AddAscii7UTF16Text{$ELSE}AddText{$ENDIF}(PWideChar(ValueAddr), 38, Result);
+                       SQLWriter.AddChar(#39, Result);
+                     end;
+        adDBTime,
+        adDate,
+        adDBDate,
+        adDBTimeStamp: SQLWriter.AddDateTime(PDateTime(ValueAddr)^, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
+        adChar,
+        adWChar,
+        adVarChar,
+        adVarWChar:     begin
+                          {$IFNDEF UNICODE}
+                          PUnicodeToRaw(PWideChar(ValueAddr), Length(WideString(ValueAddr)), zCP_UTF8, fRawTemp);
+                          SQLWriter.AddTextQuoted(fRawTemp, #39, Result);
+                          fRawTemp := '';
+                          {$ELSE}
+                          SQLWriter.AddTextQuoted(PWideChar(ValueAddr), Length(WideString(ValueAddr)), #39, Result);
+                          {$ENDIF}
+                        end;
+        adLongVarChar:  SQLWriter.AddText('(CLOB)', Result);
+        adLongVarWChar: SQLWriter.AddText('(NCLOB)', Result);
+        adLongVarBinary:SQLWriter.AddText('(BLOB)', Result);
+        adBinary,
+        adVarBinary:    SQLWriter.AddHexBinary(tagVariant(V).parray.pvData, tagVariant(V).parray.cbElements, True,  Result);
+        else            SQLWriter.AddText('(UNKNOWN)', Result);
+      end;
+    end;
+  end;
+end;
 
 function TZAbstractAdoStatement.CreateResultSet: IZResultSet;
 var NativeResultSet: IZResultSet;
@@ -545,27 +668,6 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
-(*var i: Integer;
-begin
-  { test if we can access the parameter collection }
-  if fDEFERPREPARE then
-    FRefreshParamsFailed := True
-  else try
-    if BindList.Count <> FAdoCommand.Parameters.Count then //this could cause an AV
-      BindList.Count := FAdoCommand.Parameters.Count;
-    FRefreshParamsFailed := False;
-    for I := 0 to BindList.Count -1 do
-      with FAdoCommand.Parameters[i] do
-        BindList.SetParamTypes(I, ConvertAdoToSqlType(Get_Type_, Get_Precision,
-          Get_NumericScale), AdoType2ZProcedureColumnType[Get_Direction]);
-  except { do not handle the exception
-      tag ADO did fail to compute the paramter info's instead!
-      an example: Insert into Foo Values (?,?),(?,?),(?,?) crash with ado but native oledb succeeds !
-      So we add a parameter}
-    FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter('DummyParam', adVariant, adParamInput, SizeOf(OleVariant), null));
-    FAdoCommand.Parameters.Delete('DummyParam');
-    FRefreshParamsFailed := True;
-  end;*)
 var
   I: Integer;
   ParamCount: NativeUInt;
@@ -608,7 +710,8 @@ begin
             Parameter := FAdoCommand.CreateParameter(Name, wType, Direction, ulParamSize, EmptyParam);
             Parameter.Precision := bPrecision;
             Parameter.NumericScale := ParamInfo[I].bScale;
-            Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
+            if (dwFlags and $FFFFFFF0) <= (adParamSigned or adParamNullable or adParamLong) then
+              Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
           end;
         FRefreshParamsFailed := False;
       end else FRefreshParamsFailed := True;
@@ -628,7 +731,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetBigDecimal(Index: Integer;
-  const AValue: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TBCD);
 var V: OleVariant;
 label set_var;
 begin
@@ -763,7 +866,7 @@ begin
     L := Length(AValue);
     case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBytes) of
       adGUID: begin
-                Assert(L=SizeOf(TGUID), 'UID-Size missmatch');
+                CheckError(L=SizeOf(TGUID), 'UID-Size missmatch');
                 GUIDToBuffer(@UID.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
                 SetPWideChar(Index, PWideChar(fByteBuffer), 38); //ad GUID is a BSTR?
               end;
@@ -779,7 +882,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetCharRec(Index: Integer;
-  const AValue: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZCharRec);
 begin
   if AValue.CP = zCP_UTF16 then
     SetPWidechar(Index, AValue.P, AValue.Len)
@@ -849,7 +952,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
 end;
 
 procedure TZAdoPreparedStatement.SetDate(Index: Integer;
-  const AValue: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZDate);
 var V: OleVariant;
 label jmp_assign;
 begin
@@ -971,7 +1074,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
 end;
 
 procedure TZAdoPreparedStatement.SetGUID(Index: Integer;
-  const AValue: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TGUID);
 begin
   GUIDToBuffer(@AValue.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
   SetPWideChar(Index, PWideChar(fByteBuffer), 38); //ad GUID is a BSTR?
@@ -1137,6 +1240,7 @@ begin
         V := VarArrayCreate([0, Len - 1], varByte);
         Move(AValue^, TVarData(V).VArray.Data^, Len);
         FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
+        FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Size := Len;
       end;
     else raise CreateConversionError(Index, stBytes, stUnknown)
   end;
@@ -1272,7 +1376,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetTime(Index: Integer;
-  const AValue: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTime);
 var V: OleVariant;
 label jmp_assign;
 begin
@@ -1301,7 +1405,7 @@ jmp_assign:       V := null;
 end;
 
 procedure TZAdoPreparedStatement.SetTimestamp(Index: Integer;
-  const AValue: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTimeStamp);
 var V: OleVariant;
 label jmp_Assign;
 begin
@@ -1346,6 +1450,7 @@ begin
     adSmallInt: begin
                   tagVariant(V).vt := VT_I2;
                   tagVariant(V).iVal := AValue;
+                  goto set_var;
                 end;
     adInteger:  begin
                   tagVariant(V).vt := VT_I4;

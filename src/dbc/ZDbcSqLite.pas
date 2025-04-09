@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZCompatibility;
+  ZGenericSqlAnalyser, ZCompatibility, ZExceptions;
 
 type
 
@@ -70,8 +70,11 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
-
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
     function GetTokenizer: IZTokenizer; override;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
@@ -242,8 +245,15 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
-
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -737,8 +747,18 @@ end;
 function TZSQLiteConnection.AbortOperation: Integer;
 begin
   // https://sqlite.org/c3ref/interrupt.html
-  FPlainDriver.sqlite3_interrupt(FHandle);
-  Result := 1;
+
+  If Assigned(FPlainDriver.sqlite3_interrupt) Then
+  Begin
+    FPlainDriver.sqlite3_interrupt(FHandle);
+
+    If Not Assigned(FPlainDriver.sqlite3_is_interrupted) Or (FPlainDriver.sqlite3_is_interrupted(FHandle) = SQLITE_INTERRUPT) Then
+      Result := 0
+    Else
+      Result := 1
+  End
+  Else
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZSQLiteConnection.AfterConstruction;
@@ -935,6 +955,16 @@ end;
 function TZSQLiteConnection.GetSQLiteIntAffinity: Boolean;
 begin
   Result := FSQLiteIntAffinity;
+end;
+
+function TZSQLiteConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSQLiteStatementAnalyser.Create;
+end;
+
+function TZSQLiteConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSQLiteTokenizer.Create;
 end;
 
 function TZSQLiteConnection.GetHostVersion: Integer;

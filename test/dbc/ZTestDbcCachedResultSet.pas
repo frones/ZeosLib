@@ -119,13 +119,16 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
 
+    procedure SetConnection(const Value: IZConnection);
     procedure SetTransaction(const Value: IZTransaction);
+    function GetTransaction: IZTransaction;
     function HasAutoCommitTransaction: Boolean;
+    procedure FlushStatementCache;
   end;
 
 implementation
 
-uses ZEncoding;
+uses ZEncoding, ZExceptions;
 
 const
   stBooleanIndex        = FirstDbcIndex + 0;
@@ -1005,6 +1008,11 @@ procedure TZEmptyResolver.CalculateDefaults(const Sender: IZCachedResultSet;
 begin
 end;
 
+procedure TZEmptyResolver.FlushStatementCache;
+begin
+  //noop
+end;
+
 {**
   Posts cached updates.
   @param Sender a sender CachedResultSet object.
@@ -1036,9 +1044,19 @@ begin
 end;
 
 
+procedure TZEmptyResolver.SetConnection(const Value: IZConnection);
+begin
+
+end;
+
 procedure TZEmptyResolver.SetTransaction(const Value: IZTransaction);
 begin
 
+end;
+
+function TZEmptyResolver.GetTransaction: IZTransaction;
+begin
+  raise EZSQLException.Create('This method should never be called.');
 end;
 
 {$IFDEF FPC} {$POP} {$ENDIF}

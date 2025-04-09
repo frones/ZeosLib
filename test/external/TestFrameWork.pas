@@ -2010,9 +2010,19 @@ begin
 end;
 
 procedure TAbstractTest.CheckEqualsMem(expected, actual: pointer; size:longword; msg:string='');
+var
+  Failed: Boolean;
 begin
+  Failed := False;
   FCheckCalled := True;
-  if not CompareMem(expected, actual, size) then
+  if not Assigned(actual) or not assigned(expected) then begin
+    if Assigned(actual) xor Assigned(expected) then
+      Failed := True;
+  end else begin
+    Failed := not CompareMem(expected, actual, size);
+  end;
+
+  if Failed then
     Fail(GetMemDiffStr(expected, actual, size, msg), ReturnAddress);
 end;
 {$ELSE}

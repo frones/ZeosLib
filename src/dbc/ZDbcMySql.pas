@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZExceptions;
 type
 
   {** Implements MySQL Database Driver. }
@@ -76,8 +76,11 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
-
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
     function GetTokenizer: IZTokenizer; override;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser; override;
     function GetClientVersion(const Url: string): Integer; override;
   end;
@@ -114,6 +117,7 @@ type
     FPlainDriver: TZMySQLPlainDriver;
     FLastWarning: EZSQLWarning;
     FSilentError: Boolean;
+    FHostVersion: Integer;
   protected
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
@@ -252,6 +256,8 @@ type
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
 
     function GetDatabaseName: String;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
@@ -274,6 +280,12 @@ type
       const Sender: IImmediatelyReleasable);
     procedure SetSilentError(Value: Boolean);
     function IsSilentError: Boolean;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -299,6 +311,7 @@ constructor TZMySQLDriver.Create;
 begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQLPlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMariaDBPlainDriver.Create));
 end;
 
 {**
@@ -394,9 +407,9 @@ begin
       try
         if Url.Properties.Values[ConnProps_Datadir] = ''
         then TmpList.Add(EMBEDDED_DEFAULT_DATA_DIR)
-        else Url.Properties.Values[ConnProps_Datadir];
+        else TmpList.Add('--datadir=' + Url.Properties.Values[ConnProps_Datadir]);
         for i := 0 to Url.Properties.Count -1 do
-          if StartsWith(SERVER_ARGUMENTS_KEY_PREFIX, Url.Properties[i]) and
+          if StartsWith(Url.Properties[i], SERVER_ARGUMENTS_KEY_PREFIX) and
             (Length(Url.Properties[i])>Length(SERVER_ARGUMENTS_KEY_PREFIX)+1) then
             TmpList.Add(Url.Properties.ValueFromIndex[i]);
         SetLength(FServerArgs, TmpList.Count);
@@ -414,7 +427,7 @@ begin
         then ErrorNo := PlainDriver.mysql_library_init(i, Pointer(FServerArgs), @SERVER_GROUPS) //<<<-- Isn't threadsafe
         else ErrorNo := PlainDriver.mysql_server_init(I, Pointer(FServerArgs), @SERVER_GROUPS); //<<<-- Isn't threadsafe
         if ErrorNo <> 0 then
-          raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+          raise EZSQLException.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
         PlainDriver.IsInitialized := True;
       finally
         FreeAndNil(TmpList);
@@ -423,7 +436,7 @@ begin
     end;
   end
   else
-    raise Exception.Create('Can''t receive Plaindriver!');
+    raise EZSQLException.Create('Can''t receive Plaindriver!');
 end;
 
 {**
@@ -499,7 +512,7 @@ var
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt, sMy_client_Char_Set:String;
-  ClientVersion: Integer;
+  ClientVersion, OptionRequiredVersion: Integer;
   SQL: RawByteString;
   P: PAnsiChar;
   S: String;
@@ -541,13 +554,19 @@ label setuint;
 begin
   if not Closed then
     Exit;
-
   FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);;
-  GlobalCriticalSection.Enter;
-  try
-    FHandle := FPlainDriver.mysql_init(FHandle); //is not threadsave!
-  finally
-    GlobalCriticalSection.Leave;
+  if (FHandle <> nil) then begin
+    if (PingServer = 0) then begin
+      inherited Open;
+      Exit;
+    end;
+  end else begin
+    GlobalCriticalSection.Enter;
+    try
+      FHandle := FPlainDriver.mysql_init(FHandle); //is not threadsave!
+    finally
+      GlobalCriticalSection.Leave;
+    end;
   end;
   {EgonHugeist: get current characterset first }
   if Assigned(FPlainDriver.mysql_character_set_name) then begin
@@ -563,9 +582,7 @@ begin
     end;
   end;
   try
-    { Sets a default port number. }
-    if Port = 0 then
-       Port := MYSQL_PORT;
+    { Port = 0 means default port number, pass it to driver. }
 
     { Turn on compression protocol. }
     if StrToBoolEx(Info.Values[ConnProps_Compress]) and
@@ -581,7 +598,12 @@ begin
     for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
       sMyOpt:= GetMySQLOptionValue(myOpt);
-      if ClientVersion >= TMySqlOptionMinimumVersion[myopt] then //version checked (:
+      if FPLainDriver.IsMariaDBDriver then
+        OptionRequiredVersion := TMariaDBOptionMinimumVersion[myopt]
+      else
+        OptionRequiredVersion := TMySqlOptionMinimumVersion[myopt];
+
+      if ClientVersion >= OptionRequiredVersion then //version checked (:
         case myopt of
           {unsigned int options ...}
           MYSQL_OPT_CONNECT_TIMEOUT,
@@ -728,7 +750,7 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
   S := Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean];
   FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(S);
   FSupportsBitType := (
-    (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
+    (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) or (ClientVersion < 50000) ) or
     (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
   //if not explizit !un!set -> assume as default since Zeos 7.3
   FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (S = ''));
@@ -799,19 +821,29 @@ end;
 
 function TZMySQLConnection.PrepareCallWithParams(const Name: String;
   Params: TStrings): IZCallableStatement;
+var ClientVersion: ULong;
 begin
-  if (FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 100000)) or
-     (not FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 50608))
+  if IsClosed then
+     Open;
+  ClientVersion := FPlainDriver.mysql_get_client_version;
+  //The mariadb clientversion has been set down to version 30000 +
+  if (FPLainDriver.IsMariaDBDriver and ((ClientVersion < 50000) or (ClientVersion >= 100207))) or
+     (not FPLainDriver.IsMariaDBDriver and (ClientVersion >= 50608))
   then Result := TZMySQLCallableStatement56up.Create(Self, Name, Params)
   else Result := TZMySQLCallableStatement56down.Create(Self, Name, Params);
 end;
 
 function TZMySQLConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
+var ClientVersion: ULong;
 begin
   if IsClosed then
      Open;
-  Result := TZMySQLPreparedStatement.Create(Self, SQL, Info)
+  ClientVersion := FPlainDriver.mysql_get_client_version;
+  if FPlainDriver.IsMariaDBDriver and ((ClientVersion >= 100207) or ( ClientVersion < 50000)) and
+     (GetHostVersion >= EncodeSQLVersioning(10,3,0))
+  then Result := TZMariaDBBatchDMLPreparedStatement.Create(Self, SQL, Info)
+  else Result := TZMySQLEmulatedBatchPreparedStatement.Create(Self, SQL, Info);
 end;
 
 function TZMySQLConnection.CreateStatementWithParams(
@@ -950,6 +982,7 @@ begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcDisconnect, URL.Protocol,
         'DISCONNECT FROM "'+URL.Database+'"');
+    FHostVersion := 0;
   end;
 end;
 
@@ -977,8 +1010,6 @@ procedure TZMySQLConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZMySQLPlainDriver;
   FIKnowMyDatabaseName := False;
-  if Self.Port = 0 then
-     Self.Port := MYSQL_PORT;
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
   inherited AfterConstruction;
   inherited SetTransactionIsolation(tiRepeatableRead);
@@ -1004,7 +1035,7 @@ begin
   if Value <> ReadOnly then begin
     if not Closed then begin
       if not FSupportsReadOnly then
-        raise EZSQLException.Create(SUnsupportedOperation);
+        raise EZUnsupportedException.Create(SUnsupportedOperation);
       ExecuteImmediat(MySQLSessionTransactionReadOnly[ReadOnly], lcTransaction);
     end;
     ReadOnly := Value;
@@ -1029,18 +1060,6 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    {EH: Commented out, start a expplicit txn see:
-     https://github.com/mariadb-corporation/mariadb-connector-c/blob/3.1/libmariadb/mariadb_lib.c
-    return((my_bool) mysql_real_query(mysql, (mode) ? "SET autocommit=1" :
-                                         "SET autocommit=0", 16));
-
-    if FPlainDriver.mysql_autocommit(FHandle, 0) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False],
-        IImmediatelyReleasable(FWeakImmediatRelPtr))
-
-    else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[False]);}
-
     ExecuteImmediat(cStartTransaction, lcTransaction);
     AutoCommit := False;
     Result := 1;
@@ -1131,7 +1150,9 @@ end;
 }
 function TZMySQLConnection.GetHostVersion: Integer;
 begin
-  Result := ConvertMySQLVersionToSQLVersion( FPlainDriver.mysql_get_server_version(FHandle) );
+  if FHostVersion = 0
+  then Result := ConvertMySQLVersionToSQLVersion(FPlainDriver.mysql_get_server_version(FHandle) )
+  else Result := FHostVersion;
 end;
 
 function TZMySQLConnection.GetPlainDriver: TZMySQLPlainDriver;
@@ -1144,7 +1165,8 @@ procedure TZMySQLConnection.HandleErrorOrWarning(
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
   FormatStr, SQLState: String;
-  ErrorCode: Integer;
+  C: Cardinal;
+  ErrorCode: Integer absolute C;
   P, S: PAnsiChar;
   L: NativeUInt;
   Error: EZSQLThrowable;
@@ -1157,17 +1179,17 @@ label jmpErr;
 begin
   S := nil;
   if Assigned(MYSQL_STMT) then begin
-    ErrorCode := FPlainDriver.mysql_stmt_errno(MYSQL_STMT);
+    C := FPlainDriver.mysql_stmt_errno(MYSQL_STMT);
     P := FPlainDriver.mysql_stmt_error(MYSQL_STMT);
     if Assigned(FPlainDriver.mysql_stmt_sqlstate) then
       S := FPlainDriver.mysql_stmt_sqlstate(MYSQL_STMT);
   end else begin
-    ErrorCode := FPlainDriver.mysql_errno(FHandle);
+    C := FPlainDriver.mysql_errno(FHandle);
     P := FPlainDriver.mysql_error(FHandle);
     if Assigned(FPlainDriver.mysql_stmt_sqlstate) then
       S := FPlainDriver.mysql_sqlstate(FHandle);
   end;
-  if (ErrorCode <> 0) then begin
+  if (ErrorCode > 0) then begin
     if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
     then msgCP := ConSettings.ClientCodePage.CP
     else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
@@ -1269,6 +1291,16 @@ end;
 function TZMySQLConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spMySQL;
+end;
+
+function TZMySQLConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZMySQLStatementAnalyser.Create;
+end;
+
+function TZMySQLConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZMySQLTokenizer.Create;
 end;
 
 function TZMySQLConnection.GetDatabaseName: String;

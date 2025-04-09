@@ -56,7 +56,7 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes,  ZAbstractConnection, ZClasses;
+  SysUtils, Classes, ZAbstractConnection, ZTransaction, ZClasses;
 
 const
   ZEOS_MAJOR_VERSION = ZClasses.ZEOS_MAJOR_VERSION;
@@ -77,7 +77,7 @@ type
     property Password: string read GetPassword write SetPassword;
     property Protocol: string read GetProtocol write SetProtocol;
     property Catalog: string read FCatalog write FCatalog;
-    property LibraryLocation: String read GetLibLocation write SetLibLocation;
+    property LibraryLocation;
   end;
 
   TZTransaction = class(TZAbstractTransaction)

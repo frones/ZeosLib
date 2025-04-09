@@ -154,6 +154,7 @@ begin
     CheckEquals(Str5, Query.FieldByName('s_char'), 's_char value');
     CheckEquals(Str5, Query.FieldByName('s_varchar'), 's_varchar value');
   finally
+    Query.Close;
     Query.Properties.Values[DSProps_ValidateUpdateCount] := '-1';
     Query.SQL.Text := 'delete from national_char_values';
     Query.ExecSQL;

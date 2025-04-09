@@ -208,6 +208,7 @@ end;
 
   unsigned int field problem.
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestDbcMySQLBugReport.Test768163;
 const
   fld1_Index = FirstDbcIndex;
@@ -245,6 +246,7 @@ begin
   end;
     ResultSet := nil;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test the bug report #816925.
@@ -475,7 +477,7 @@ begin
     Check(RS.Next, 'No row retrieved');
     Check(not RS.IsNull(FirstDbcIndex), 'No data retrieved');
     I := RS.GetInt(FirstDbcIndex);
-
+    RS.Close;
     PStmt := Connection.PrepareStatement('insert into TestTicket365 (int_value) values (?); SELECT last_insert_id() as id;');
 
     for I:= I to 10 do begin

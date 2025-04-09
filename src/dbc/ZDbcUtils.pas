@@ -55,11 +55,10 @@ interface
 
 {$I ZDbc.inc}
 uses
-  {$IFDEF USE_SYNCOMMONS}SynCommons, {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, TypInfo, FmtBcd,
   ZCompatibility, ZDbcIntfs, ZTokenizer, ZVariant, ZSysUtils,
-  ZDbcResultSetMetadata;
+  ZDbcResultSetMetadata, ZExceptions;
 
 const SQL_MAX_NUMERIC_LEN = 16;
 type
@@ -87,12 +86,11 @@ type
 
   TZVariantTypes = set of TZVariantType;
 
-{**
-  Resolves a connection protocol and raises an exception with protocol
-  is not supported.
-  @param Url an initial database URL.
-  @param SuupportedProtocols a driver's supported subprotocols.
-}
+/// <summary>Resolves a connection protocol and raises an exception with
+///  protocol is not supported.</summary>
+/// <param>"Url" an initial database URL.</param>
+/// <param>"SupportedProtocols" a driver's supported subprotocols.</param>
+/// <returns>the protocol of the url</returns>
 function ResolveConnectionProtocol(const Url: string;
   const SupportedProtocols: TStringDynArray): string;
 
@@ -240,16 +238,6 @@ function SQLServerProductToHostVersion(const ProductVersion: String): Integer;
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
-function TokenizeSQLQueryRaw(const SQL: SQLString; {$IFDEF UNICODE}RawCP: Word;{$ENDIF}
-  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
-  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
-  var TokenMatchIndex: Integer): TRawByteStringDynArray;
-
-function TokenizeSQLQueryUni(const SQL: SQLString; Const ConSettings: PZConSettings;
-  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
-  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
-  var TokenMatchIndex: Integer): TUnicodeStringDynArray;
-
 function ExtractFields(const FieldNames: string; const SepChars: Array of Char): TStrings;
 
 function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
@@ -269,9 +257,9 @@ function ArrayValueToUInt64(ZArray: PZArray; Index: Integer): UInt64;
 function ArrayValueToCurrency(ZArray: PZArray; Index: Integer): Currency;
 function ArrayValueToDouble(ZArray: PZArray; Index: Integer): Double;
 function ArrayValueToBoolean(ZArray: PZArray; Index: Integer): Boolean;
-function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
-function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
-function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
+function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
+function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 procedure ArrayValueToGUID(ZArray: PZArray; Index: Integer; GUID: PGUID);
 procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 
@@ -281,17 +269,22 @@ function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeS
 function CreateCanNotAccessBlobRecordException(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;
 function CreateWriteOnlyException: EZSQLException;
 
-{**
-  creates an "operation is not allowed in READ ONLY mode" exception.
-}
+/// <summary>creates an "operation is not allowed in READ ONLY mode" exception.</summary>
 function CreateReadOnlyException: EZSQLException;
+/// <summary>creates an "Operation is not allowed in BINARY mode" exception.</summary>
 function CreateBinaryException: EZSQLException;
+/// <summary>creates an "Operation is not allowed in NON BINARY mode" exception.</summary>
 function CreateNonBinaryException: EZSQLException;
 function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType): EZSQLException;
 function CreateBindVarOutOfRangeError(Index: Integer): EZSQLException;
 function CreateColumnWasNotFoundException(const ColumnName: String): EZSQLException;
 
 function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+procedure BindDataArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+procedure BindNullArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
 
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
@@ -446,7 +439,7 @@ begin
     stUnicodeStream:  Result := 'UnicodeStream';
     stBinaryStream:   Result := 'BinaryStream';
     stArray:          Result := 'Array';
-    stDataSet:        Result := 'DataSet';
+    stResultSet:      Result := 'ResultSet';
     else
       Result := 'Unknown';
   end;
@@ -1195,7 +1188,7 @@ begin
         SubVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
       end;
     end;
-    Result := MajorVersion*1000000 + MiniorVersion * 100{0} + SubVersion;
+    Result := EncodeSQLVersioning(Majorversion, MiniorVersion, SubVersion);
   end else
     Result := 0;
 end;
@@ -1223,211 +1216,6 @@ begin
       dec(Len);
     end;
   end;
-end;
-
-{**
-  Splits a SQL query into a list of sections.
-  @returns a list of splitted sections.
-}
-function TokenizeSQLQueryRaw(const SQL: SQLString;
-  {$IFDEF UNICODE}RawCP: Word;{$ENDIF}
-  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
-  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
-  var TokenMatchIndex: Integer): TRawByteStringDynArray;
-var
-  I, C, N, FirstComposePos: Integer;
-  NextIsNChar, ParamFound: Boolean;
-  Tokens: TZTokenList;
-  Token: PZToken;
-  Tmp: RawByteString;
-
-  procedure Add(const Value: RawByteString; const Param: Boolean = False);
-  begin
-    SetLength(Result, Length(Result)+1);
-    Result[High(Result)] := Value;
-    SetLength(IsParamIndex, Length(Result));
-    IsParamIndex[High(IsParamIndex)] := Param;
-    if IsNCharIndex <> nil then begin
-      SetLength(IsNCharIndex^, Length(Result));
-      if Param and NextIsNChar then
-      begin
-        IsNCharIndex^[High(IsNCharIndex^)] := True;
-        NextIsNChar := False;
-      end else
-        IsNCharIndex^[High(IsNCharIndex^)] := False;
-    end;
-  end;
-begin
-  ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or Assigned(ComparePrefixTokens) then begin
-    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    try
-      NextIsNChar := False;
-      N := -1;
-      FirstComposePos := 0;
-      TokenMatchIndex := -1;
-      Tmp := '';
-      for I := 0 to Tokens.Count -1 do begin
-        Token := Tokens[I];
-        {check if we've a preparable statement. If ComparePrefixTokens = nil then
-          comparing is not required or already done }
-        if (Token.TokenType = ttWord) and Assigned(ComparePrefixTokens) then
-          if N = -1 then begin
-            for C := 0 to high(ComparePrefixTokens^) do
-              if Tokens.IsEqual(I, ComparePrefixTokens^[C].MatchingGroup,  tcInsensitive) then begin
-                if Length(ComparePrefixTokens^[C].ChildMatches) = 0
-                then TokenMatchIndex := C
-                else N := C; //save group
-                Break;
-              end;
-            if N = -1 then //no sub-tokens ?
-              ComparePrefixTokens := nil; //stop compare sequence
-          end else begin //we already got a group
-            for C := 0 to high(ComparePrefixTokens^[N].ChildMatches) do
-              if Tokens.IsEqual(I, ComparePrefixTokens^[N].ChildMatches[C], tcInsensitive) then begin
-                TokenMatchIndex := N;
-                Break;
-              end;
-            ComparePrefixTokens := nil; //stop compare sequence
-          end;
-      if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
-        if (FirstComposePos < Tokens.Count-1) then
-          {$IFDEF UNICODE}
-          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, RawCP);
-          {$ELSE}
-          Tmp := Tokens.AsString(FirstComposePos, I-1);
-          {$ENDIF}
-          Add(Tmp, False);
-          {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-          Add(ZUnicodeToRaw(Tokens.AsString(I, I), RawCP), True);
-          {$ELSE}
-          Add('?', True);
-          {$ENDIF}
-          Tmp := EmptyRaw;
-          FirstComposePos := i +1;
-        end else if ParamFound and (IsNCharIndex<> nil) and Tokens.IsEqual(I, Char('N')) and
-            (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
-          NextIsNChar := True;
-      end;
-      I := Tokens.Count -1;
-      if (FirstComposePos <= Tokens.Count-1) then begin
-        {$IFDEF UNICODE}
-        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, RawCP);
-        {$ELSE}
-        Tmp := Tokens.AsString(FirstComposePos, I);
-        {$ENDIF}
-        Add(Tmp, False);
-      end;
-    finally
-      Tokens.Free;
-    end;
-  end else
-    {$IFDEF UNICODE}
-    begin
-      Tmp := ZUnicodeToRaw(SQL, RawCP);
-      Add(Tmp);
-    end;
-    {$ELSE}
-      Add(SQL);
-    {$ENDIF}
-end;
-
-{**
-  Splits a SQL query into a list of sections.
-  @returns a list of splitted sections.
-}
-function TokenizeSQLQueryUni(const SQL: SQLString; Const ConSettings: PZConSettings;
-  const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
-  IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
-  var TokenMatchIndex: Integer): TUnicodeStringDynArray;
-var
-  I, C, N: Integer;
-  Tokens: TZTokenList;
-  Token: PZToken;
-  Temp: UnicodeString;
-  FirstComposePos: Integer;
-  NextIsNChar, ParamFound: Boolean;
-  procedure Add(const Value: UnicodeString; Const Param: Boolean = False);
-  begin
-    SetLength(Result, Length(Result)+1);
-    Result[High(Result)] := Value;
-    SetLength(IsParamIndex, Length(Result));
-    IsParamIndex[High(IsParamIndex)] := Param;
-    if IsNCharIndex <> nil then begin
-      SetLength(IsNCharIndex^, Length(Result));
-      if Param and NextIsNChar then begin
-        IsNCharIndex^[High(IsNCharIndex^)] := True;
-        NextIsNChar := False;
-      end else
-        IsNCharIndex^[High(IsNCharIndex^)] := False;
-    end;
-  end;
-begin
-  ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or Assigned(ComparePrefixTokens) then begin
-    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    try
-      Temp := '';
-      NextIsNChar := False;
-      N := -1;
-      TokenMatchIndex := -1;
-      FirstComposePos := 0;
-      for I := 0 to Tokens.Count -1 do begin
-        Token := Tokens[I];
-        {check if we've a preparable statement. If ComparePrefixTokens = nil then
-          comparing is not required or already done }
-        if (Token.TokenType = ttWord) and Assigned(ComparePrefixTokens) then
-          if N = -1 then begin
-            for C := 0 to high(ComparePrefixTokens^) do
-              if Tokens.IsEqual(I, ComparePrefixTokens^[C].MatchingGroup, tcInsensitive) then begin
-                if Length(ComparePrefixTokens^[C].ChildMatches) = 0 then
-                  TokenMatchIndex := C
-                else
-                  N := C; //save group
-                Break;
-              end;
-            if N = -1 then //no sub-tokens ?
-              ComparePrefixTokens := nil; //stop compare sequence
-          end else begin //we already got a group
-            for C := 0 to high(ComparePrefixTokens^[N].ChildMatches) do
-              if Tokens.IsEqual(I, ComparePrefixTokens^[N].ChildMatches[C], tcInsensitive) then begin
-                TokenMatchIndex := N;
-                Break;
-              end;
-            ComparePrefixTokens := nil; //stop compare sequence
-          end;
-        if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
-          {$IFDEF UNICODE}
-          Temp := Tokens.AsString(FirstComposePos, I-1);
-          {$ELSE}
-          Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, GetW2A2WConversionCodePage(ConSettings));
-          {$ENDIF}
-          Add(Temp, False);
-          Add('?', True);
-          Temp := '';
-          FirstComposePos := i +1;
-        end else if ParamFound and (IsNCharIndex <> nil) and Tokens.IsEqual(I, Char('N')) and
-          (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
-            NextIsNChar := True
-      end;
-      I := Tokens.Count -1;
-      if (FirstComposePos <= Tokens.Count-1) then begin
-        {$IFDEF UNICODE}
-        Temp := Tokens.AsString(FirstComposePos, I);
-        {$ELSE}
-        Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, GetW2A2WConversionCodePage(ConSettings));
-        {$ENDIF}
-        Add(Temp, False);
-      end;
-    finally
-      Tokens.Free;
-    end;
-  end else
-    {$IFDEF UNICODE}
-    Add(SQL);
-    {$ELSE}
-    Add(ZRawToUnicode(SQL, GetW2A2WConversionCodePage(ConSettings)));
-    {$ENDIF}
 end;
 
 {**
@@ -1776,6 +1564,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToIntDef(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToIntDef(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1833,6 +1622,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1890,6 +1680,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1946,6 +1737,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1968,6 +1760,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function ArrayValueToCurrency(ZArray: PZArray; Index: Integer): Currency;
 var P: Pointer;
 begin
@@ -1991,6 +1784,7 @@ begin
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len)
       else SQLStrToFloatDef(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -2013,7 +1807,9 @@ begin
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function ArrayValueToDouble(ZArray: PZArray; Index: Integer): Double;
 var P: Pointer;
 begin
@@ -2037,6 +1833,7 @@ begin
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len)
       else SQLStrToFloatDef(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -2050,7 +1847,7 @@ begin
         stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
         stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
         stCurrency:   Result := TCurrencyDynArray(ZArray.VArray)[Index];
-        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
+        stBigDecimal: Result := BcdToDouble(TBCDDynArray(ZArray.VArray)[Index]);
         stTime, stDate, stTimeStamp:
           Result := TDateTimeDynArray(ZArray.VArray)[Index];
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
@@ -2062,6 +1859,7 @@ begin
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function ArrayValueToBoolean(ZArray: PZArray; Index: Integer): Boolean;
 begin
@@ -2094,12 +1892,13 @@ begin
         stTime, stDate, stTimeStamp: Result := TDateTimeDynArray(ZArray.VArray)[Index]  <> 0;
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
+    vtBoolean: Result := TBooleanDynArray(ZArray.VArray)[Index];
     else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
-function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 var P: Pointer;
   L: LengthInt;
   B: Boolean;
@@ -2146,7 +1945,7 @@ Fail: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SU
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
-function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 var P: Pointer;
   L: LengthInt;
   B: Boolean;
@@ -2193,7 +1992,7 @@ Fail:  raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+S
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
-function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 var P: Pointer;
   L: LengthInt;
   B: Boolean;
@@ -2276,12 +2075,13 @@ W_Conv: ZSysUtils.ValidGUIDToBinary(PWideChar(P), @GUID.D1);
       end;
     vtBytes: case TZSQLType(ZArray.VArrayType) of
         stGUID: begin
-                  Assert(Length(TBytesDynArray(ZArray.VArray)[Index]) = SizeOf(TGUID), 'wrong guid value');
+                  if Length(TBytesDynArray(ZArray.VArray)[Index]) <> SizeOf(TGUID) then
+                    raise EZSQLException.Create('The GUID value has an incorrect length.');
                   GUID^ := PGUID(TBytesDynArray(ZArray.VArray)[Index])^;
                 end;
         else goto DoRaise;
       end;
-    vtNull: case TZSQLType(ZArray.VArrayType) of
+    vtNull, vtGUID: case TZSQLType(ZArray.VArrayType) of
         stGUID:  GUID^ := TGUIDDynArray(ZArray.VArray)[Index];
         else goto DoRaise;
       end;
@@ -2294,6 +2094,7 @@ end;
 procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 var P: Pointer;
   L: Integer;
+  Success: Boolean;
 label W_Conv, A_Conv, DoRaise;
 begin
   {$R-}
@@ -2311,16 +2112,17 @@ begin
     vtRawByteString: begin
         P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
         L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
-A_Conv: Assert(ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.'), 'wrong bcd value');
+A_Conv: Success := ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.');
+        Assert(Success, 'wrong bcd value');
       end;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: begin
         P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
         L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
-W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd value');
+W_Conv: Success := ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.');
+        Assert(Success, 'wrong bcd value');
       end;
-    vtBigDecimal, vtCurrency, vtDouble,
-    vtInteger, vtUInteger,
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull: case TZSQLType(ZArray.VArrayType) of
               stBoolean:    ScaledOrdinal2BCD(Word(Ord(TBooleanDynArray(ZArray.VArray)[Index])), 0, BCD);
               stByte:       ScaledOrdinal2BCD(Word(TByteDynArray(ZArray.VArray)[Index]), 0, BCD, False);
@@ -2355,9 +2157,6 @@ begin
   Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['WRITE ONLY']));
 end;
 
-{**
-  Raises operation is not allowed in READ ONLY mode exception.
-}
 function CreateReadOnlyException: EZSQLException;
 begin
   Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['READ ONLY']));
@@ -2399,6 +2198,76 @@ begin
       then Result := zCP_UTF8
       else Result := ConSettings.ClientCodePage.CP
     else Result := zCP_UTF8;
+end;
+
+procedure BindDataArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+var J: Integer;
+    ZData: Pointer;
+begin
+  for J := 0 to ArrayItersCount-1 do begin
+    ZData := ZArray.VArray;
+    if (ZData = nil) then
+      Stmt.SetNull(ParamIndex, ZDbcIntfs.stUnknown)
+    else case TZSQLType(ZArray.VArrayType) of
+        stBoolean: Stmt.SetBoolean(ParamIndex, TBooleanDynArray(ZData)[J]);
+        stByte: Stmt.SetSmall(ParamIndex, TByteDynArray(ZData)[J]);
+        stShort: Stmt.SetSmall(ParamIndex, TShortIntDynArray(ZData)[J]);
+        stWord: Stmt.SetInt(ParamIndex, TWordDynArray(ZData)[J]);
+        stSmall: Stmt.SetSmall(ParamIndex, TSmallIntDynArray(ZData)[J]);
+        stLongWord: Stmt.SetLong(ParamIndex, TLongWordDynArray(ZData)[J]);
+        stInteger: Stmt.SetInt(ParamIndex, TIntegerDynArray(ZData)[J]);
+        stLong: Stmt.SetLong(ParamIndex, TInt64DynArray(ZData)[J]);
+        stULong: Stmt.SetLong(ParamIndex, TUInt64DynArray(ZData)[J]);
+        stFloat: Stmt.SetFloat(ParamIndex, TSingleDynArray(ZData)[J]);
+        stDouble: Stmt.SetDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
+        stCurrency: Stmt.SetCurrency(ParamIndex, TCurrencyDynArray(ZData)[J]);
+        stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TBCDDynArray(ZData)[J]);
+        stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
+        stString, stUnicodeString:
+              case ZArray.VArrayVariantType of
+                vtString: Stmt.SetString(ParamIndex, TStringDynArray(ZData)[j]);
+                {$IFNDEF NO_ANSISTRING}
+                vtAnsiString: Stmt.SetAnsiString(ParamIndex, TAnsiStringDynArray(ZData)[j]);
+                {$ENDIF}
+                {$IFNDEF NO_UTF8STRING}
+                vtUTF8String: Stmt.SetUTF8String(ParamIndex, TUTF8StringDynArray(ZData)[j]);
+                {$ENDIF}
+                vtRawByteString: Stmt.SetRawByteString(ParamIndex, TRawByteStringDynArray(ZData)[j]);
+                vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
+                vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
+                else raise EZSQLException.Create('Unsupported String Variant');
+              end;
+        stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
+        stDate:       if ZArray.VArrayVariantType = vtDate
+                      then Stmt.SetDate(ParamIndex, TZDateDynArray(ZData)[j])
+                      else Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stTime:       if ZArray.VArrayVariantType = vtTime
+                      then Stmt.SetTime(ParamIndex, TZTimeDynArray(ZData)[j])
+                      else Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stTimestamp:  if ZArray.VArrayVariantType = vtTimeStamp
+                      then Stmt.SetTimestamp(ParamIndex, TZTimeStampDynArray(ZData)[j])
+                      else Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stAsciiStream,
+        stUnicodeStream,
+        stBinaryStream: Stmt.SetBlob(ParamIndex, TZSQLType(ZArray.VArrayType), TInterfaceDynArray(ZData)[j] as IZBlob);
+        else EZSQLException.Create(SUnsupportedParameterType);
+      end;
+    Inc(ParamIndex, ParameterCount);
+  end;
+end;
+
+procedure BindNullArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+var J: Integer;
+    ZData: Pointer;
+begin
+  for J := 0 to ArrayItersCount-1 do begin
+    ZData := ZArray.VArray;
+    if (ZData = nil) or IsNullFromArray(ZArray, J) then
+      Stmt.SetNull(ParamIndex, TZSQLType(ZArray.VArrayType));
+    Inc(ParamIndex, ParameterCount);
+  end;
 end;
 
 {$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}

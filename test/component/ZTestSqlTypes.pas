@@ -103,6 +103,7 @@ end;
 {**
   Runs a test for Date, Time and DateTime SQL types.
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized}{$ENDIF}
 procedure TZTestSQLTypesCase.TestDateTypes;
 var
   NowDate: TDateTime;
@@ -217,12 +218,14 @@ begin
   if F.InheritsFrom(TZDateTimeField) and (TZDateTimeField(F).SecondFractionsScale < 3)
   then CheckEqualsDate(NowDate, F.AsDateTime, [dpYear..dpSec])
   else CheckEquals(NowDate, F.AsDateTime, 1e-10);
+  Query.Close;
   Query.SQL.Text := 'DELETE FROM date_values WHERE d_id=:Id';
   Query.Params[0].DataType := ftInteger;
   Query.Params[0].Value := TEST_ROW_ID;
   Query.ExecSQL;
   CheckEquals(1, Query.RowsAffected);
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 initialization
   RegisterTest('component',TZTestSQLTypesCase.Suite);

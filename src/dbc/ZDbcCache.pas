@@ -56,15 +56,18 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBcd, ZClasses, ZDbcIntfs,
-  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, ZCompatibility, ZSysUtils;
+  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, ZCompatibility, ZSysUtils,
+  ZExceptions;
 
 type
   PZIndexPair = ^TZIndexPair;
@@ -120,7 +123,7 @@ type
   TZRowAccessor = class(TObject)
   protected
     FRowSize: Integer;
-    FCachedLobs: WordBool;
+    FLobCacheMode:  TLobCacheMode;
     FColumnsSize: Integer;
     FColumnCount: Integer;
     FHighLobCols: Integer;
@@ -144,22 +147,24 @@ type
       Value: Pointer; Len: Cardinal); {$IFDEF WITHINLINE} inline; {$ENDIF}
   private
     {store columnswhere mem-deallocation/copy needs an extra sequence of code}
-    FHighVarLenCols, FHighArrayCols, FHighDataSetCols: Integer;
-    FVarLenCols, FArrayCols, FLobCols, FDataSetCols: array of Integer;
+    FHighVarLenCols, FHighArrayCols, FHighResultSetCols: Integer;
+    FVarLenCols, FArrayCols, FLobCols, FResultSetCols: array of Integer;
     FConSettings: PZConSettings;
-    function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
+    function GetColumnSize(SQLType: TZSQLType): Integer;
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetULong(ColumnIndex: Integer; const Value: UInt64); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; virtual;
   public
     TinyBuffer: array[Byte] of Byte;
     FRawTemp: RawByteString;
     FUniTemp: UnicodeString;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); virtual;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); virtual;
 
     function AllocBuffer: PZRowBuffer;
     procedure InitBuffer(Buffer: PZRowBuffer);
@@ -170,12 +175,13 @@ type
     procedure DisposeBuffer(Buffer: PZRowBuffer);
 
     function CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
-      const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+      const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs;
+      NullsFirst: Boolean = false): Integer;
     function CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
-      ColumnIndex: Integer; CompareFunc: TCompareFunc): Integer;
-    function GetCompareFunc(ColumnIndex: Integer; const CompareKind: TComparisonKind): TCompareFunc;
+      ColumnIndex: Integer; CompareFunc: TZCompareFunc; NullsFirst: Boolean = false): Integer;
+    function GetCompareFunc(ColumnIndex: Integer; const CompareKind: TComparisonKind): TZCompareFunc;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 
     procedure Alloc;
     procedure Init;
@@ -198,6 +204,8 @@ type
     function GetColumnLength(ColumnIndex: Integer): Integer;
     function GetColumnOffSet(ColumnIndex: Integer): Integer;
     function GetColumnDefaultExpression(ColumnIndex: Integer): string;
+    function HasColumnDefaultExpression(ColumnIndex: Integer): Boolean;
+    function HasServerLinkedColumns: Boolean;
     procedure SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
     procedure SetColumnCodePage(ColumnIndex: Integer; const Value: Word);
 
@@ -241,7 +249,7 @@ type
     function GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
     function GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
     function GetBlob(ColumnIndex: Integer; out IsNull: Boolean): IZBlob;
-    function GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
+    function GetResultSet(ColumnIndex: Integer; out IsNull: Boolean): IZResultSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
@@ -262,8 +270,8 @@ type
     procedure SetFloat(ColumnIndex: Integer; Value: Single);
     procedure SetDouble(ColumnIndex: Integer; const Value: Double);
     procedure SetCurrency(ColumnIndex: Integer; const Value: Currency);
-    procedure SetBigDecimal(ColumnIndex: Integer; const Value: TBCD);
-    procedure SetGUID(ColumnIndex: Integer; const Value: TGUID);
+    procedure SetBigDecimal(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    procedure SetGUID(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
     procedure SetString(ColumnIndex: Integer; const Value: String);
     procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
     procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
@@ -277,29 +285,34 @@ type
     procedure SetUnicodeString(ColumnIndex: Integer; const Value: UnicodeString); virtual;
     procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
     procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; var Len: NativeUint); overload; virtual;
-    procedure SetDate(ColumnIndex: Integer; const Value: TZDate); virtual;
-    procedure SetTime(ColumnIndex: Integer; const Value: TZTime); virtual;
-    procedure SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); virtual;
+    procedure SetDate(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); virtual;
+    procedure SetTime(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); virtual;
+    procedure SetTimestamp(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); virtual;
     procedure SetAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetBlob(ColumnIndex: Integer; const Value: IZBlob);
-    procedure SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
+    procedure SetResultSet(ColumnIndex: Integer; const Value: IZResultSet);
     procedure SetValue(ColumnIndex: Integer; const Value: TZVariant);
 
-    {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
+    {$ENDIF WITH_COLUMNS_TO_JSON}
 
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
     property RowBuffer: PZRowBuffer read FBuffer write FBuffer;
     property ConSettings: PZConSettings read FConSettings;
-    property CachedLobs: WordBool read FCachedLobs write FCachedLobs;
+    property LobCacheMode: TLobCacheMode read FLobCacheMode{ write FLobCacheMode};
 
     procedure FillStatement(const Statement: IZPreparedStatement;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList;
       const MetaData: IZResultSetMetaData);
+    /// <summary>Fills the current row buffer with the data of the current
+    ///  resultset row.</summary>
+    /// <param>"ResultSet" a resultset object we read from</param>
+    /// <param>"IndexPairList" a List of pairs to copy from. If the List is nil
+    ///  we assume the columnIndices are equal.</param>
     procedure FillFromFromResultSet(const ResultSet: IZResultSet;
         {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList); virtual;
     procedure FetchLongData(AsStreamedType: TZSQLType; const ResultSet: IZResultSet;
@@ -338,15 +351,15 @@ const
   PAnsiInc = SizeOf(Cardinal);
   PWideInc = SizeOf(Word); //PWide inc assumes allways two byte
   BothNotNull = Low(Integer);
-  // Results of Asc comparation of Null1, Null2 flags.
-  // If both flags are False, comparation of values is required
+  // Results of Asc comparison of Null1, Null2 flags.
+  // If both flags are False, comparison of values is required
   NullsCompareMatrix: array[Boolean] of array[Boolean] of Integer =
     (
       (BothNotNull, 1),
       (-1, 0)
     );
-  // Results of equality comparation of Null1, Null2 flags.
-  // If both flags are False, comparation of values is required
+  // Results of equality comparison of Null1, Null2 flags.
+  // If both flags are False, comparison of values is required
   NullsEqualMatrix: array[Boolean] of array[Boolean] of Integer =
     (
       (BothNotNull, bIsNotNull),
@@ -354,519 +367,414 @@ const
     );
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
-function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
+function CompareNothing(V1, V2: Pointer): Integer; //emergency exit for types we can't sort like arrays, ResultSet ...
 begin
   Result := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
+  Result := Ord(PWordBool(V1)^) - Ord(PWordBool(V2)^); //overflow safe
 end;
 
-function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBoolean_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBoolean_Asc(V1, V2);
 end;
 
-function CompareBoolean_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
+  Result := Ord(PWordBool(V1)^ <> PWordBool(V2)^);
 end;
 
-function CompareByte_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareByte_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PByte(V1)^ - PByte(V2)^; //overflow safe
+  Result := PByte(V1)^ - PByte(V2)^; //overflow safe
 end;
 
-function CompareByte_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareByte_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareByte_Asc(Null1, Null2, V1, V2);
+  Result := -CompareByte_Asc(V1, V2);
 end;
 
-function CompareByte_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareByte_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PByte(V1)^ <> PByte(V2)^);
+  Result := Ord(PByte(V1)^ <> PByte(V2)^);
 end;
 
-function CompareShort_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareShort_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
+  Result := PShortInt(V1)^ - PShortInt(V2)^; //overflow safe
 end;
 
-function CompareShort_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareShort_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareShort_Asc(Null1, Null2, V1, V2);
+  Result := -CompareShort_Asc(V1, V2);
 end;
 
-function CompareShort_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareShort_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
+  Result := Ord(PShortInt(V1)^ <> PShortInt(V2)^);
 end;
 
-function CompareWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareWord_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PWord(V1)^ - PWord(V2)^; //overflow safe
+  Result := PWord(V1)^ - PWord(V2)^; //overflow safe
 end;
 
-function CompareWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareWord_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareWord_Asc(Null1, Null2, V1, V2);
+  Result := -CompareWord_Asc(V1, V2);
 end;
 
-function CompareWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareWord_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PWord(V1)^ <> PWord(V2)^);
+  Result := Ord(PWord(V1)^ <> PWord(V2)^);
 end;
 
-function CompareSmallInt_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareSmallInt_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
+  Result := PSmallInt(V1)^ - PSmallInt(V2)^; //overflow safe
 end;
 
-function CompareSmallInt_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareSmallInt_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareSmallInt_Asc(Null1, Null2, V1, V2);
+  Result := -CompareSmallInt_Asc(V1, V2);
 end;
 
-function CompareSmallInt_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareSmallInt_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
+  Result := Ord(PSmallInt(V1)^ <> PSmallInt(V2)^);
 end;
 
-function CompareLongWord_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareLongWord_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
+  Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
+end;
+
+function CompareLongWord_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareLongWord_Asc(V1, V2);
+end;
+
+function CompareLongWord_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
+end;
+
+function CompareInteger_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := PInteger(V1)^;
+  if Result xor PInteger(V2)^>=0
+    then Result:=Result-PInteger(V2)^
+    else Result:=Result or 1;
+end;
+
+function CompareInteger_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareInteger_Asc(V1, V2);
+end;
+
+function CompareInteger_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
+end;
+
+function CompareInt64_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
+end;
+
+function CompareInt64_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareInt64_Asc(V1, V2);
+end;
+
+function CompareInt64_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+end;
+
+function CompareUInt64_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
+end;
+
+function CompareUInt64_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareUInt64_Asc(V1, V2);
+end;
+
+function CompareUInt64_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
+end;
+
+function CompareSingle_Asc(V1, V2: Pointer): Integer;
+var aDiv: Single;
+begin
+  if PSingle(V1)^ > PSingle(V2)^ then begin
+    aDiv := PSingle(V1)^ - PSingle(V2)^;
+    Result := Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+  end else begin
+    aDiv := PSingle(V2)^ - PSingle(V1)^;
+    Result := -Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+  end;
+  //commented! fails see: https://sourceforge.net/p/zeoslib/tickets/435/
+  //Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
+end;
+
+function CompareSingle_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareSingle_Asc(V1, V2);
+end;
+
+function CompareDouble_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(CompareValue(PDouble(V1)^, PDouble(V2)^));
+end;
+
+function CompareDouble_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareDouble_Asc(V1, V2);
+end;
+
+function CompareCurrency_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
+end;
+
+function CompareCurrency_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareCurrency_Asc(V1, V2);
+end;
+
+function CompareCurrency_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
+end;
+
+function CompareBigDecimal_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
+end;
+
+function CompareBigDecimal_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareBigDecimal_Asc(V1, V2);
+end;
+
+function CompareZDate_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ <> PInt64(V2)^)
+end;
+
+function CompareZDate_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+end;
+
+function CompareZDate_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareZDate_Asc(V1, V2);
+end;
+
+function CompareZTime_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
+  if Result = 0 then
+      Result := Ord(PInt64(PAnsiChar(V1)+2)^ <> PInt64(PAnsiChar(V2)+2)^);
+end;
+
+function CompareZTime_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTime_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -ZCompareTime(PZTime(V1)^, PZTime(V2)^)
+end;
+
+function CompareZTimeStamp_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
+  if Result = 0 then begin
+    Result := Ord(PInt64(PAnsiChar(V1)+8)^ <> PInt64(PAnsiChar(V2)+8)^);
+    if Result = 0 then
+      Result := Ord(PInt64(PAnsiChar(V1)+14)^ <> PInt64(PAnsiChar(V2)+14)^);
+  end;
+end;
+
+function CompareZTimeStamp_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
+end;
+
+function CompareZTimeStamp_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareZTimeStamp_Asc(V1, V2);
+end;
+
+function CompareGUID_Asc(V1, V2: Pointer): Integer;
+begin
+  Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
+end;
+
+function CompareGUID_Desc(V1, V2: Pointer): Integer;
+begin
+  Result := -CompareGUID_Asc(V1, V2);
+end;
+
+function CompareGUID_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
+end;
+
+function CompareRaw_Equals(V1, V2: Pointer): Integer;
+begin
+  Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  if PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^ then Result := 1//length different?
+  else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                       PAnsiChar(Pointer(V2)^)+PAnsiInc,
+                       PCardinal(Pointer(V1)^)^);
+end;
+
+function CompareBytes_Asc(V1, V2: Pointer): Integer;
+var L: Cardinal;
+begin
+  Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  if PCardinal(V1)^ > PCardinal(V2)^
+  then L := PCardinal(V2)^
+  else L := PCardinal(V1)^;
+  Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                       PAnsiChar(Pointer(V2)^)+PAnsiInc, L);
+  if Result = 0 then
     Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
 end;
 
-function CompareLongWord_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBytes_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareLongWord_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareLongWord_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
-end;
-
-function CompareInteger_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  //function ShaCompareInt(Item1, Item2: Pointer): Integer;
-  begin //on 100 mio execs 200ms faster
-    Result := PInteger(V1)^;
-    if Result xor PInteger(V2)^>=0
-      then Result:=Result-PInteger(V2)^
-      else Result:=Result or 1;
-  end; //Than My (EH) overflow save idea
-  //Result := Ord(PInteger(V1)^ > PInteger(V2)^)-Ord(PInteger(V1)^ < PInteger(V2)^);
-end;
-
-function CompareInteger_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareInteger_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareInteger_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInteger(V1)^ <> PInteger(V2)^);
-end;
-
-function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInt64(V1)^ > PInt64(V2)^)-Ord(PInt64(V1)^ < PInt64(V2)^);
-end;
-
-function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareInt64_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
-end;
-
-function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PUInt64(V1)^ > PUInt64(V2)^)-Ord(PUInt64(V1)^ < PUInt64(V2)^);
-end;
-
-function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareUInt64_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PUInt64(V1)^ <> PUInt64(V2)^);
-end;
-
-function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-var aDiv: Single;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    if PSingle(V1)^ > PSingle(V2)^ then begin
-      aDiv := PSingle(V1)^ - PSingle(V2)^;
-      Result := Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
-    end else begin
-      aDiv := PSingle(V2)^ - PSingle(V1)^;
-      Result := -Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
-    end;
-    //commented! fails see: https://sourceforge.net/p/zeoslib/tickets/435/
-    //Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
-end;
-
-function CompareSingle_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareSingle_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(CompareValue(PDouble(V1)^, PDouble(V2)^));
-end;
-
-function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
-end;
-
-function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
-end;
-
-function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZBCDCompare(PBCD(V1)^, PBCD(V2)^);
-end;
-
-function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareZDate_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := Ord(PInt64(V1)^ <> PInt64(V2)^)
-end;
-
-function CompareZDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZCompareDate(PZDate(V1)^, PZDate(V2)^)
-end;
-
-function CompareZDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareZDate_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareZTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then begin
-    Result := Ord(PCardinal(V1)^ <> PCardinal(V2)^);
-    if Result = 0 then
-        Result := Ord(PInt64(PAnsiChar(V1)+2)^ <> PInt64(PAnsiChar(V2)+2)^);
-  end;
-end;
-
-function CompareZTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZCompareTime(PZTime(V1)^, PZTime(V2)^)
-end;
-
-function CompareZTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := -ZCompareTime(PZTime(V1)^, PZTime(V2)^)
-end;
-
-function CompareZTimeStamp_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then begin
-    Result := Ord(PInt64(V1)^ <> PInt64(V2)^);
-    if Result = 0 then begin
-      Result := Ord(PInt64(PAnsiChar(V1)+8)^ <> PInt64(PAnsiChar(V2)+8)^);
-      if Result = 0 then
-        Result := Ord(PInt64(PAnsiChar(V1)+14)^ <> PInt64(PAnsiChar(V2)+14)^);
-    end;
-  end;
-end;
-
-function CompareZTimeStamp_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
-end;
-
-function CompareZTimeStamp_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareZTimeStamp_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16); //Not a endversion! It would be nice to compare field-by-field of TGUID
-end;
-
-function CompareGUID_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareGUID_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareGUID_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
-end;
-
-function CompareRaw_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    if PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^ then Result := 1//length different?
-    else Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
-                         PAnsiChar(Pointer(V2)^)+PAnsiInc,
-                         PCardinal(Pointer(V1)^)^);
-  end;
-end;
-
-function CompareBytes_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-var L: Cardinal;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    if PCardinal(V1)^ > PCardinal(V2)^
-    then L := PCardinal(V2)^
-    else L := PCardinal(V1)^;
-    Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
-                         PAnsiChar(Pointer(V2)^)+PAnsiInc, L);
-    if Result = 0 then
-      Result := Ord(PCardinal(V1)^ > PCardinal(V2)^)-Ord(PCardinal(V1)^ < PCardinal(V2)^);
-  end;
-end;
-
-function CompareBytes_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareBytes_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBytes_Asc(V1, V2);
 end;
 
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-function CompareNativeRaw_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeRaw_Asc(V1, V2: Pointer): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF MSWINDOWS}
-    Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
-      PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^,
-      PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
-    {$ELSE}
-    Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-      AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
-    {$ENDIF}
-  end;
+  Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF MSWINDOWS}
+  Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
+    PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^,
+    PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
+  {$ELSE}
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+    AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
+  {$ENDIF}
 end;
 
-function CompareNativeRaw_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeRaw_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareNativeRaw_Asc(Null1, Null2, V1, V2);
+  Result := -CompareNativeRaw_Asc(V1, V2);
 end;
 {$ENDIF}
 
-function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeFromUTF8_Asc(V1, V2: Pointer): Integer;
 var
   S1, S2: UnicodeString;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^, zCP_UTF8);
-    S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^, zCP_UTF8);
-    {$IFDEF UNICODE}
-    Result := AnsiCompareStr(S1, S2);
-    {$ELSE}
-    Result := WideCompareStr(S1, S2);
-    {$ENDIF}
-  end;
+  Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PCardinal(Pointer(V1)^)^, zCP_UTF8);
+  S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PCardinal(Pointer(V2)^)^, zCP_UTF8);
+  {$IFDEF UNICODE}
+  Result := AnsiCompareStr(S1, S2);
+  {$ELSE}
+  Result := WideCompareStr(S1, S2);
+  {$ENDIF}
 end;
 
-function CompareUnicodeFromUTF8_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeFromUTF8_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicodeFromUTF8_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUnicodeFromUTF8_Asc(V1, V2);
 end;
 
-function CompareUnicode_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicode_Asc(V1, V2: Pointer): Integer;
 {$IFNDEF MSWINDOWS}
 var S1, S2: UnicodeString;
 {$ENDIF}
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF MSWINDOWS}
-    SetLastError(0);
-    Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-      PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1,
-      PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1) - 2{CSTR_EQUAL};
-    if GetLastError <> 0 then
-      RaiseLastOSError;
-    {$ELSE}
-    System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1);
-    System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1);
-    {$IFDEF UNICODE}
-    Result := AnsiCompareStr(S1, S2);
-    {$ELSE}
-    Result := WideCompareStr(S1, S2);
-    {$ENDIF}
-    {$ENDIF}
-  end;
+  Result := NullsCompareMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF MSWINDOWS}
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+    PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1,
+    PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1) - 2{CSTR_EQUAL};
+  if GetLastError <> 0 then
+    RaiseLastOSError;
+  {$ELSE}
+  System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1);
+  System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1);
+  {$IFDEF UNICODE}
+  Result := AnsiCompareStr(S1, S2);
+  {$ELSE}
+  Result := WideCompareStr(S1, S2);
+  {$ENDIF}
+  {$ENDIF}
 end;
 
-function CompareUnicode_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicode_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicode_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUnicode_Asc(V1, V2);
 end;
 
-function CompareUnicode_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicode_Equals(V1, V2: Pointer): Integer;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
-    if Result <> BothNotNull then Exit;
-    Result := Ord(PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^);
-    if Result = 0 then
-       Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
-                           Pointer(PWideChar(Pointer(V2)^)+PWideInc),
-                           PCardinal(Pointer(V1)^)^);
-  end;
+  Result := NullsEqualMatrix[(PPointer(V1)^ = nil), (PPointer(V2)^ = nil)];
+  if Result <> BothNotNull then Exit;
+  Result := Ord(PCardinal(Pointer(V1)^)^ <> PCardinal(Pointer(V2)^)^);
+  if Result = 0 then
+     Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
+                         Pointer(PWideChar(Pointer(V2)^)+PWideInc),
+                         PCardinal(Pointer(V1)^)^);
 end;
 
-function CompareNativeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeCLob_Asc(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-    {$ELSE}
-    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
-    {$ENDIF}
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+  Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+  {$ELSE}
+  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
+  {$ENDIF}
 end;
 
-function CompareNativeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeCLob_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareNativeCLob_Asc(Null1, Null2, V1, V2);
+  Result := -CompareNativeCLob_Asc(V1, V2);
 end;
 
-function CompareNativeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareNativeCLob_Equals(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    Result := Ord(Blob1.IsUpdated or Blob2.IsUpdated);
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  Result := Ord(Blob1.IsUpdated or Blob2.IsUpdated);
 end;
 
-function CompareUnicodeCLob_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Asc(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
   {$IFDEF MSWINDOWS}
@@ -875,81 +783,66 @@ var
   Buf1, Buf2: UnicodeString;
   {$ENDIF}
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    {$IFDEF MSWINDOWS}
-    Buf1 := '';
-    Buf2 := '';
-    ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
-    ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
-    SetLastError(0);
-    Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-      ValuePtr1, Len1, ValuePtr2, Len2) - 2{CSTR_EQUAL};
-    if GetLastError <> 0 then RaiseLastOSError;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsCompareMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  {$IFDEF MSWINDOWS}
+  Buf1 := '';
+  Buf2 := '';
+  ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
+  ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+    ValuePtr1, Len1, ValuePtr2, Len2) - 2{CSTR_EQUAL};
+  if GetLastError <> 0 then RaiseLastOSError;
+  {$ELSE}
+    {$IFDEF UNICODE}
+    Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
     {$ELSE}
-      {$IFDEF UNICODE}
-      Result := AnsiCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-      {$ELSE}
-      Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-      {$ENDIF}
+    Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
     {$ENDIF}
-  end;
+  {$ENDIF}
 end;
 
-function CompareUnicodeCLob_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicodeClob_Asc(Null1,Null2,V1,V2);
+  Result := -CompareUnicodeClob_Asc(V1,V2);
 end;
 
-function CompareUnicodeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Equals(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
   ValuePtr1, ValuePtr2: Pointer;
   Len1, Len2: NativeUInt;
   Buf1, Buf2: UnicodeString;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    if Blob1.IsUpdated or Blob2.IsUpdated then begin
-      Buf1 := '';
-      Buf2 := '';
-      ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
-      ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
-      if Len1 <> Len2 then
-        Result := 1 else
-        Result := ZMemLComp(ValuePtr1, ValuePtr2, Len1  shl 1);
-    end else Result := 0;
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  if Blob1.IsUpdated or Blob2.IsUpdated then begin
+    Buf1 := '';
+    Buf2 := '';
+    ValuePtr1 := Blob1.GetPWideChar(Buf1, Len1);
+    ValuePtr2 := Blob2.GetPWideChar(Buf2, Len2);
+    if Len1 <> Len2 then
+      Result := 1 else
+      Result := ZMemLComp(ValuePtr1, ValuePtr2, Len1  shl 1);
+  end else Result := 0;
 end;
 
-function CompareBlob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBlob_Equals(V1, V2: Pointer): Integer;
 var
   Blob1, Blob2: IZBlob;
 begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-  begin
-    // Both values not null
-    Blob1 := IZBlob(PPointer(V1)^);
-    Blob2 := IZBlob(PPointer(V2)^);
-    Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
-    if Result <> BothNotNull then Exit;
-    if Blob1.IsUpdated or Blob2.IsUpdated
-    then Result := 1
-    else Result := 0;
-  end;
+  Blob1 := IZBlob(PPointer(V1)^);
+  Blob2 := IZBlob(PPointer(V2)^);
+  Result := NullsEqualMatrix[(Blob1 = nil) or (Blob1.IsEmpty), (Blob2 = nil) or (Blob2.IsEmpty)];
+  if Result <> BothNotNull then Exit;
+  if Blob1.IsUpdated or Blob2.IsUpdated
+  then Result := 1
+  else Result := 0;
 end;
 
 { TZRowAccessor }
@@ -959,10 +852,11 @@ end;
   @param ColumnsInfo a collection with column information.
 }
 constructor TZRowAccessor.Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-  const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
+  const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode);
 var
   I: Integer;
   Current: TZColumnInfo;
+  SQLType: TZSQLType;
 begin
   FConSettings := ConSettings;
   FClientCP := ConSettings^.ClientCodePage^.CP;
@@ -970,7 +864,7 @@ begin
   FBuffer := nil;
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
-  FCachedLobs := CachedLobs;
+  FLobCacheMode := LobCacheMode;
 
   {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
   FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
@@ -983,45 +877,40 @@ begin
   SetLength(FColumnDefaultExpressions, FColumnCount);
   SetLength(FColumnCodePages, FColumnCount);
 
-  for I := 0 to FColumnCount - 1 do
-  begin
+  for I := 0 to FColumnCount - 1 do begin
     Current := TZColumnInfo(ColumnsInfo[I]);
     FColumnNames[I] := Current.ColumnName;
     FColumnCases[I] := Current.CaseSensitive;
     FColumnTypes[I] := Current.ColumnType;
-    FColumnLengths[I] := GetColumnSize(Current);
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
     FColumnCodePages[I] := Current.ColumnCodePage;
+    SQLType := MetadataToAccessorType(Current, ConSettings, FColumnCodePages[I]);
+    FColumnTypes[I] := SQLType;
+    FColumnLengths[I] := GetColumnSize(SQLType);
     Inc(FColumnsSize, FColumnLengths[I] + 1);
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     FColumnsSize := align(FColumnsSize+1,sizeof(pointer))-1;
     {$endif}
-    if Current.ColumnType in [stBytes, stString, stUnicodeString] then
-    begin
+    if SQLType in [stBytes, stString, stUnicodeString] then begin
       FColumnLengths[I] := Current.Precision;
       SetLength(FVarLenCols, Length(FVarLenCols)+1);
       FVarLenCols[High(FVarLenCols)] := I;
-    end
-    else if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+    end else if SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
       SetLength(FLobCols, Length(FLobCols)+1);
       FLobCols[High(FLobCols)] := I;
-    end
-    else if Current.ColumnType = stArray then
-    begin
+    end else if SQLType = stArray then begin
       SetLength(FArrayCols, Length(FArrayCols)+1);
       FArrayCols[High(FArrayCols)] := I;
-    end
-    else if Current.ColumnType = stDataSet then
-    begin
-      SetLength(FDataSetCols, Length(FDataSetCols)+1);
-      FDataSetCols[High(FDataSetCols)] := I;
+    end else if SQLType = stResultSet then begin
+      SetLength(FResultSetCols, Length(FResultSetCols)+1);
+      FResultSetCols[High(FResultSetCols)] := I;
     end;
   end;
   FHighVarLenCols := Length(FVarLenCols)-1;
   FHighArrayCols := Length(FArrayCols)-1;
   FHighLobCols := Length(FLobCols)-1;
-  FHighDataSetCols := Length(FDataSetCols)-1;
+  FHighResultSetCols := Length(FResultSetCols)-1;
   FRowSize := FColumnsSize + RowHeaderSize;
 end;
 
@@ -1079,9 +968,9 @@ end;
   @param ColumnInfo a column information struct.
   @return a size for the column with the specified type.
 }
-function TZRowAccessor.GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
+function TZRowAccessor.GetColumnSize(SQLType: TZSQLType): Integer;
 begin
-  case ColumnInfo.ColumnType of
+  case SQLType of
     stBoolean:    Result := SizeOf(WordBool);
     stByte:       Result := SizeOf(Byte);
     stShort:      Result := SizeOf(ShortInt);
@@ -1198,12 +1087,12 @@ end;
 procedure TZRowAccessor.InternalSetPWideChar(BuffAddr: PPointer;
   Value: PWideChar; Len: Cardinal);
 begin
+  Len := Len shl 1; //get the number of bytes -> SizeOf(PWideChar) = 2
   if (BuffAddr^ <> nil) and (Len <> PCardinal(BuffAddr^)^) then begin
     FreeMem(BuffAddr^);
     BuffAddr^ := nil;
   end;
   if (Len > 0) and (Value <> nil) then begin
-    Len := Len shl 1;
     if BuffAddr^ = nil then
       GetMem(BuffAddr^, Len+SizeOf(Cardinal)+SizeOf(WideChar)); //including #0#0 terminator
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (PWideChar(BuffAddr^)+PWideInc)^, Len);
@@ -1284,27 +1173,43 @@ var
   Data: PPointer;
   IndexPair: PZIndexPair absolute P;
   SQLType: TZSQLType;
-  function GetAsCachedLob(const Lob: IZBlob): IZBlob;
-  var CLob: IZClob;
-    current: IZBlob;
+  procedure InternalSetLob(Dest: PIZLob; ResultSet: IZResultSet; ColumnIndex: Integer); //keep intfclr out of main mathod
+    procedure SetAsCachedLob(Lob: PIZLob);
+    var CLob: IZClob;
+      current, newlob: IZBlob;
+    begin
+      Current := Lob^; //keep recount greater than 1
+      if Current.QueryInterface(IZCLob, Clob) = S_OK
+      then newlob := TZLocalMemCLob.CreateFromClob(Clob, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], ConSettings, FOpenLobStreams)
+      else newlob := TZLocalMemBLob.CreateFromBlob(Current, FOpenLobStreams);
+      Lob^ := newlob;
+    end;
   begin
-    Current := Lob; //keep recount greater than 1
-    if Current.QueryInterface(IZCLob, Clob) = S_OK
-    then Result := TZLocalMemCLob.CreateFromClob(Clob, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], ConSettings, FOpenLobStreams)
-    else Result := TZLocalMemBLob.CreateFromBlob(Current, FOpenLobStreams)
+    PIZLob(Dest)^ := ResultSet.GetBlob(ResultSetIndex);
+    if FLobCacheMode = lcmOnLoad then
+      SetAsCachedLob(Dest);
   end;
 begin
-  for i := 0 to IndexPairList.Count -1 do begin
-    IndexPair := IndexPairList[i];
-    ColumnIndex := IndexPair.ColumnIndex;
-    ResultSetIndex := IndexPair.SrcOrDestIndex;
-    SQLType := FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  if IndexPairList = nil then begin
+    I := ResultSet.GetColumnCount;
+    ResultSetIndex := InvalidDbcIndex;
+  end else I := IndexPairList.Count;
+  for i := 0 to I -1 do begin
+    if IndexPairList = nil then begin
+      Inc(ResultSetIndex);
+      ColumnIndex := I;
+    end else begin
+      IndexPair := IndexPairList[i];
+      ColumnIndex := IndexPair.ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+      ResultSetIndex := IndexPair.SrcOrDestIndex;
+    end;
+    SQLType := FColumnTypes[ColumnIndex];
     {$R-}
-    P := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]];
+    P := @FBuffer.Columns[FColumnOffsets[ColumnIndex]];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     Data := Pointer(PAnsiChar(P)+1);
     if ResultSet.IsNull(ResultSetIndex) then
-      SetNull(ColumnIndex) //clear old value
+      SetNull(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) //clear old value
     else begin
       PByte(P)^ := bIsNotNull;
       case SQLType of
@@ -1321,19 +1226,19 @@ begin
         stCurrency: PCurrency(Data)^ := ResultSet.GetCurrency(ResultSetIndex);
         stDouble:   PDouble(Data)^ := ResultSet.GetDouble(ResultSetIndex);
         stBigDecimal: ResultSet.GetBigDecimal(ResultSetIndex, PBCD(Data)^);
-        stUnicodeString: if FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] <= 0 then
+        stUnicodeString: if FColumnLengths[ColumnIndex] <= 0 then
              FetchLongData(stUnicodeStream, ResultSet, ResultSetIndex, PPZVarLenData(Data))
           else begin
             P := ResultSet.GetPWideChar(ResultSetIndex, Len);
             InternalSetPWideChar(Data, P, Len);
           end;
-        stString: if FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] <= 0 then
+        stString: if FColumnLengths[ColumnIndex] <= 0 then
             FetchLongData(stAsciiStream, ResultSet, ResultSetIndex, PPZVarLenData(Data))
           else begin
             P := ResultSet.GetPAnsiChar(ResultSetIndex, Len);
             InternalSetPAnsiChar(Data, P, Len);
           end;
-        stBytes: if FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] <= 0 then
+        stBytes: if FColumnLengths[ColumnIndex] <= 0 then
             FetchLongData(stBinaryStream, ResultSet, ResultSetIndex, PPZVarLenData(Data))
           else begin
             P := ResultSet.GetBytes(ResultSetIndex, Len);
@@ -1343,15 +1248,11 @@ begin
         stDate:     ResultSet.GetDate(ResultSetIndex, PZDate(Data)^);
         stTime:     ResultSet.GetTime(ResultSetIndex, PZTime(Data)^);
         stTimestamp:ResultSet.GetTimestamp(ResultSetIndex, PZTimeStamp(Data)^);
-        stAsciiStream, stUnicodeStream, stBinaryStream: begin
-            PIZLob(Data)^ := ResultSet.GetBlob(ResultSetIndex);
-            if FCachedLobs then
-              PIZLob(Data)^ := GetAsCachedLob(PIZLob(Data)^);
-          end;
+        stAsciiStream, stUnicodeStream, stBinaryStream: InternalSetLob(PIZLob(Data), ResultSet, ResultsetIndex);
         else ; //hide fpc warnig
       end;
       if ResultSet.WasNull then //if conversion failed?
-        SetNull(ColumnIndex)
+        SetNull(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     end;
   end;
 end;
@@ -1531,6 +1432,15 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings" not used} {$ENDIF}
+class function TZRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings;
+  Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 {**
   Moves the row buffer from source to destination row.
   Source buffer is cleaned up after the operation.
@@ -1553,159 +1463,175 @@ begin
   CopyBuffer(SrcBuffer, DestBuffer, True);
 end;
 
-{$IFDEF USE_SYNCOMMONS}
-procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
+{$IFDEF WITH_COLUMNS_TO_JSON}
+procedure TZRowAccessor.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 var Data: PPointer;
     I, H, C: SmallInt;
     L: NativeUInt;
 begin
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     {$R-}
     Data := @FBuffer.Columns[FColumnOffsets[C] + 1];
     if FBuffer.Columns[FColumnOffsets[C]] = bIsNull then begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      if JSONWriter.Expand then begin
+      if ResultsWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+          ResultsWriter.AddShort('null,')
         end;
       end else
-        JSONWriter.AddShort('null,');
+        ResultsWriter.AddShort('null,');
     end else begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[I]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[I]);
       case FColumnTypes[C] of
-        stBoolean       : JSONWriter.AddShort(JSONBool[PWord(Data)^ <> 0]);
-        stByte          : JSONWriter.AddU(PByte(Data)^);
-        stShort         : JSONWriter.Add(PShortInt(Data)^);
-        stWord          : JSONWriter.AddU(PWord(Data)^);
-        stSmall         : JSONWriter.Add(PSmallInt(Data)^);
-        stLongWord      : JSONWriter.AddU(PCardinal(Data)^);
-        stInteger       : JSONWriter.Add(PInteger(Data)^);
-        stULong         : JSONWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(Data)^));
-        stLong          : JSONWriter.Add(PInt64(Data)^);
-        stFloat         : JSONWriter.AddSingle(PSingle(Data)^);
-        stDouble        : JSONWriter.AddDouble(PDouble(Data)^);
-        stCurrency      : JSONWriter.AddCurr64(PCurrency(Data)^);
-        stBigDecimal    : JSONWriter.AddNoJSONEscape(@TinyBuffer[0], BCDToRaw(PBCD(Data)^, @TinyBuffer[0], '.'));
+        stBoolean       : ResultsWriter.AddShort(JSONBool[PWord(Data)^ <> 0]);
+        stByte          : ResultsWriter.AddU(PByte(Data)^);
+        stShort         : ResultsWriter.Add(PShortInt(Data)^);
+        stWord          : ResultsWriter.AddU(PWord(Data)^);
+        stSmall         : ResultsWriter.Add(PSmallInt(Data)^);
+        stLongWord      : ResultsWriter.AddU(PCardinal(Data)^);
+        stInteger       : ResultsWriter.Add(PInteger(Data)^);
+        stULong         : ResultsWriter.AddNoJSONEscapeUTF8(ZFastCode.IntToRaw(PUInt64(Data)^));
+        stLong          : ResultsWriter.Add(PInt64(Data)^);
+        stFloat         : ResultsWriter.AddSingle(PSingle(Data)^);
+        stDouble        : ResultsWriter.AddDouble(PDouble(Data)^);
+        stCurrency      : ResultsWriter.AddCurr64({$IFDEF MORMOT2}PInt64(Data){$ELSE}PCurrency(Data)^{$ENDIF});
+        stBigDecimal    : ResultsWriter.AddNoJSONEscape(@TinyBuffer[0], BCDToRaw(PBCD(Data)^, @TinyBuffer[0], '.'));
         stString        : begin
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                             if (Data^ <> nil) then begin
                               if FColumnCodePages[i] = zCP_UTF8 then
-                                JSONWriter.AddJSONEscape(PPAnsiChar(Data)^+PAnsiInc,
+                                ResultsWriter.AddJSONEscape(PPAnsiChar(Data)^+PAnsiInc,
                                   PCardinal(PPointer(Data)^)^)
                               else begin
-                                FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-                                  PCardinal(PPointer(Data)^)^, FClientCP);
-                                JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+                                  PCardinal(PPointer(Data)^)^, FClientCP, FUniTemp);
+                                ResultsWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
                               end;
                             end;
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                           end;
         stUnicodeString : begin
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                             if (Data^ <> nil) then
-                                JSONWriter.AddJSONEscapeW(Pointer(ZPPWideChar(Data)^+PWideInc),
+                                ResultsWriter.AddJSONEscapeW(Pointer(ZPPWideChar(Data)^+PWideInc),
                                   PCardinal(PPointer(Data)^)^ shr 1);
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                           end;
-        stBytes         : JSONWriter.WrBase64(PPAnsiChar(Data)^+PAnsiInc,
+        stBytes         : ResultsWriter.WrBase64(PPAnsiChar(Data)^+PAnsiInc,
                                   PCardinal(PPointer(Data)^)^, True);
         stGUID          : begin
-                            JSONWriter.Add('"');
-                            JSONWriter.Add(PGUID(Data)^);
-                            JSONWriter.Add('"');
+                            {$IFDEF MORMOT2}
+                            ResultsWriter.Add(PGUID(Data), '"');
+                            {$ELSE !MORMOT2}
+                            ResultsWriter.Add('"');
+                            ResultsWriter.Add(PGUID(Data)^);
+                            ResultsWriter.Add('"');
+                            {$ENDIF !MORMOT2}
                           end;
         stTime          : begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("0000-00-00')
+                              ResultsWriter.AddShort('ISODate("0000-00-00')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$IFDEF MORMOT2}
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             end else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             TimeToIso8601PChar(@TinyBuffer[0], True, PZTime(Data)^.hour,
                               PZTime(Data)^.Minute, PZTime(Data)^.second, PZTime(Data)^.Fractions div NanoSecsPerMSec,
                                 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            ResultsWriter.AddNoJSONEscape(@TinyBuffer[0],9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('Z)"')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('Z)"')
+                            else ResultsWriter.Add('"');
                           end;
         stDate          : begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("')
+                              ResultsWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$IFDEF MORMOT2}
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             if PZDate(Data)^.IsNegative then
-                              JSONWriter.Add('-');
+                              ResultsWriter.Add('-');
                             DateToIso8601PChar(@TinyBuffer[0], True, PZDate(Data)^.Year,
                               PZDate(Data)^.Month, PZDate(Data)^.Day);
-                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],10);
+                            ResultsWriter.AddNoJSONEscape(@TinyBuffer[0],10);
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('T00:00:00Z")')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('T00:00:00Z")')
+                            else ResultsWriter.Add('"');
                           end;
         stTimestamp     : begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("')
+                              ResultsWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$IFDEF MORMOT2}
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             if PZTimeStamp(Data)^.IsNegative then
-                              JSONWriter.Add('-');
+                              ResultsWriter.Add('-');
                             DateToIso8601PChar(@TinyBuffer[0], True, PZTimeStamp(Data)^.Year,
                                PZTimeStamp(Data)^.Month, PZTimeStamp(Data)^.Day);
                             TimeToIso8601PChar(@TinyBuffer[10], True, PZTimeStamp(Data)^.Hour,
                               PZTimeStamp(Data)^.Minute, PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions div NanoSecsPerMSec,
                                 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            ResultsWriter.AddNoJSONEscape(@TinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('Z")')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('Z")')
+                            else ResultsWriter.Add('"');
                           end;
         stAsciiStream, stUnicodeStream:
           begin
             if (Data^ = nil) or PIZlob(Data)^.IsEmpty then
-              JSONWriter.AddShort('null')
+              ResultsWriter.AddShort('null')
             else begin
               PAnsiChar(Data) := PIZlob(Data)^.GetPAnsiChar(zCP_UTF8, fRawTemp, L);
-              JSONWriter.Add('"');
-              JSONWriter.AddJSONEscape(Data, L);
-              JSONWriter.Add('"');
+              ResultsWriter.Add('"');
+              ResultsWriter.AddJSONEscape(Data, L);
+              ResultsWriter.Add('"');
             end;
           end;
         stBinaryStream:
           begin
             if (Data^ = nil) or PIZlob(Data)^.IsEmpty
-            then JSONWriter.AddShort('null')
+            then ResultsWriter.AddShort('null')
             else begin
               Data := PIZlob(Data)^.GetBuffer(fRawTemp, L);
-              JSONWriter.WrBase64(PAnsiChar(Data), L, True);
+              ResultsWriter.WrBase64(PAnsiChar(Data), L, True);
             end;
           end;
       end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 {**
   Compares fields from two row buffers.
@@ -1715,8 +1641,10 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZRowAccessor.CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
-  ColumnIndex: Integer; CompareFunc: TCompareFunc): Integer;
-var ValuePtr1, ValuePtr2: Pointer;
+  ColumnIndex: Integer; CompareFunc: TZCompareFunc; NullsFirst: Boolean = false): Integer;
+var
+  ValuePtr1, ValuePtr2: Pointer;
+  isNull1, isNull2: Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}ColumnIndex := ColumnIndex-1{$ENDIF};
   { Compares column values. }
@@ -1724,19 +1652,30 @@ begin
   ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
   if @CompareFunc = @CompareNothing
   then Result := -1
-  else Result := CompareFunc(
-    (Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
-    (Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
-      ValuePtr1, ValuePtr2);
+  else begin
+    isNull1 := Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull;
+    isNull2 := Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull;
+    if isNull1 xor isNull2 then begin
+      if isNull1 then
+        Result := 1
+      else Result := -1;
+      if NullsFirst then
+        Result := Result * (-1);
+    end else if isNull1 and isNull2 then
+      Result := 0
+    else
+      Result := CompareFunc(ValuePtr1, ValuePtr2);
+  end;
 end;
 
 function TZRowAccessor.CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs;
+  NullsFirst: Boolean = false): Integer;
 var I: Integer;
 begin
   Result := 0; //satisfy compiler
   for I := Low(ColumnIndices) to High(ColumnIndices) do begin
-    Result := CompareBuffer(Buffer1, Buffer2, ColumnIndices[I], CompareFuncs[i]);
+    Result := CompareBuffer(Buffer1, Buffer2, ColumnIndices[I], CompareFuncs[i], NullsFirst);
     if Result <> 0 then
       Break;
   end;
@@ -1750,7 +1689,7 @@ end;
   returns the array of "best fit" compare functions
 }
 function TZRowAccessor.GetCompareFunc(ColumnIndex: Integer;
-  const CompareKind: TComparisonKind): TCompareFunc;
+  const CompareKind: TComparisonKind): TZCompareFunc;
 label jmpLongW;
 begin
   Result := CompareNothing;
@@ -1900,7 +1839,7 @@ jmpLongW:case CompareKind of
 end;
 
 function TZRowAccessor.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-  const CompareKinds: TComparisonKindArray): TCompareFuncs;
+  const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 var I: Integer;
 begin
   {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
@@ -1916,17 +1855,20 @@ end;
 procedure TZRowAccessor.ClearBuffer(Buffer: PZRowBuffer; const WithFillChar: Boolean = True);
 var
   I: Integer;
+  TempP: PPointer;
 begin
   Buffer^.Index := -1;
   Buffer^.UpdateType := utUnmodified;
   Buffer^.BookmarkFlag := 0;
   {$R-}
   for I := 0 to FHighVarLenCols do
-    if (Buffer^.Columns[FColumnOffsets[FVarLenCols[i]]] = bIsNotNull) then
-      if PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1])^ <> nil then begin
-        System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1])^);
-        PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1])^ := nil;
+    if (Buffer^.Columns[FColumnOffsets[FVarLenCols[i]]] = bIsNotNull) then begin
+      TempP := PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1]);
+      if TempP^ <> nil then begin
+        System.FreeMem(TempP^);
+        TempP^ := nil;
       end;
+    end;
   for I := 0 to FHighLobCols do
     if (Buffer^.Columns[FColumnOffsets[FLobCols[I]]] = bIsNotNull) then
       PIZLob(@Buffer^.Columns[FColumnOffsets[FLobCols[I]] +1])^ := nil;
@@ -2332,8 +2274,8 @@ SetEmpty:           Len := 0;
                     Result := PEmptyAnsiString;
                   end else begin
                     CP := GetW2A2WConversionCodePage(ConSettings);
-                    FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-                      PCardinal(PPointer(Data)^)^ shr 1, CP);
+                    PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
+                      PCardinal(PPointer(Data)^)^ shr 1, CP, FRawTemp);
                     Len := Length(FRawTemp);
                     if Len > 0
                     then Result := Pointer(FRawTemp)
@@ -2465,7 +2407,7 @@ begin
                           if FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = zOSCodePage
                           then System.SetString(Result, PAnsiChar(P), L)
                           else begin
-                            FUniTemp := PRawToUnicode(P, L, fClientCP);
+                            PRawToUnicode(P, L, fClientCP, FUniTemp);
                             Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zOSCodePage);
                           end
                         else Result := '';
@@ -2517,14 +2459,14 @@ begin
                           if FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = zCP_UTF8
                           then ZSetString(PAnsiChar(P), L, Result)
                           else begin
-                            FUniTemp := PRawToUnicode(P, L, fClientCP);
-                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zCP_UTF8);
+                            PRawToUnicode(P, L, fClientCP, FUniTemp);
+                            PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zCP_UTF8, RawByteString(Result));
                           end;
                       end;
     stUnicodeString, stUnicodeStream:  begin
                         P := GetPWideChar(ColumnIndex, IsNull, L);
                         if L > 0 then
-                           Result := PUnicodeToRaw(P, L, zCP_UTF8);
+                           PUnicodeToRaw(P, L, zCP_UTF8, RawByteString(Result));
                       end;
     else begin
       P := GetPAnsiChar(ColumnIndex, IsNull, L);
@@ -2632,8 +2574,8 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
       stString:   if (Data^ = nil)
                   then goto SetEmpty
                   else begin
-                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-                      PCardinal(PPointer(Data)^)^, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]);
+                    PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+                      PCardinal(PPointer(Data)^)^, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], FUniTemp);
 Set_From_Temp:      Len := Length(FUniTemp);
                     if Len = 0 then begin
 SetEmpty:             Result := PEmptyUnicodeString;
@@ -2648,7 +2590,7 @@ SetEmpty:             Result := PEmptyUnicodeString;
                     Len := PCardinal(Data^)^ shr 1;
                   end;
       stBytes:    if Data^ <> nil then begin
-                    fUniTemp := Ascii7ToUnicodeString(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^);
+                    Ascii7ToUnicodeString(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^, fUniTemp);
                     goto Set_From_Temp;
                   end else
                     goto SetEmpty;
@@ -2813,6 +2755,18 @@ begin
 {$ENDIF}
   Result := Word(GetUInt(ColumnIndex, IsNull));
 end;
+
+function TZRowAccessor.HasColumnDefaultExpression(ColumnIndex: Integer): Boolean;
+begin
+  Result := FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] <> '';
+end;
+
+function TZRowAccessor.HasServerLinkedColumns: Boolean;
+begin
+  Result := ((FLobCols <> nil) and (FLobCacheMode = lcmNone)) or
+            (FResultSetCols <> nil);
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -3392,7 +3346,7 @@ begin
           then Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PCardinal(PPointer(Data)^)^ )
           else Result := nil;
       stUnicodeString: if Data^ <> nil then begin
-            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^ shr 1);
+            UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^ shr 1, FRawTemp);
             Result := BufferToBytes( Pointer(FRawTemp), Length(FRawTemp) );
         end else
           Result := nil;
@@ -3724,13 +3678,14 @@ begin
     stAsciiStream,
     stBinaryStream: if (TempBlob^ <> nil) then
                       Result := TempBlob^;
-    stString, stUnicodeString: if FColumnLengths[ColumnIndex] <= 0 then begin
-        CP := FColumnCodePages[ColumnIndex];
-        if CP = zCP_UTF16
-        then Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams)
-        else Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams);
+    stUnicodeString: if (FColumnLengths[ColumnIndex] <= 0) or (FColumnLengths[ColumnIndex] = MaxInt) then begin
+        Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), zCP_UTF16, ConSettings, FOpenLobStreams)
       end else goto Fail;
-    stBytes: if FColumnLengths[ColumnIndex] <= 0
+    stString: if (FColumnLengths[ColumnIndex] <= 0) or (FColumnLengths[ColumnIndex] = MaxInt) then begin
+        CP := FColumnCodePages[ColumnIndex];
+        Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams);
+      end else goto Fail;
+    stBytes: if (FColumnLengths[ColumnIndex] <= 0) or (FColumnLengths[ColumnIndex] = MaxInt)
       then Result := TZRowAccessorBytesLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), zCP_Binary, ConSettings, FOpenLobStreams)
       else goto Fail;
     else
@@ -3751,7 +3706,7 @@ end;
   {$PUSH}
   {$WARN 5024 off : Parameter "ColumnIndex" not used}
 {$ENDIF}
-function TZRowAccessor.GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
+function TZRowAccessor.GetResultSet(ColumnIndex: Integer; out IsNull: Boolean): IZResultSet;
 begin
   Result := nil;
   IsNull := True;
@@ -3896,7 +3851,7 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
 }
-procedure TZRowAccessor.SetNull(ColumnIndex: Integer);
+ procedure TZRowAccessor.SetNull(ColumnIndex: Integer);
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4185,7 +4140,7 @@ begin
   end;
 end;
 
-procedure TZRowAccessor.SetGUID(ColumnIndex: Integer; const Value: TGUID);
+procedure TZRowAccessor.SetGUID(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var Data: PPointer;
   L: NativeUInt;
 begin
@@ -4313,7 +4268,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var Data: PPointer;
   L: NativeUInt;
 begin
@@ -4433,7 +4388,7 @@ begin
     stString: InternalSetPAnsiChar(Data, Value, Len);
     stUnicodeString: begin
         CP := GetW2A2WConversionCodePage(ConSettings);
-        fUniTemp := PRawToUnicode(Value, Len, CP); //localize because of WideString overrun
+        PRawToUnicode(Value, Len, CP, fUniTemp); //localize because of WideString overrun
         InternalSetPWideChar(Data, Pointer(fUniTemp), Length(fUniTemp));
       end;
     stBytes: InternalSetVarLenBytes(Data, Value, Len);
@@ -4442,19 +4397,19 @@ begin
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate: if not ZSysUtils.TryRawToDate(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZDate(Data)^) then
-              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS{%H-}) then begin
+              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS{%H-}) then begin
                 PZDate(Data)^.Year := TS.Year;
                 PZDate(Data)^.Month := TS.Month;
                 PZDate(Data)^.Day := TS.Day;
                 PZDate(Data)^.IsNegative := TS.IsNegative;
               end else
                 PInt64(Data)^ := 0;
-    stTime: if not ZSysUtils.TryRawToTime(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTime(Data)^) then
-              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS) then begin
+    stTime: if not ZSysUtils.TryRawToTime(Value, Len, ConSettings^.ReadFormatSettings.TimeFormat, PZTime(Data)^) then
+              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS) then begin
                 PZTime(Data)^ := PZTime(@TS.Hour)^;
                 PZTime(Data)^.IsNegative := False;
               end;
-    stTimestamp: ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTimeStamp(Data)^);
+    stTimestamp: ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, PZTimeStamp(Data)^);
     stUnicodeStream, stAsciiStream:
       if (Data^ = nil) then begin
         CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
@@ -4526,18 +4481,18 @@ begin
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate: if not ZSysUtils.TryUniToDate(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZDate(Data)^) then
-              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS{%H-}) then begin
+              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS{%H-}) then begin
                 PZDate(Data)^.Year := TS.Year;
                 PZDate(Data)^.Month := TS.Month;
                 PZDate(Data)^.Day := TS.Day;
                 PZDate(Data)^.IsNegative := TS.IsNegative;
               end;
-    stTime: if not ZSysUtils.TryUniToTime(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTime(Data)^) then
-              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS) then begin
+    stTime: if not ZSysUtils.TryUniToTime(Value, Len, ConSettings^.ReadFormatSettings.TimeFormat, PZTime(Data)^) then
+              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS) then begin
                 PZTime(Data)^ := PZTime(@TS.Hour)^;
                 PZTime(Data)^.IsNegative := False;
               end;
-    stTimestamp: ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTimeStamp(Data)^);
+    stTimestamp: ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, PZTimeStamp(Data)^);
     else
       raise EZSQLException.Create(SConvertionIsNotPossible);
   end;
@@ -4562,7 +4517,7 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else begin
-    fUniTemp := ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
+    PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage, fUniTemp); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
@@ -4588,7 +4543,7 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else begin
-    fUniTemp := ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
+    PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8, fUniTemp); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
@@ -4694,7 +4649,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDate(ColumnIndex: Integer; const Value: TZDate);
+procedure TZRowAccessor.SetDate(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var Data: PPointer;
   Len: NativeUInt;
   DT: TDateTime;
@@ -4738,7 +4693,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTime(ColumnIndex: Integer; const Value: TZTime);
+procedure TZRowAccessor.SetTime(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var Data: PPointer;
   Len: NativeUInt;
   DT: TDateTime;
@@ -4782,7 +4737,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp);
+procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var Data: PPointer;
   Len: NativeUInt;
   DT: TDateTime;
@@ -5023,7 +4978,7 @@ end;
   {$PUSH}
   {$WARN 5024 off : Parameter "ColumnIndex/Value" not used}
 {$ENDIF}
-procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
+procedure TZRowAccessor.SetResultSet(ColumnIndex: Integer; const Value: IZResultSet);
 begin
   //no op by now
 end;
@@ -5133,14 +5088,14 @@ end;
 {$ENDIF}
 function TZRowAccessorLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 begin
-  raise EZSQLException.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZRowAccessorLob.SetCodePageTo(Value: Word);
 begin
   if FColumnCodePage <> Value then
-     raise EZSQLException.Create(SUnsupportedOperation);
+     raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 constructor TZRowAccessorLob.CreateWithDataAddess(DataAddress: Pointer;

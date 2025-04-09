@@ -55,17 +55,48 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_DBLIB}
-uses Classes, ZGenericSqlAnalyser;
+{$IF defined(ZEOS_DISABLE_DBLIB) and defined(ZEOS_DISABLE_ASA) and
+     defined(ZEOS_DISABLE_SQLANY) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZSybaseAnalyser}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZSybaseAnalyser}
+uses ZGenericSqlAnalyser, ZTokenizer, ZSelectSchema;
 
 type
-
-  {** Implements an Sybase statements analyser. }
-  TZSybaseStatementAnalyser = class (TZGenericStatementAnalyser)
+  /// <summary>Implements an Sybase statements analyser.</summary>
+  TZSybaseStatementAnalyser = class(TZGenericStatementAnalyser)
+    public
+      function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
+        const SQL: string): IZSelectSchema; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_DBLIB}
+{$ENDIF EMPTY_ZSybaseAnalyser}
+
 implementation
+
+{$IFNDEF EMPTY_ZSybaseAnalyser}
+uses ZSysUtils;
+
+function TZSybaseStatementAnalyser.DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
+  const SQL: string): IZSelectSchema;
+var
+  TableNo: Integer;
+  TableRef: TZTableRef;
+begin
+  Result := inherited DefineSelectSchemaFromQuery(Tokenizer, SQL);
+  // change the Catalog of all temporary tables...
+  if Assigned(Result) then begin
+    for TableNo := 0 to Result.TableCount - 1 do begin
+      TableRef := Result.GetTable(TableNo);
+      if StartsWith(TableRef.Table, '#') then
+        TableRef.Catalog := 'tempdb';
+    end;
+  end;
+end;
+
+{$ENDIF EMPTY_ZSybaseAnalyser}
 
 end.
  

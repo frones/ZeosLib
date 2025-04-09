@@ -53,11 +53,11 @@
 // Die in dieser Datei deklarierten Typen wurden aus Daten der unten
 // beschriebenen WSDL-Datei generiert:
 
-// WSDL     : http://localhost:8000/WSDL/zeosproxy
-//  >Import : http://localhost:8000/WSDL/zeosproxy>0
+// WSDL     : C:\Komponenten\Zeos 8\src\webservice\wsdl\zeosproxy.WSDL
+//  >Import : C:\Komponenten\Zeos 8\src\webservice\wsdl\zeosproxy.WSDL>0
 // Codierung : utf-8
 // Version: 1.0
-// (12.01.2020 21:31:48 - - $Rev: 69934 $)
+// (21.09.2024 20:54:14 - - $Rev: 116709 $)
 // ************************************************************************ //
 
 unit ZPlainProxyDriverSoapProxy;
@@ -66,9 +66,15 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
-uses Soap.InvokeRegistry, Soap.SOAPHTTPClient, System.Types, Soap.XSBuiltIns;
+uses {Soap.}InvokeRegistry, {Soap.}SOAPHTTPClient, {System.}Types, {Soap.}XSBuiltIns;
+
+const
+  IS_OPTN = $0001;
+  IS_UNBD = $0002;
+  IS_UNQL = $0008;
+
 
 type
 
@@ -79,21 +85,42 @@ type
   // sind in der Regel vordefinierten/bekannten XML- oder Embarcadero-Typen zugeordnet; sie könnten aber auf 
   // ein inkorrektes WSDL-Dokument hinweisen, das einen Schematyp nicht deklariert oder importiert hat.
   // ************************************************************************ //
-  // !:unsignedInt     - "http://www.w3.org/2001/XMLSchema"[]
+  // !:unsignedInt     - "http://www.w3.org/2001/XMLSchema"[Gbl]
   // !:boolean         - "http://www.w3.org/2001/XMLSchema"[]
-  // !:UnicodeString   - "http://www.w3.org/2001/XMLSchema"[Lit][]
+  // !:int             - "http://www.w3.org/2001/XMLSchema"[Lit][]
+  // !:string          - "http://www.w3.org/2001/XMLSchema"[Lit][Gbl]
+
+  TStatementDescription = class;                { "zproxy"[GblCplx] }
+
+  TStatementDescriptions = array of TStatementDescription;   { "zproxy"[GblCplx] }
 
 
   // ************************************************************************ //
+  // XML       : TStatementDescription, global, <complexType>
   // Namespace : zproxy
-  // soapAction: zproxy/IZeosProxy%operationName%
+  // ************************************************************************ //
+  TStatementDescription = class(TRemotable)
+  private
+    FSQL: string;
+    FParameters: string;
+    FMaxRows: Cardinal;
+  published
+    property SQL:        string    Index (IS_UNQL) read FSQL write FSQL;
+    property Parameters: string    Index (IS_UNQL) read FParameters write FParameters;
+    property MaxRows:    Cardinal  Index (IS_UNQL) read FMaxRows write FMaxRows;
+  end;
+
+  TStringArray = array of string;               { "zproxy"[Lit][GblCplx] }
+
+  // ************************************************************************ //
+  // Namespace : zproxy
   // Transport : http://schemas.xmlsoap.org/soap/http
   // Stil     : rpc
   // Verwenden von       : literal
   // Bindung   : IZeosProxyBinding
   // Service   : IZeosProxy
   // Port      : IZeosProxyPort
-  // URL       : 0.0.0.0/services/IZeosProxy
+  // URL       : 127.0.0.1/services/IZeosProxy
   // ************************************************************************ //
   IZeosProxy = interface(IInvokable)
   ['{269AF2BC-9AAB-FBA4-61C1-37129CFC7BFC}']
@@ -101,136 +128,150 @@ type
     // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabemeldung besteht aus mehreren Parts
-    function  Connect(const UserName: UnicodeString; const Password: UnicodeString; const DbName: UnicodeString; const InProperties: UnicodeString; out OutProperties: UnicodeString; out DbInfo: UnicodeString
-                      ): UnicodeString; stdcall;
+    function  Connect(const UserName: string; const Password: string; const DbName: string; const InProperties: string; out OutProperties: string; out DbInfo: string
+                      ): string; stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabe-Part verweist auf kein Element
-    procedure Disconnect(const ConnectionID: UnicodeString); stdcall;
+    procedure Disconnect(const ConnectionID: string); stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
-    procedure SetAutoCommit(const ConnectionID: UnicodeString; const Value: Boolean); stdcall;
+    procedure SetAutoCommit(const ConnectionID: string; const Value: Boolean); stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabe-Part verweist auf kein Element
-    procedure Commit(const ConnectionID: UnicodeString); stdcall;
+    procedure Commit(const ConnectionID: string); stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabe-Part verweist auf kein Element
-    procedure Rollback(const ConnectionID: UnicodeString); stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  SetProperties(const ConnectionID: UnicodeString; const Properties: UnicodeString): UnicodeString; stdcall;
+    procedure Rollback(const ConnectionID: string); stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
-    function  ExecuteStatement(const ConnectionID: UnicodeString; const SQL: UnicodeString; const Parameters: UnicodeString; const MaxRows: Cardinal): UnicodeString; stdcall;
+    function  SetProperties(const ConnectionID: string; const Properties: string): string; stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
-    function  GetTables(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const TableNamePattern: UnicodeString; const Types: UnicodeString): UnicodeString; stdcall;
+    function  ExecuteStatement(const ConnectionID: string; const SQL: string; const Parameters: string; const MaxRows: Cardinal): string; stdcall;
 
     // Entpacken nicht möglich: 
-    //     - Eingabe-Part verweist auf kein Element
+    //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
-    function  GetSchemas(const ConnectionID: UnicodeString): UnicodeString; stdcall;
+    function  GetTables(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const TableNamePattern: string; const Types: string): string; stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabe-Part verweist auf kein Element
     //     - Ausgabe-Part verweist auf kein Element
-    function  GetCatalogs(const ConnectionID: UnicodeString): UnicodeString; stdcall;
+    function  GetSchemas(const ConnectionID: string): string; stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabe-Part verweist auf kein Element
     //     - Ausgabe-Part verweist auf kein Element
-    function  GetTableTypes(const ConnectionID: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetColumns(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const TableNamePattern: UnicodeString; const ColumnNamePattern: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetTablePrivileges(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const TableNamePattern: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetColumnPrivileges(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString; const ColumnNamePattern: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetPrimaryKeys(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetImportedKeys(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetExportedKeys(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetCrossReference(const ConnectionID: UnicodeString; const PrimaryCatalog: UnicodeString; const PrimarySchema: UnicodeString; const PrimaryTable: UnicodeString; const ForeignCatalog: UnicodeString; const ForeignSchema: UnicodeString; 
-                                const ForeignTable: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetIndexInfo(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString; const Unique: Boolean; const Approximate: Boolean
-                           ): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetSequences(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const SequenceNamePattern: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetTriggers(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const TableNamePattern: UnicodeString; const TriggerNamePattern: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetProcedures(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const ProcedureNamePattern: UnicodeString): UnicodeString; stdcall;
-
-    // Entpacken nicht möglich: 
-    //     - Eingabemeldung besteht aus mehreren Parts
-    //     - Ausgabe-Part verweist auf kein Element
-    function  GetProcedureColumns(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const ProcedureNamePattern: UnicodeString; const ColumnNamePattern: UnicodeString): UnicodeString; stdcall;
+    function  GetCatalogs(const ConnectionID: string): string; stdcall;
 
     // Entpacken nicht möglich: 
     //     - Eingabe-Part verweist auf kein Element
     //     - Ausgabe-Part verweist auf kein Element
-    function  GetCharacterSets(const ConnectionID: UnicodeString): UnicodeString; stdcall;
+    function  GetTableTypes(const ConnectionID: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetColumns(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const TableNamePattern: string; const ColumnNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetTablePrivileges(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const TableNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetColumnPrivileges(const ConnectionID: string; const Catalog: string; const Schema: string; const Table: string; const ColumnNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetPrimaryKeys(const ConnectionID: string; const Catalog: string; const Schema: string; const Table: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetImportedKeys(const ConnectionID: string; const Catalog: string; const Schema: string; const Table: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetExportedKeys(const ConnectionID: string; const Catalog: string; const Schema: string; const Table: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetCrossReference(const ConnectionID: string; const PrimaryCatalog: string; const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string; 
+                                const ForeignTable: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetIndexInfo(const ConnectionID: string; const Catalog: string; const Schema: string; const Table: string; const Unique: Boolean; const Approximate: Boolean
+                           ): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetSequences(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const SequenceNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetTriggers(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const TableNamePattern: string; const TriggerNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetProcedures(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const ProcedureNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetProcedureColumns(const ConnectionID: string; const Catalog: string; const SchemaPattern: string; const ProcedureNamePattern: string; const ColumnNamePattern: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabe-Part verweist auf kein Element
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetCharacterSets(const ConnectionID: string): string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabe-Part verweist auf kein Element
+    //     - Ausgabe-Part verweist auf kein Element
+    function  StartTransaction(const ConnectionID: string): Integer; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Ausgabe-Part verweist auf kein Element
+    function  GetPublicKeys: string; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabemeldung besteht aus mehreren Parts
+    //     - Ausgabe-Part verweist auf kein Element
+    function  ExecuteMultipleStmts(const ConnectionID: string; const Statements: TStatementDescriptions): TStringArray; stdcall;
   end;
 
 function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: THTTPRIO = nil): IZeosProxy;
 
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$IFEND}
 implementation
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
-uses System.SysUtils;
+uses {System.}SysUtils;
 
 function GetIZeosProxy(UseWSDL: Boolean; Addr: string; HTTPRIO: THTTPRIO): IZeosProxy;
 const
-  defWSDL = 'http://localhost:8000/WSDL/zeosproxy';
-  defURL  = '0.0.0.0/services/IZeosProxy';
+  defWSDL = 'C:\Komponenten\Zeos 8\src\webservice\wsdl\zeosproxy.WSDL';
+  defURL  = 'https://www.iks.ag/services/ZeosProxyBinding';
   defSvc  = 'IZeosProxy';
   defPrt  = 'IZeosProxyPort';
 var
@@ -267,8 +308,17 @@ end;
 initialization
   { IZeosProxy }
   InvRegistry.RegisterInterface(TypeInfo(IZeosProxy), 'zproxy', 'utf-8');
-  InvRegistry.RegisterDefaultSOAPAction(TypeInfo(IZeosProxy), 'zproxy/IZeosProxy%operationName%');
+  InvRegistry.RegisterDefaultSOAPAction(TypeInfo(IZeosProxy), '');
   InvRegistry.RegisterInvokeOptions(TypeInfo(IZeosProxy), ioLiteral);
+  { IZeosProxy.ExecuteMultipleStmts }
+  InvRegistry.RegisterParamInfo(TypeInfo(IZeosProxy), 'ExecuteMultipleStmts', 'Statements', '',
+                                '[Namespace="zproxy", ArrayItemName="item"]');
+  InvRegistry.RegisterParamInfo(TypeInfo(IZeosProxy), 'ExecuteMultipleStmts', 'result', '',
+                                '[Namespace="zproxy", ArrayItemName="item"]');
+  RemClassRegistry.RegisterXSInfo(TypeInfo(TStatementDescriptions), 'zproxy', 'TStatementDescriptions');
+  RemClassRegistry.RegisterXSClass(TStatementDescription, 'zproxy', 'TStatementDescription');
+  RemClassRegistry.RegisterXSInfo(TypeInfo(TStringArray), 'zproxy', 'TStringArray');
+  RemClassRegistry.RegisterSerializeOptions(TypeInfo(TStringArray), [xoLiteralParam]);
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$IFEND}
 end.

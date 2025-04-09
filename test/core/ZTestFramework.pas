@@ -213,6 +213,9 @@ procedure TZTestFramework.TestCheckEqual;
 
   function Bytes(const Arr: array of Byte): TBytes;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}
+    Result := nil;
+    {$ENDIF}
     SetLength(Result, Length(Arr));
     if Length(Arr) > 0 then
       Move(Arr[0], Pointer(Result)^, Length(Arr));

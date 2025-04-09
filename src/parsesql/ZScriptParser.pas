@@ -100,7 +100,7 @@ type
 
 implementation
 
-uses ZMessages, ZSysUtils, ZFastCode, ZCompatibility;
+uses ZMessages, ZSysUtils, ZFastCode, ZCompatibility, ZExceptions;
 
 { TZSQLScriptParser }
 
@@ -232,7 +232,7 @@ var
 label jmpEOF, jmpNewDelim, jmpReset, jmpSpcRepl, jmpTerm;
 begin
   if Tokenizer = nil then
-    raise Exception.Create(STokenizerIsNotDefined);
+    raise EZSQLException.Create(STokenizerIsNotDefined);
   Tokens := Tokenizer.TokenizeBufferToList(Text, ParseOptions[CleanupStatements]);
 
   DelimTokenType := ttSymbol;

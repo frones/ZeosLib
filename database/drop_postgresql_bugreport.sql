@@ -13,6 +13,7 @@ drop table if exists test739519;
 drop table if exists test766053a;
 drop table if exists test766053b;
 drop table if exists test816846;
+drop table if exists PgTruncScale;
 
 drop table if exists "insert";
 
@@ -21,3 +22,4 @@ drop table if exists test894367a;
 
 drop table if exists sf354;
 drop table if exists TableSFTicket331;
+drop table if exists TableTestMichlsBCDs;

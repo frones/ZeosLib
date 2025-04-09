@@ -1,3 +1,54 @@
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{                WebService Proxy Server                  }
+{                                                         }
+{         Originally written by Jan Baumgarten            }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2020 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
 unit DbcProxyUtils;
 
 {$ifdef fpc}
@@ -11,294 +62,23 @@ interface
 uses
   Classes, SysUtils, ZDbcIntfs;
 
-function encodeResultSet(const RS: IZResultSet; const MaxRows: LongWord = 0; const UpdateCount: Integer = 0): String;
-function encodeResultSetMetaData(const MD: IZResultSetMetadata): String;
-function encodeResultSetRows(const RS: IZResultSet; const MaxRows: LongWord): String;
 function encodeConnectionProperties(const Connection: IZConnection): String;
 function encodeDatabaseInfo(const Connection: IZConnection): String;
 
 procedure decodeParameters(const ParamXML: String; Statement: IZPreparedStatement);
 procedure applyConnectionProperties(const Connection: IZConnection; const Properties: String);
 
-function XMLEncode(Input: String): String;
+//function ZXMLEncode(Input: String): String;
 
 implementation
 
 uses
-  typinfo, dom, XMLRead, Base64{$IFDEF ZEOS73UP}, FMTBCD{$ENDIF};
-
-var
-  ProxyFormatSettings: TFormatSettings;
+  typinfo, dom, XMLRead, Base64, ZExceptions{$IFDEF ZEOS73UP}, FMTBCD{$ENDIF}, ZDbcXmlUtils;
 
 {$IFNDEF FPC}
 const
   LineEnding = sLineBreak;
 {$IFEND}
-
-function encodeResultSet(const RS: IZResultSet; const MaxRows: LongWord; const UpdateCount: Integer = 0): String;
-var
-  MD: IZResultSetMetadata;
-begin
-  MD := RS.GetMetadata;
-  Result := '<resultset updatecount="' + IntToStr(UpdateCount) + '">' + LineEnding
-          + encodeResultSetMetaData(MD) + LineEnding
-          + encodeResultSetRows(RS, MaxRows) + LineEnding
-          + '</resultset>';
-end;
-
-{--------------- metadata encoding --------------------------------------------}
-
-function encodeResultSetMetaData(const MD: IZResultSetMetadata): String;
-const
-  MetadataStart = '<metadata>';
-  MetadataEnd = '</metadata>';
-  ColumnStart = '<column';
-  ColumnEnd = ' />';
-var
-  x: Integer;
-  Line: String;
-
-  procedure addProperty(const Name, Value: String); overload;
-  begin
-    Line := Line + ' ' + Name + '="' + Value +'"';
-  end;
-
-  procedure addProperty(const Name: String; Const Value: Integer); overload;
-  begin
-    Line := Line + ' ' + Name + '="' + IntToStr(Value) +'"';
-  end;
-
-  procedure addProperty(const Name: String; const Value: TZSQLType); overload;
-  var
-    TypeName: String;
-  begin
-    TypeName := GetEnumName(TypeInfo(Value), Ord(Value));
-    Line := Line + ' ' + Name + '="' + TypeName +'"';
-  end;
-
-  procedure addProperty(const Name: String; const Value: TZColumnNullableType); overload;
-  var
-    TypeName: String;
-  begin
-    TypeName := GetEnumName(TypeInfo(Value), Ord(Value));
-    Line := Line + ' ' + Name + '="' + TypeName +'"';
-  end;
-
-  procedure addProperty(const Name: String; const Value: Boolean); overload;
-  begin
-      Line := Line + ' ' + Name + '="' + BoolToStr(Value, True) + '"';
-  end;
-
-begin
-  Result := MetadataStart + LineEnding;
-  // todo: adapt to the current start and end of Zeos enumerations
-  for x := 1 to MD.GetColumnCount do begin
-    Line := '';
-    addProperty('catalogname', MD.GetCatalogName(x));
-    addProperty('codepage', IntToStr(MD.GetColumnCodePage(x)));  // is this needed? All data is unicode in the end?
-    {$IFNDEF ZEOS73UP}
-    addProperty('displaysize', MD.GetColumnDisplaySize(x));
-    {$ENDIF}
-    addProperty('label', MD.GetColumnLabel(x));
-    addProperty('name', MD.GetColumnName(x));
-    addProperty('type', MD.GetColumnType(x));
-    addProperty('defaultvalue', MD.GetDefaultValue(x));
-    addProperty('precision', MD.GetPrecision(x));
-    addproperty('scale', MD.GetScale(x));
-    addproperty('schemaname', MD.GetSchemaName(x));
-    addProperty('tablename', MD.GetTableName(x));
-    addproperty('hasdefaultvalue', MD.HasDefaultValue(x));
-    addproperty('isautoincrement', MD.IsAutoIncrement(x));
-    addProperty('iscasesensitive', MD.IsCaseSensitive(x));
-    addProperty('iscurrency', MD.IsCurrency(x));
-    addProperty('isdefinitlywritable', MD.IsDefinitelyWritable(x));
-    addProperty('isnullable', MD.IsNullable(x));
-    addProperty('isreadonly', MD.IsReadOnly(x));
-    addProperty('issearchable', MD.IsSearchable(x));
-    addproperty('issigned', MD.IsSigned(x));
-    addProperty('iswritable', MD.IsWritable(x));
-    Result := Result + ColumnStart + Line + ColumnEnd + LineEnding;
-  end;
-  Result := Result + MetadataEnd;
-end;
-
-{------------------ record set encoding ---------------------------------------}
-
-function ConvertBool(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + BoolToStr(RS.GetBoolean(Idx), True) + '" />';
-end;
-
-function ConvertInt(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + IntToStr(RS.GetInt(Idx)) + '" />';
-end;
-
-function ConvertInt64(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + IntToStr(RS.GetLong(Idx)) + '" />';
-end;
-
-function ConvertSingle(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + FloatToStr(RS.GetFloat(Idx), ProxyFormatSettings) + '" />';
-end;
-
-function ConvertDouble(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + FloatToStr(RS.GetDouble(Idx), ProxyFormatSettings) + '" />';
-end;
-
-function ConvertCurrency(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + CurrToStr(RS.GetCurrency(Idx), ProxyFormatSettings) + '" />';
-end;
-
-{$IFNDEF ZEOS73UP}
-function ConvertExtended(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + FloatToStr(RS.GetBigDecimal(Idx), ProxyFormatSettings) + '" />';
-end;
-{$ELSE}
-function ConvertBcd(const RS: IZResultSet; Const Idx: Integer): String;
-var
-  BCD: TBCD;
-begin
-  RS.GetBigDecimal(Idx, BCD);
-  Result := '<field value="' + BCDToStr(BCD, ProxyFormatSettings) + '" />';
-end;
-{$ENDIF}
-
-function ConvertString(const RS: IZResultSet; Const Idx: Integer): String;
-var
-  Value: UnicodeString;
-begin
-  Value := RS.GetUnicodeString(Idx);
-  Result := '<field value="' + XMLEncode(Utf8Encode(Value)) + '" />';
-end;
-
-function ConvertBinaryStream(const RS: IZResultSet; Const Idx: Integer): String;
-var
-  DbStream: TStream;
-  EncodingStream: TBase64EncodingStream;
-  StringStream: TStringStream;
-begin
-  StringStream := TStringStream.Create('');
-  try
-    EncodingStream := TBase64EncodingStream.Create(StringStream);
-    try
-      DbStream := RS.GetBinaryStream(Idx);
-      try
-        EncodingStream.CopyFrom(DbStream, DbStream.Size);
-      finally
-        FreeAndNil(DbStream);
-      end;
-      EncodingStream.Flush;
-    finally
-      FreeAndNil(EncodingStream);
-    end;
-    Result := '<field value="' + XMLEncode(StringStream.DataString) + '" />';
-  finally
-    FreeAndNil(StringStream);
-  end;
-end;
-
-function ConvertBytes(const RS: IZResultSet; Const Idx: Integer): String;
-var
-  DbValue: TBytes;
-  EncodingStream: TBase64EncodingStream;
-  StringStream: TStringStream;
-begin
-  StringStream := TStringStream.Create('');
-  try
-    EncodingStream := TBase64EncodingStream.Create(StringStream);
-    try
-      DbValue := RS.GetBytes(Idx);
-      EncodingStream.Write(DbValue[0], Length(DbValue));
-      EncodingStream.Flush;
-    finally
-      FreeAndNil(EncodingStream);
-    end;
-    Result := '<field value="' + XMLEncode(StringStream.DataString) + '" />';
-  finally
-    FreeAndNil(StringStream);
-  end;
-end;
-
-function ConvertDate(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + DateToStr(RS.GetDate(Idx), ProxyFormatSettings) + '" />';
-end;
-
-function ConvertTime(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + TimeToStr(RS.GetTime(Idx), ProxyFormatSettings) + '" />';
-end;
-
-function ConvertDateTime(const RS: IZResultSet; Const Idx: Integer): String;
-begin
-  Result := '<field value="' + DateTimeToStr(RS.GetTimestamp(Idx), ProxyFormatSettings) + '" />';
-end;
-
-function ConvertNull: String;
-begin
-  Result := '<field isnull="True" />';
-end;
-
-function encodeResultSetRows(const RS: IZResultSet; const MaxRows: LongWord): String;
-type
-  TRSConversionProc = function(const RS: IZResultSet; Const Idx: Integer): String;
-var
-  Idx: Integer;
-  CF: Array of TRSConversionProc;
-  Line: String;
-  MD: IZResultSetMetadata;
-  Rows: TStringList;
-begin
-  if not RS.IsAfterLast then begin
-    MD := RS.GetMetadata;
-    SetLength(CF, MD.GetColumnCount);
-    for Idx := FirstDbcIndex to MD.GetColumnCount - 1 + FirstDbcIndex do begin
-      case MD.GetColumnType(Idx) of
-        stBoolean: CF[Idx - 1] := ConvertBool;
-        stByte, stShort, stWord, stSmall, stLongWord, stInteger: CF[Idx - 1] := ConvertInt;
-        stULong, stLong: CF[Idx - 1] := ConvertInt64;
-        stFloat: CF[Idx - 1] := ConvertSingle;
-        stDouble: CF[Idx - 1] := ConvertDouble;
-        stCurrency: CF[Idx - 1] := ConvertCurrency;
-        stBigDecimal: CF[Idx - 1] := {$IFNDEF ZEOS73UP}ConvertExtended{$ELSE}ConvertBcd{$ENDIF};
-        stString, stUnicodeString: CF[Idx - 1] := ConvertString;
-        stDate: CF[Idx - 1] := ConvertDate;
-        stTime: CF[Idx - 1] := ConvertTime;
-        stTimestamp: CF[Idx - 1] := ConvertDateTime;
-        stAsciiStream, stUnicodeStream: CF[Idx - 1] := ConvertString;
-        stBinaryStream: CF[Idx - 1] := ConvertBinaryStream;
-        stBytes: CF[Idx-1] := ConvertBytes;
-        else raise Exception.Create('Conversion of type ' + MD.GetColumnTypeName(Idx) + ' is not supported (yet).');
-      end;
-    end;
-
-    Rows := TStringList.Create;
-    try
-      while RS.Next do begin
-        if (MaxRows <> 0) then
-          if (Rows.Count >= MaxRows) then Break;
-        Line := '<row>';
-        for idx := 1 to MD.GetColumnCount do begin
-          if RS.IsNull(idx) then
-            Line := Line + ConvertNull
-          else
-            Line := Line + CF[Idx - 1](RS, Idx);
-        end;
-        Rows.Add(Line + '</row>');
-      end;
-      Line := Rows.Text;
-    finally
-      FreeAndNil(Rows);
-    end;
-    Result := '<rows>' + LineEnding + Line + '</rows>';
-  end;
-end;
 
 {------------------------- DecodeParameters -----------------------------------}
 
@@ -313,6 +93,7 @@ var
   ParamValue: String;
   x: Integer;
   Stream: TStringStream;
+  ParamIdx: Integer;
 
   function GetNodeValue(Node: TDomNode): String;
   begin
@@ -327,6 +108,7 @@ var
     StringStream: TStringStream;
     DecodingStream: TBase64DecodingStream;
   begin
+    Result := [];
     StringStream := TStringStream.Create(Base64Str);
     try
       DecodingStream := TBase64DecodingStream.Create(StringStream);
@@ -350,55 +132,56 @@ begin
       ParamsNode := Doc.GetChildNodes.Item[0];
 
       for x := 1 to ParamsNode.GetChildNodes.Count do begin
+        ParamIdx := x - 1 + FirstDbcIndex;
         ParamNode := ParamsNode.GetChildNodes.Item[x - 1];
         IsNull := StrToBoolDef(GetNodeValue(ParamNode.Attributes.GetNamedItem('isnull')), false);
         ParamTypeStr := GetNodeValue(ParamNode.Attributes.GetNamedItem('type'));
         ParamType := TZSQLType(GetEnumValue(TypeInfo(ParamType), ParamTypeStr));
         ParamValue := GetNodeValue(ParamNode.Attributes.GetNamedItem('value'));
         if IsNull then
-          Statement.SetNull(x, ParamType)
+          Statement.SetNull(ParamIdx, ParamType)
         else begin
           case ParamType of
             stBoolean:
-              Statement.SetBoolean(x, StrToBool(ParamValue));
+              Statement.SetBoolean(ParamIdx, StrToBool(ParamValue));
             stByte:
-              Statement.SetByte(x, StrToInt(ParamValue));
+              Statement.SetByte(ParamIdx, StrToInt(ParamValue));
             stShort:
-              Statement.SetShort(x, StrToInt(ParamValue));
+              Statement.SetShort(ParamIdx, StrToInt(ParamValue));
             stWord:
-              Statement.SetWord(x, StrToInt(ParamValue));
+              Statement.SetWord(ParamIdx, StrToInt(ParamValue));
             stSmall:
-              Statement.SetSmall(x, StrToInt(ParamValue));
+              Statement.SetSmall(ParamIdx, StrToInt(ParamValue));
             stLongWord:
-              Statement.SetUInt(x, StrToDWord(ParamValue));
+              Statement.SetUInt(ParamIdx, StrToDWord(ParamValue));
             stInteger:
-              Statement.SetInt(x, StrToInt(ParamValue));
+              Statement.SetInt(ParamIdx, StrToInt(ParamValue));
             stULong:
-              Statement.SetULong(x, StrToQWord(ParamValue));
+              Statement.SetULong(ParamIdx, StrToQWord(ParamValue));
             stLong:
-              Statement.SetLong(x, StrToInt64(ParamValue));
+              Statement.SetLong(ParamIdx, StrToInt64(ParamValue));
             stFloat:
-              Statement.SetFloat(x, StrToFloat(ParamValue, ProxyFormatSettings));
+              Statement.SetFloat(ParamIdx, StrToFloat(ParamValue, ZXmlProxyFormatSettings));
             stDouble:
-              Statement.SetDouble(x, StrToFloat(ParamValue, ProxyFormatSettings));
+              Statement.SetDouble(ParamIdx, StrToFloat(ParamValue, ZXmlProxyFormatSettings));
             stCurrency:
-              Statement.SetCurrency(x, StrToCurr(ParamValue, ProxyFormatSettings));
+              Statement.SetCurrency(ParamIdx, StrToCurr(ParamValue, ZXmlProxyFormatSettings));
             stBigDecimal:
-              Statement.SetBigDecimal(x, StrToFloat(ParamValue, ProxyFormatSettings));
+              Statement.SetBigDecimal(ParamIdx, StrToFloat(ParamValue, ZXmlProxyFormatSettings));
             stString, stUnicodeString:
-              Statement.SetString(x, ParamValue);
+              Statement.SetString(ParamIdx, ParamValue);
             stDate:
-              Statement.SetDate(x, StrToDate(ParamValue, ProxyFormatSettings));
+              Statement.SetDate(ParamIdx, StrToDate(ParamValue, ZXmlProxyFormatSettings));
             stTime:
-              Statement.SetTime(x, StrToTime(ParamValue, ProxyFormatSettings));
+              Statement.SetTime(ParamIdx, StrToTime(ParamValue, ZXmlProxyFormatSettings));
             stTimestamp:
-              Statement.SetTimestamp(x, StrToDateTime(ParamValue, ProxyFormatSettings));
+              Statement.SetTimestamp(ParamIdx, StrToDateTime(ParamValue, ZXmlProxyFormatSettings));
             stAsciiStream, stUnicodeStream:
-              Statement.SetString(x, ParamValue);
+              Statement.SetString(ParamIdx, ParamValue);
             stBinaryStream, stBytes:
-              Statement.SetBytes(x, BinaryToBytes(ParamValue));
+              Statement.SetBytes(ParamIdx, BinaryToBytes(ParamValue));
             else
-              raise Exception.Create('Conversion of parameter of type ' + ParamTypeStr + ' is not supported (yet).');
+              raise EZSQLException.Create('Conversion of parameter of type ' + ParamTypeStr + ' is not supported (yet).');
           end;
         end;
       end;
@@ -478,33 +261,6 @@ begin
   finally
     FreeAndNil(List);
   end;
-end;
-
-function XMLEncode(Input: String): String;
-var
-  x: Integer;
-  Position: Integer;
-
-  procedure CutAndInsert(Replacement: String);
-  begin
-    if Position < x then Result := Result + Copy(Input, Position, x - Position);
-    Result := Result + Replacement;
-    Position := x + 1;
-  end;
-begin
-  Position := 1;
-  Result := '';
-  for x := 1 to Length(Input) do begin
-    case Input[x] of
-      #00..#31, '%': CutAndInsert('&#' + IntToStr(Ord(Input[x])) + ';');
-      '<': CutAndInsert('&lt;');
-      '>': CutAndInsert('&gt;');
-      '&': CutAndInsert('&amp;');
-      '''': CutAndInsert('&apos;');
-      '"': CutAndInsert('&quot;');
-    end;
-  end;
-  if Position <= Length(Input) then Result := Result + Copy(Input, Position, Length(Input));
 end;
 
 function encodeDatabaseInfo(const Connection: IZConnection): String;
@@ -658,15 +414,4 @@ begin
   end;
 end;
 
-initialization
-  ProxyFormatSettings.DateSeparator := '-';
-  ProxyFormatSettings.LongDateFormat := 'YYYY/MM/DD';
-  ProxyFormatSettings.ShortDateFormat := 'YYYY/MM/DD';
-  ProxyFormatSettings.LongTimeFormat := 'HH:NN:SS.ZZZ';
-  ProxyFormatSettings.ShortTimeFormat := 'HH:NN:SS.ZZZ';
-  ProxyFormatSettings.DecimalSeparator := '.';
-  ProxyFormatSettings.TimeSeparator := ':';
-  ProxyFormatSettings.ThousandSeparator := ',';
-
 end.
-

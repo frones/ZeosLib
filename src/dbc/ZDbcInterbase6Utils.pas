@@ -59,7 +59,7 @@ uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZPlainFirebirdInterbaseDriver, ZCompatibility, ZMessages, ZVariant,
-  ZDbcLogging, ZDbcProperties;
+  ZDbcLogging, ZDbcProperties, ZExceptions;
 
 type
   { Interbase Statement Type }
@@ -67,28 +67,39 @@ type
     stDDL, stGetSegment, stPutSegment, stExecProc, stStartTrans, stCommit,
     stRollback, stSelectForUpdate, stSetGenerator, stDisconnect);
 
-  PZInterbaseFirerbirdParam = ^TZInterbaseFirerbirdParam;
-  TZInterbaseFirerbirdParam = record
+  PZInterbaseFirebirdParam = ^TZInterbaseFirebirdParam;
+  TZInterbaseFirebirdParam = record
     sqltype:            Cardinal;      { datatype of field (normalized) }
+    sqlsubtype:         Cardinal;      { subtype of field (normalized) }
     sqlscale:           Integer;       { scale factor }
     codepage:           word;          { the codepage of the field }
     sqllen:             Cardinal;      { length of data area }
     sqldata:            PAnsiChar;     { address of data }
     sqlind:             PISC_SHORT;    { address of indicator }
+    QMarkPosition:      Cardinal;      { the position if the Question Mark in the raw SQL string}
   end;
-  PZInterbaseFirerbirdParamArray = ^TZInterbaseFirerbirdParamArray;
-  TZInterbaseFirerbirdParamArray = array[byte] of TZInterbaseFirerbirdParam;
+  PZInterbaseFirebirdParamArray = ^TZInterbaseFirebirdParamArray;
+  TZInterbaseFirebirdParamArray = array[byte] of TZInterbaseFirebirdParam;
 
   { Interbase Error Class}
   EZIBConvertError = class(Exception);
 
   { Full info about single Interbase status entry}
+  /// <summary>Represents a "cluster" of interbase error information.
+  ///  This can be an error code or an error message. Also has members for
+  ///  derived information.</summary>
   TZIBStatus = record
+    /// <summary>Error code type if this is an error code.</summary>
     IBDataType: Integer; // one of isc_arg_* constants
+    /// <summary>Error Code if this is an error code cluster.</summary>
     IBDataInt: Integer;  // int data (error code)
+    /// <summary>additional Strings for OS errors.</summary>
     IBDataStr: string;   // string data
-    IBMessage: string;   // result of isc_interpret
+    /// <summary>result of isc_interprete or fb_interpret</summary>
+    IBMessage: string;   // result of isc_interprete
+    /// <summary>result of isc_sqlcode</summary>
     SQLCode: Integer;    // result of isc_sqlcode
+    /// <summary>result of isc_sql_interprete</summary>
     SQLMessage: string;  // result of isc_sql_interprete
   end;
   PZIBStatus = ^TZIBStatus;
@@ -114,7 +125,7 @@ type
   { Interbase SQL Error Class}
   EZIBSQLException = class(EZSQLException)
   public
-    constructor Create(const Msg: string; const StatusVector: TZIBStatusVector; const SQL: string);
+    constructor Create(const Msg: string; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} StatusVector: TZIBStatusVector; const SQL: string);
   end;
 
   TZIbParamValueType = (
@@ -122,7 +133,8 @@ type
     pvtNone,     // no value
     pvtByteZ,    // 1-byte int that always = 0 (value ignored)
     pvtNum,      // 1/2/4-byte int, depending on a value
-    pvtString    // raw byte string
+    pvtString,   // raw byte string
+    pvtLongString  // a string that can be longer than 255 Bytes
   );
 
   { Paparameter string name and it's value}
@@ -349,7 +361,7 @@ const
     (Name: ConnProps_isc_dpb_process_name;          ValueType: pvtString;  Number: isc_dpb_process_name),
     (Name: ConnProps_isc_dpb_trusted_role;          ValueType: pvtString;  Number: isc_dpb_trusted_role),
     (Name: ConnProps_isc_dpb_org_filename;          ValueType: pvtString;  Number: isc_dpb_org_filename),
-    (Name: ConnProps_isc_dpb_utf8_filename;         ValueType: pvtNone;    Number: isc_dpb_utf8_filename),
+    (Name: ConnProps_isc_dpb_utf8_filename;         ValueType: pvtString;  Number: isc_dpb_utf8_filename),
     (Name: ConnProps_isc_dpb_ext_call_depth;        ValueType: pvtNum;     Number: isc_dpb_ext_call_depth),
     (Name: ConnProps_isc_dpb_auth_block;            ValueType: pvtString;  Number: isc_dpb_auth_block), // Bytes
     (Name: ConnProps_isc_dpb_client_version;        ValueType: pvtString;  Number: isc_dpb_client_version),
@@ -428,7 +440,7 @@ function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbaseFirebirdPlain
   @param Buffer - a buffer returned by driver
   @return - a number read
 }
-function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; pBuf: PByte): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 //procedure ScaledOrdinal2Raw(const Value: Int128; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 //procedure ScaledOrdinal2Raw(const Value: UInt128; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
@@ -442,7 +454,8 @@ procedure ScaledOrdinal2Unicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWi
 procedure ScaledOrdinal2Unicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 
-procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
+procedure BCD2ScaledOrdinal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
+  Dest: Pointer; DestSize, Scale: Byte);
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 function XSQLDA_LENGTH_V2(Value: LongInt): LongInt;
@@ -525,6 +538,7 @@ var
   ParamValue: String;
   tmp: RawByteString;
   PParam: PZIbParam;
+  tmpLen: Word;
 begin
   Result := EmptyRaw;
   Writer := TZRawSQLStringWriter.Create(1024);
@@ -541,8 +555,6 @@ begin
       case PParam.ValueType of
         pvtNone: begin
             Writer.AddChar(AnsiChar(PParam.Number), Result);
-            if VersionCode < isc_tpb_version3 then
-              Writer.AddChar(AnsiChar(#0), Result);
           end;
         pvtByteZ: begin
             Writer.AddChar(AnsiChar(PParam.Number), Result);
@@ -580,6 +592,19 @@ begin
             {$ENDIF}
             Writer.AddChar(AnsiChar(PParam.Number), Result);
             Writer.AddChar(AnsiChar(Length(tmp)), Result);
+            Writer.AddText(tmp, Result);
+          end;
+        pvtLongString:
+          begin
+            {$IFDEF UNICODE}
+            tmp := ZUnicodeToRaw(ParamValue, CP);
+            {$ELSE}
+            tmp := ParamValue;
+            {$ENDIF}
+            tmpLen := Length(tmp);
+            Writer.AddChar(AnsiChar(PParam.Number), Result);
+            Writer.AddChar(PAnsiChar(@TmpLen)[0], Result);
+            Writer.AddChar(PAnsiChar(@TmpLen)[1], Result);
             Writer.AddText(tmp, Result);
           end;
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //pvtUnimpl
@@ -692,12 +717,11 @@ end;
   @param Buffer - a buffer returned by driver
   @return - a number read
 }
-function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-var
-  pBuf: PAnsiChar;
+function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; pBuf: PByte): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+var Len: Integer;
 begin
-  pBuf := @Buffer;
-  Result := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
+  Len := PlainDriver.isc_vax_integer(PAnsiChar(pBuf), 2);
+  Result := PlainDriver.isc_vax_integer(PAnsiChar(pBuf)+2, Len);
 end;
 
 procedure ScaledOrdinal2Raw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar;
@@ -1114,12 +1138,12 @@ end;
 
 { EZIBSQLException }
 
-constructor EZIBSQLException.Create(const Msg: string; const StatusVector: TZIBStatusVector; const SQL: string);
+constructor EZIBSQLException.Create(const Msg: string; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} StatusVector: TZIBStatusVector; const SQL: string);
 var
   i, SQLErrCode, IBErrorCode: Integer;
   IBStatusCode: String;
 begin
-  SQLErrCode := 0; IBErrorCode := 0;
+  SQLErrCode := 0; IBErrorCode := 0; IBStatusCode := '';
   // find main IB code
   for i := Low(StatusVector) to High(StatusVector) do
     if StatusVector[i].IBDataType = isc_arg_gds then
@@ -1509,7 +1533,8 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
+procedure BCD2ScaledOrdinal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
+  Dest: Pointer; DestSize, Scale: Byte);
 var
   LastNibbleByteIDX, BCDScale, P, I, F: Byte;
   i64: Int64;
@@ -1520,7 +1545,7 @@ begin
   F := Value.SignSpecialPlaces;
   BCDScale := (F and 63);
   Negative := (F and $80) = $80;
-  LastByteIsHalfByte := (Value.Precision and 1 = 1) or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
+  LastByteIsHalfByte := (Value.Precision and 1 = 1);// or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
   P := 0;
   i64 := 0;
   { scan for leading zeroes to skip them }
@@ -1530,9 +1555,12 @@ begin
     then Inc(P)
     else begin
       i64 := ZBcdNibble2Base100ByteLookup[F];
-      if P = LastNibbleByteIDX
-      then goto finalize
-      else Break;
+      if P = LastNibbleByteIDX then begin
+        if LastByteIsHalfByte then
+          i64 := i64 div 10;
+        goto finalize
+      end else
+        Break;
     end;
   end;
   { initialize the Result }

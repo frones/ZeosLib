@@ -70,6 +70,8 @@
 			</DelphiCompile>
 			<DCCReference Include="rtl.dcp"/>
 			<DCCReference Include="dbrtl.dcp"/>
+			<DCCReference Include="soaprtl.dcp"/>
+			<DCCReference Include="..\..\src\core\ZExceptions.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariant.pas"/>
 			<DCCReference Include="..\..\src\core\ZCollections.pas"/>
 			<DCCReference Include="..\..\src\core\ZCompatibility.pas"/>
@@ -82,6 +84,7 @@
 			<DCCReference Include="..\..\src\core\ZSysUtils.pas"/>
 			<DCCReference Include="..\..\src\core\ZTokenizer.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariables.pas"/>
+			<DCCReference Include="..\..\src\core\ZBase64.pas"/>
 			<DCCReference Include="..\..\src\core\ZClasses.pas"/>
 			<DCCReference Include="..\..\src\core\ZMessages.pas"/>
 			<DCCReference Include="..\..\src\core\ZFunctions.pas"/>

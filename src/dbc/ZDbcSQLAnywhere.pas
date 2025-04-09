@@ -55,12 +55,12 @@ unit ZDbcSQLAnywhere;
 
 interface
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSQLAnywhere, ZTokenizer,
-  ZGenericSqlAnalyser, ZDbcLogging;
+  ZGenericSqlAnalyser, ZDbcLogging, ZExceptions;
 
 type
   {** Implements a ASA Database Driver. }
@@ -94,8 +94,10 @@ type
     Fa_sqlany_interface_context: Pa_sqlany_interface_context;
     Fapi_version: Tsacapi_u32;
     FLastWarning: EZSQLWarning;
+    FClientLanguageCP: Word;
   private
     function DetermineASACharSet: String;
+    procedure DetermineClientLanguageCP;
   protected
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
@@ -215,12 +217,20 @@ type
     procedure Open; override;
 
     function AbortOperation: Integer; override;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses ZDbcASAMetadata, ZSybaseAnalyser, ZSybaseToken, ZDbcSQLAnywhereStatement,
   ZDbcProperties, ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZClasses;
@@ -299,10 +309,13 @@ end;
 }
 function TZSQLAnywhereConnection.AbortOperation: Integer;
 begin
-  Result := 1;
+  Result := 0;
   if Closed then
     Exit;
-  FSQLAnyPlainDriver.sqlany_cancel(Fa_sqlany_connection);
+  If Assigned(FSQLAnyPlainDriver.sqlany_cancel) Then
+    FSQLAnyPlainDriver.sqlany_cancel(Fa_sqlany_connection)
+  Else
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -319,7 +332,6 @@ var err_len, st_len: Tsize_t;
   StateBuf: array[0..5] of Byte;
   AException: EZSQLThrowable;
   P: PAnsiChar;
-  msgCP: Word;
   {$IFNDEF UNICODE}
   errCP: Word;
   {$ENDIF}
@@ -337,21 +349,17 @@ begin
   err_len := ZFastCode.StrLen(P);
   st_len := FSQLAnyPlainDriver.sqlany_sqlstate(Fa_sqlany_connection, @StateBuf[0], SizeOf(StateBuf));
   Dec(st_len);
-  if ConSettings.ClientCodePage <> nil
-  then msgCP := ConSettings.ClientCodePage.CP
-  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
-
   {$IFDEF UNICODE}
   State := USASCII7ToUnicodeString(@StateBuf[0], st_Len);
-  ErrMsg := PRawToUnicode(P, err_Len, msgCP);
+  ErrMsg := PRawToUnicode(P, err_Len, FClientLanguageCP);
   {$ELSE}
   State := '';
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
   ErrMsg := '';
   errCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
-  if errCP <> msgCP then begin
+  if errCP <> FClientLanguageCP then begin
     ErrMsg := '';
-    PRawToRawConvert(P, err_len, msgCP, errCP, RawByteString(ErrMsg));
+    PRawToRawConvert(P, err_len, FClientLanguageCP, errCP, RawByteString(ErrMsg));
   end else System.SetString(ErrMsg, P, err_Len);
   {$ENDIF}
   if DriverManager.HasLoggingListener then
@@ -455,6 +463,75 @@ begin
   Stmt := nil;
 end;
 
+procedure TZSQLAnywhereConnection.DetermineClientLanguageCP;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  S: String;
+begin
+  Stmt := CreateStatementWithParams(Info);
+  RS := Stmt.ExecuteQuery('SELECT CONNECTION_PROPERTY(''Language'')');
+  if RS.Next
+  then S := RS.GetString(FirstDbcIndex)
+  else S := '';
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
+  if S = 'arabic' then
+    FClientLanguageCP := zCP_WIN1256
+  else if S = 'czech' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'danish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'dutch' then
+    FClientLanguageCP := zCP_WIN1252
+  else if (S = 'us_english') or (S = 'english') then
+    FClientLanguageCP := zCP_us_ascii
+  else if S = 'finnish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'french' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'german' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'greek' then
+    FClientLanguageCP := zCP_WIN1253
+  else if S = 'hebrew' then
+    FClientLanguageCP := zCP_WIN1255
+  else if S = 'hungarian' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'italian' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'japanese' then
+    FClientLanguageCP := zCP_SHIFTJS
+  else if S = 'korean' then
+    FClientLanguageCP := zCP_EUCKR
+  else if S = 'lithuanian' then
+    FClientLanguageCP := zCP_WIN1257
+  else if (S = 'norwegian') or (s = 'norweg') then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'polish' then
+    FClientLanguageCP := zCP_WIN1251
+  else if (S = 'portuguese') or (S = 'portugue') then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'russian' then
+    FClientLanguageCP := zCP_WIN1251
+  else if (S = 'chinese') or (S = 'simpchin') then
+    FClientLanguageCP := zCP_GB2312
+  else if S = 'spanish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'swedish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'thai' then
+    FClientLanguageCP := zCP_WIN874
+  else if (S = 'tchinese') or (S = 'tradchin') then
+    FClientLanguageCP := zCP_Big5
+  else if S = 'turkish' then
+    FClientLanguageCP := zCP_WIN1254
+  else if S = 'ukrainian' then
+    FClientLanguageCP := zCP_WIN1251
+  else FClientLanguageCP := zOSCodePage;
+end;
+
 procedure TZSQLAnywhereConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var B: Tsacapi_bool;
@@ -482,6 +559,16 @@ end;
 function TZSQLAnywhereConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spASA;
+end;
+
+function TZSQLAnywhereConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSybaseStatementAnalyser.Create;
+end;
+
+function TZSQLAnywhereConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSybaseTokenizer.Create;
 end;
 
 function TZSQLAnywhereConnection.Get_api_version: Tsacapi_u32;
@@ -527,6 +614,7 @@ label jmpInit;
 begin
   if not Closed then
     Exit;
+  FClientLanguageCP := ZOSCodePage; //init
   FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   R := '';
   S := Info.Values[ConnProps_AppName];
@@ -604,6 +692,7 @@ jmpInit:
     S := DetermineASACharSet;
     CheckCharEncoding(S);
   end;
+  DetermineClientLanguageCP;
   if Ord(TransactIsolationLevel) > Ord(tiReadUncommitted) then
     ExecuteImmediat(SQLAnyTIL[TransactIsolationLevel], lcTransaction);
   if AutoCommit
@@ -766,5 +855,5 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(SQLAynwhereDriver);
   SQLAynwhereDriver := nil;
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.

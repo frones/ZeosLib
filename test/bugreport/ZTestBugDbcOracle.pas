@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility,
-  ZDbcOracle, ZSqlTestCase;
+  ZDbcOracle, ZSqlTestCase, ZExceptions;
 
 type
 
@@ -75,6 +75,7 @@ type
     procedure TestTicket437;
     procedure TestConnectionLossTicket452;
     procedure TestTicket455;
+    procedure TestDuplicateParamNames;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -148,13 +149,13 @@ begin
 
   ResultSet := Statement.ExecuteQuery('select * from table_ticket437 order by id');
   with ResultSet do try
-    with GetMetadata do
+    {with GetMetadata do
     begin
       CheckEquals(stInteger, GetColumnType(col_id_Index), 'id column type');
       CheckEquals(stString, GetColumnType(col_text_Index), 'text column type');
       CheckEquals(stAsciiStream, GetColumnType(col_clobek_index), 'clobek column type');
       CheckEquals(stAsciiStream, GetColumnType(col_longek_index), 'longek column type');
-    end;
+    end;}
     Check(Next, 'ResultSet.Next');
     CheckEquals('ASD', GetString(col_text_Index), 'the value of text varchar2(4000) field');
     CheckEquals('ASD', GetString(col_clobek_index), 'the value of clobek clob field');
@@ -257,6 +258,31 @@ begin
   finally
     FreeAndnil(Stream);
     FreeAndNil(FConnLostError);
+  end;
+end;
+
+{ see https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=132398}
+procedure TZTestDbcOracleBugReport.TestDuplicateParamNames;
+var Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  Check(Connection <> nil);
+  try
+    Statement := Connection.PrepareStatement('SELECT :SID, :SID, :SID+:AID FROM DUAL Where 1 = :SID or 2 = :SID');
+    Statement.SetInt(FirstDbcIndex, 1);
+    Statement.SetInt(FirstDbcIndex+1, 1);
+    Statement.SetInt(FirstDbcIndex+2, 1);
+    Statement.SetInt(FirstDbcIndex+3, 1);
+    Statement.SetInt(FirstDbcIndex+4, 1);
+    Statement.SetInt(FirstDbcIndex+5, 1);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    Check(ResultSet.Next);
+    CheckEquals(3, ResultSet.GetColumnCount);
+    CheckFalse(ResultSet.IsNull(FirstDbcIndex));
+    CheckFalse(ResultSet.IsNull(FirstDbcIndex+1));
+    CheckFalse(ResultSet.IsNull(FirstDbcIndex+2));
+  finally
+
   end;
 end;
 

@@ -55,24 +55,24 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IFDEF ENABLE_PROXY}
 
 uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver,
-  {$IFDEF ZEOS_PROXY_USE_INTERNAL_PROXY}ZPlainProxyDriverInternalProxy, {$ENDIF}
+  ZCompatibility, ZPlainDriver,
+  {$IFDEF ENABLE_INTERNAL_PROXY}ZPlainProxyDriverInternalProxy, {$ENDIF}
   ZPlainProxyDriverIntf;
 
-{$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+{$IFNDEF ENABLE_INTERNAL_PROXY}
 const
   WINDOWS_DLL_LOCATION = 'libzdbcproxy.dll';
   LINUX_DLL_LOCATION = 'libzdbcproxy.'+SharedSuffix;
-{$ENDIF ZEOS_PROXY_USE_INTERNAL_PROXY}
+{$ENDIF ENABLE_INTERNAL_PROXY}
 
-{$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+{$IFNDEF ENABLE_INTERNAL_PROXY}
 type
   TZDbcProxy_GetInterface = function(): IZDbcProxy; stdcall;
   TZDbcProxy_GetLastErrorStr = function(): WideString; stdcall;
-{$ENDIF ZEOS_PROXY_USE_INTERNAL_PROXY}
+{$ENDIF ENABLE_INTERNAL_PROXY}
 
   { ************* Plain API Function variables definition ************ }
 type
@@ -87,10 +87,10 @@ type
   TZProxyBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZProxyPlainDriver)
   private
   protected
-    {$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+    {$IFNDEF ENABLE_INTERNAL_PROXY}
     FGetInterface: TZDbcProxy_GetInterface;
     FGetLastErrorStr: TZDbcProxy_GetLastErrorStr;
-    {$ENDIF ZEOS_PROXY_USE_INTERNAL_PROXY}
+    {$ENDIF ENABLE_INTERNAL_PROXY}
 
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
@@ -105,11 +105,11 @@ type
     function GetLastErrorStr(): WideString;
   end;
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$ENDIF ENABLE_PROXY}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IFDEF ENABLE_PROXY}
 
 uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -129,7 +129,7 @@ end;
 constructor TZProxyBaseDriver.Create;
 begin
   inherited create;
-  {$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+  {$IFNDEF ENABLE_INTERNAL_PROXY}
     FLoader := TZNativeLibraryLoader.Create([]);
     {$IFDEF MSWINDOWS}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
@@ -137,19 +137,19 @@ begin
     FLoader.AddLocation(LINUX_DLL_LOCATION);
     FLoader.AddLocation(LINUX_DLL_LOCATION+'.0');
     {$ENDIF}
-  {$ENDIF ZEOS_PROXY_USE_INTERNAL_PROXY}
+  {$ENDIF ENABLE_INTERNAL_PROXY}
 end;
 
 procedure TZProxyBaseDriver.LoadApi;
 begin
 { ************** Load adresses of API Functions ************* }
-  {$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+  {$IFNDEF ENABLE_INTERNAL_PROXY}
   with Loader do
   begin
     {@}FGetInterface                := GetAddress('GetInterface');
     {@}FGetLastErrorStr             := GetAddress('GetLastErrorStr');
   end;
-  {$ENDIF ZEOS_PROXY_USE_INTERNAL_PROXY}
+  {$ENDIF ENABLE_INTERNAL_PROXY}
 end;
 
 function TZProxyBaseDriver.GetProtocol: string;
@@ -169,7 +169,7 @@ end;
 
 function TZProxyBaseDriver.GetLibraryInterface(): IZDbcProxy;
 begin
-  {$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+  {$IFNDEF ENABLE_INTERNAL_PROXY}
   Result := FGetInterface();
   {$ELSE}
   Result := ZPlainProxyDriverInternalProxy.GetInterface;
@@ -178,14 +178,14 @@ end;
 
 function TZProxyBaseDriver.GetLastErrorStr(): WideString;
 begin
-  {$IFNDEF ZEOS_PROXY_USE_INTERNAL_PROXY}
+  {$IFNDEF ENABLE_INTERNAL_PROXY}
   Result := FGetLastErrorStr();
   {$ELSE}
   Result := ZPlainProxyDriverInternalProxy.GetLastErrorStr;
   {$ENDIF ZEOS_PROXY_USE_INTERNAL_PROXY}
 end;
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$ENDIF ENABLE_PROXY}
 
 end.
 

@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <definitions name="zproxy" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="zproxy" xmlns:wst="urn:wst_base" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="zproxy">
   <types>
-    <xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="zproxy" targetNamespace="zproxy"/>
+    <xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="zproxy" xmlns:wst="urn:wst_base" xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="zproxy">
+      <xsd:complexType name="TStatementDescriptions">
+        <xsd:sequence>
+          <xsd:element name="item" type="tns:TStatementDescription" maxOccurs="unbounded" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TStringArray">
+        <xsd:sequence>
+          <xsd:element name="item" type="xsd:string" maxOccurs="unbounded" minOccurs="0" wst:TypeHint="UnicodeString"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="TStatementDescription" wst:wst_record="true">
+        <xsd:annotation>
+          <xsd:documentation>A description for a statement that is to be executed.</xsd:documentation>
+        </xsd:annotation>
+        <xsd:sequence>
+          <xsd:element name="SQL" type="xsd:string" wst:TypeHint="UnicodeString"/>
+          <xsd:element name="Parameters" type="xsd:string" wst:TypeHint="UnicodeString"/>
+          <xsd:element name="MaxRows" type="xsd:unsignedInt"/>
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:schema>
   </types>
   <message name="Connect">
     <part name="UserName" type="xsd:string" wst:TypeHint="UnicodeString"/>
@@ -198,6 +219,26 @@
   <message name="GetCharacterSetsResponse">
     <part name="result" type="xsd:string" wst:TypeHint="UnicodeString"/>
   </message>
+  <message name="StartTransaction">
+    <part name="ConnectionID" type="xsd:string" wst:TypeHint="UnicodeString"/>
+  </message>
+  <message name="StartTransactionResponse">
+    <part name="result" type="xsd:int"/>
+  </message>
+  <message name="GetPublicKeys"/>
+  <message name="GetPublicKeysResponse">
+    <part name="result" type="xsd:string" wst:TypeHint="UnicodeString"/>
+  </message>
+  <message name="ExecuteMultipleStmts">
+    <documentation>
+      <ParamAccess value="Statements=argDefault"/>
+    </documentation>
+    <part name="ConnectionID" type="xsd:string" wst:TypeHint="UnicodeString"/>
+    <part name="Statements" type="tns:TStatementDescriptions"/>
+  </message>
+  <message name="ExecuteMultipleStmtsResponse">
+    <part name="result" type="tns:TStringArray"/>
+  </message>
   <portType name="IZeosProxy">
     <documentation>
       <GUID value="{DD0144C6-0CD5-483C-A8D9-28A00BAD1C75}"/>
@@ -297,6 +338,18 @@
     <operation name="GetCharacterSets">
       <input message="tns:GetCharacterSets"/>
       <output message="tns:GetCharacterSetsResponse"/>
+    </operation>
+    <operation name="StartTransaction">
+      <input message="tns:StartTransaction"/>
+      <output message="tns:StartTransactionResponse"/>
+    </operation>
+    <operation name="GetPublicKeys">
+      <input message="tns:GetPublicKeys"/>
+      <output message="tns:GetPublicKeysResponse"/>
+    </operation>
+    <operation name="ExecuteMultipleStmts">
+      <input message="tns:ExecuteMultipleStmts"/>
+      <output message="tns:ExecuteMultipleStmtsResponse"/>
     </operation>
   </portType>
   <binding name="IZeosProxyBinding" type="tns:IZeosProxy">
@@ -509,6 +562,33 @@
       </output>
     </operation>
     <operation name="GetCharacterSets">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal" namespace="zproxy"/>
+      </input>
+      <output>
+        <soap:body use="literal" namespace="zproxy"/>
+      </output>
+    </operation>
+    <operation name="StartTransaction">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal" namespace="zproxy"/>
+      </input>
+      <output>
+        <soap:body use="literal" namespace="zproxy"/>
+      </output>
+    </operation>
+    <operation name="GetPublicKeys">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal" namespace="zproxy"/>
+      </input>
+      <output>
+        <soap:body use="literal" namespace="zproxy"/>
+      </output>
+    </operation>
+    <operation name="ExecuteMultipleStmts">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal" namespace="zproxy"/>

@@ -95,8 +95,12 @@ type
     function SupportsBinaryInSQL: Boolean;
     function GetMaxSQLDASize: LongWord;
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
 //    function GetDriverMajorVersion: Integer; override; Same as parent
@@ -114,7 +118,6 @@ type
 //    function SupportsConvert: Boolean; override; -> Not implemented
 //    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
 //      Boolean; override; -> Not implemented
-//    function SupportsTableCorrelationNames: Boolean; override; -> Not implemented
 //    function SupportsDifferentTableCorrelationNames: Boolean; override; -> Not implemented
     function SupportsExpressionsInOrderBy: Boolean; override;
     function SupportsOrderByUnrelated: Boolean; override;
@@ -247,12 +250,138 @@ type
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for each table
+    ///  available in a catalog from a cache. Note that a table privilege
+    ///  applies to one or more columns in the table. It would be wrong to
+    ///  assume that this priviledge applies to all columns (this may be true
+    ///  for some systems but is not true for all.)
+    ///
+    ///  Only privileges matching the schema and table name
+    ///  criteria are returned. They are ordered by TABLE_SCHEM,
+    ///  TABLE_NAME, and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///      INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    ///
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema from
+    ///  the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a table privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of a table's primary key columns. They
+    ///  are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>KEY_SEQ</c> short => sequence number within primary key
+ 	  ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetPrimaryKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
       const Table: string): IZResultSet; override;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table).  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
@@ -290,9 +419,9 @@ implementation
 
 uses ZMessages, ZDbcInterbase6Utils,
   ZFastCode, ZSelectSchema, Math, ZDbcUtils, ZPlainFirebirdInterbaseDriver,
-  ZDbcFirebirdInterbase,
+  ZDbcFirebirdInterbase, ZDbcCachedResultSet,
   {$IFNDEF ZEOS_DISABLE_FIREBIRD}ZPlainFirebird, ZDbcFirebird,{$ENDIF}
-  ZDbcLogging;
+  ZDbcLogging, ZExceptions;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');
@@ -322,7 +451,7 @@ var
   isc_info: Byte;
   P: PChar;
   PA: PAnsiChar absolute P;
-  L: NativeUInt;
+  FbPos: Integer;
 begin
   if FServerVersion = '' then begin
     Connection := Metadata.GetConnection;
@@ -332,7 +461,7 @@ begin
       Attachment := FBConnection.GetAttachment;
       Status := FBConnection.GetStatus;
       Attachment.getInfo(Status, 1, @isc_info, SizeOf(Buffer), @Buffer[0]);
-      if (Status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      if (Status.getState and cIStatus_STATE_ERRORS) <> 0 then
         FBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(Status.getErrors), 'IAttachment.getInfo', FBConnection);
     {$IFNDEF ZEOS_DISABLE_INTERBASE}end else {$ELSE}end;{$ENDIF}
     {$ENDIF ZEOS_DISABLE_FIREBIRD}
@@ -358,7 +487,8 @@ begin
     then FServerVersion := ConvertConnRawToString({$IFDEF UNICODE}
       Connection.GetConSettings, {$ENDIF}@Buffer[5], Integer(Buffer[4]))
     else FServerVersion := '';
-    FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
+    FbPos := ZFastCode.Pos('Firebird', FServerVersion);
+    FIsFireBird := FbPos > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));
     I := ZFastCode.Pos('.', FProductVersion);
@@ -369,20 +499,14 @@ begin
     else
       tmp := Copy(FProductVersion, I+1, MaxInt);
     FHostVersion := FHostVersion + StrToInt(tmp)*1000;
-    { determine release version see http://www.firebirdfaq.org/faq223/ }
-    if FIsFireBird and (FHostVersion > 2001000) then begin
-      with Connection.CreateStatement.ExecuteQuery('SELECT rdb$get_context(''SYSTEM'', ''ENGINE_VERSION'') from rdb$database') do begin
-        if Next then begin
-          PA := GetPAnsiChar(FirstDbcIndex, L);
-          Inc(PA, NativeInt(L));
-          I := 0;
-          while (PByte(PA-1)^ <> Byte('.')) do begin
-            Dec(PA);
-            Inc(I);
-          end;
-          FHostVersion := FHostVersion+RawToIntDef(PA, PA+I, 0);
-        end;
-        Close;
+    if FIsFireBird and (Copy(FServerVersion, FirstStringIndex, 8) = 'WI-V6.3.') then begin
+      tmp := FServerVersion;
+      Delete(tmp, FbPos - 1, length(tmp));
+      Delete(tmp, FirstStringIndex, 8);
+      FbPos := ZFastCode.Pos('.', tmp);
+      if FbPos > 0 then begin
+        Delete(tmp, FbPos, length(tmp));
+        FHostVersion := FHostVersion + StrToIntDef(tmp, 0);
       end;
     end;
   end;
@@ -425,10 +549,6 @@ begin
   Result := FIsFireBird and (FHostVersion >= 2000000);
 end;
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZInterbase6DatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := DBProvider[FIsFireBird];
@@ -443,10 +563,6 @@ begin
   Result := FProductVersion;
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZInterbase6DatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Interbase and Firebird';
@@ -478,7 +594,7 @@ end;
 }
 function TZInterbase6DatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
@@ -1544,7 +1660,7 @@ begin
     + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
 
   GUIDProps := (GetConnection as IZInterbaseFirebirdConnection).GetGUIDProps;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
@@ -1673,7 +1789,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..2] of String = ('TABLE', 'VIEW', 'SYSTEM TABLE');
+  TablesTypes: array [0..2] of RawByteString = ('TABLE', 'VIEW', 'SYSTEM TABLE');
 var
   I: Integer;
 begin
@@ -1682,7 +1798,7 @@ begin
   for I := Low(TablesTypes) to High(TablesTypes) do
   begin
     Result.MoveToInsertRow;
-    Result.UpdateString(TableTypeColumnTableTypeIndex, TablesTypes[I]);
+    Result.UpdateRawByteString(TableTypeColumnTableTypeIndex, TablesTypes[I]);
     Result.InsertRow;
   end;
 end;
@@ -1780,16 +1896,17 @@ var
 label GUID_Size, Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   LTableNamePattern := ConstructNameCondition(TableNamePattern,
     'RF.RDB$RELATION_NAME');
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
     'RF.RDB$FIELD_NAME');
   Connection := GetConnection;
   SQL := ' SELECT RF.RDB$RELATION_NAME, RF.RDB$FIELD_NAME, RF.RDB$FIELD_POSITION,'
-    + ' RF.RDB$NULL_FLAG, RF.RDB$FIELD_SOURCE, F.RDB$FIELD_LENGTH,'
+    + ' COALESCE(RF.RDB$NULL_FLAG, F.RDB$NULL_FLAG) AS RDB$NULL_FLAG,'
+    +' RF.RDB$FIELD_SOURCE, F.RDB$FIELD_LENGTH,'
     + ' F.RDB$FIELD_SCALE, T.RDB$TYPE_NAME, F.RDB$FIELD_TYPE,'
-    + ' F.RDB$FIELD_SUB_TYPE, F.RDB$DESCRIPTION, F.RDB$CHARACTER_LENGTH,'
+    + ' F.RDB$FIELD_SUB_TYPE, RF.RDB$DESCRIPTION, F.RDB$CHARACTER_LENGTH,'
     + ' F.RDB$FIELD_PRECISION, RF.RDB$DEFAULT_SOURCE, F.RDB$DEFAULT_SOURCE'
     + ' as RDB$DEFAULT_SOURCE_DOMAIN, F.RDB$COMPUTED_SOURCE,'
     + ' F.RDB$CHARACTER_SET_ID, ';
@@ -1862,6 +1979,7 @@ GUID_Size:  Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'GUID');
             Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
 Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);   //CHAR_OCTET_LENGTH
             Result.UpdateInt(TableColColumnSizeIndex, GetInt(CHARACTER_LENGTH_Index));
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, Precision);
           end;
         else
           Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
@@ -1873,7 +1991,7 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);  
       else Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
       P := GetPAnsiChar(DESCRIPTION_Index, L);
       if P <> nil then begin
-        L := min(L,255);
+        L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}min(L,255);
         Result.UpdatePAnsiChar(TableColColumnRemarksIndex, P, L);   //REMARKS
       end;
       P := GetPAnsiChar(DEFAULT_SOURCE_Index, L);
@@ -1929,34 +2047,6 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);  
   end;
 end;
 
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Catalog/Schema" not used} {$ENDIF}
 function TZInterbase6DatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
@@ -1991,38 +2081,6 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
 function TZInterbase6DatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var SQL, LTableNamePattern: String;
@@ -2094,28 +2152,6 @@ begin
   Result.InsertRow;
 end;
 
-{**
-  Gets a description of a table's primary key columns.  They
-  are ordered by COLUMN_NAME.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within primary key
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @exception SQLException if a database access error occurs
-}
 function TZInterbase6DatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
@@ -2161,73 +2197,6 @@ begin
     ' END AS DEFERRABILITY'
 end;
 
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
 function TZInterbase6DatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
@@ -2477,7 +2446,7 @@ var
   Len: NativeUInt;
 begin
   Result := inherited UncachedGetTypeInfo;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   SQL := 'SELECT RDB$TYPE, RDB$TYPE_NAME FROM RDB$TYPES' +
     ' WHERE RDB$FIELD_NAME = ''RDB$FIELD_TYPE''';
   with CreateStatement.ExecuteQuery(SQL) do
@@ -2586,7 +2555,7 @@ begin
     + ' I.RDB$INDEX_NAME, I.RDB$RELATION_NAME, I.RDB$UNIQUE_FLAG,'
     + ' ISGMT.RDB$FIELD_POSITION, ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE,'
     + ' I.RDB$SEGMENT_COUNT ORDER BY 1,2,3,4';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
@@ -2678,7 +2647,7 @@ begin
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,'R.RDB$FIELD_NAME');
 
   Result := inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if (TableNamePattern <> '') or (ColumnNamePattern <> '') then begin
     SQL := 'SELECT R.RDB$RELATION_NAME, R.RDB$FIELD_NAME, C.RDB$CHARACTER_SET_NAME,'
       + ' C.RDB$DEFAULT_COLLATE_NAME, C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER'

@@ -55,14 +55,14 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainASADriver, ZTokenizer, ZDbcGenericResolver,
-  ZGenericSqlAnalyser, ZDbcLogging;
+  ZGenericSqlAnalyser, ZDbcLogging, ZExceptions;
 
 type
+  {$IFNDEF ZEOS_DISABLE_ASA}
   {** Implements a ASA Database Driver. }
   TZASADriver = class(TZAbstractDriver)
   public
@@ -97,13 +97,19 @@ type
     FPlainDriver: TZASAPlainDriver;
     FHostVersion: Integer;
     FLastWarning: EZSQLWarning;
+    FClientLanguageCP: Word;
   private
     function DetermineASACharSet: String;
     procedure DetermineHostVersion;
+    procedure DetermineClientLanguageCP;
     procedure SetOption(Temporary: Integer; const LogMsg: String;
       const Option, Value: RawByteString; LoggingCategory: TZLoggingCategory);
   protected
     procedure InternalClose; override;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a raw encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
     function GetDBHandle: PZASASQLCA;
@@ -219,14 +225,27 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
-
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function GetHostVersion: Integer; override;
   end;
+
+{$ENDIF ZEOS_DISABLE_ASA}
+
+  // Note: The TZASACachedResolver should be defind in case another driver needs it.
 
   {** Implements a specialized cached resolver for ASA. }
   TZASACachedResolver = class(TZGenerateSQLCachedResolver)
   end;
+
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 var
   {** The common driver manager object. }
@@ -435,7 +454,7 @@ var err_len: Integer;
   Error: EZSQLThrowable;
   ExeptionClass: EZSQLThrowableClass;
   P: PAnsiChar;
-  {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
+  {$IFNDEF UNICODE}excCP: Word;{$ENDIF}
 begin
   ErrCode := FHandle.SqlCode;
   if (ErrCode = SQLE_NOERROR) or //Nothing todo
@@ -443,9 +462,6 @@ begin
     Exit;
   P := @FByteBuffer[0];
   PByte(P)^ := 0;
-  if ConSettings.ClientCodePage <> nil
-  then msgCP := ConSettings.ClientCodePage.CP
-  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
 {$IFNDEF UNICODE}
   excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
       {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
@@ -454,13 +470,13 @@ begin
   err_len := ZFastCode.StrLen(P);
   {$IFDEF UNICODE}
   SQLState := USASCII7ToUnicodeString(@FHandle.sqlState[0], 5);
-  FLogMessage := PRawToUnicode(P, err_Len, msgCP);
+  FLogMessage := PRawToUnicode(P, err_Len, FClientLanguageCP);
   {$ELSE}
   SQLState := '';
   ZSetString(PAnsiChar(@FHandle.sqlState[0]), 5, SQLState);
   FLogMessage := '';
-  if excCP <> msgCP
-  then PRawToRawConvert(P, err_len, msgCP, excCP, FLogMessage)
+  if excCP <> FClientLanguageCP
+  then PRawToRawConvert(P, err_len, FClientLanguageCP, excCP, FLogMessage)
   else System.SetString(FLogMessage, P, err_Len);
   {$ENDIF}
   if DriverManager.HasLoggingListener then
@@ -502,6 +518,16 @@ begin
   Result := spASA;
 end;
 
+function TZASAConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSybaseStatementAnalyser.Create;
+end;
+
+function TZASAConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSybaseTokenizer.Create;
+end;
+
 {**
   Opens a connection to database server with specified parameters.
 }
@@ -515,6 +541,7 @@ begin
   if not Closed then
      Exit;
 
+  FClientLanguageCP := ZOSCodePage; //init
   FHandle := nil;
   ConnectionString := '';
   try
@@ -540,6 +567,10 @@ begin
         ConnectionString := ConnectionString + 'DBN="' + Database + '"; ';
     end;
 
+    Links := Info.Values[ConnProps_Host];
+    if Links <> '' then
+      ConnectionString := 'Host=' + Links + ';';
+    
     Links := '';
     if Info.Values[ConnProps_CommLinks] <> ''
       then Links := 'CommLinks=' + Info.Values[ConnProps_CommLinks];
@@ -549,6 +580,17 @@ begin
       then Links := 'LINKS=tcpip(PORT=' + ZFastCode.IntToStr(Port) + ')';
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
+
+    if URL.UserName <> '' then begin
+      if System.Pos(';', URL.UserName) > 0 then
+        raise EZSQLException.Create('The user name may not include semicolons.');
+      ConnectionString := ConnectionString + 'UID=' + URL.UserName + ';';
+      if URL.Password <> '' then begin
+        if System.Pos(';', URL.Password) > 0 then
+          raise EZSQLException.Create('The password may not include semicolons.');
+        ConnectionString := ConnectionString + 'PWD=' + URL.Password + ';'
+      end;
+    end;
 
     {$IFDEF UNICODE}
     RawTemp := ZUnicodeToRaw(ConnectionString, ZOSCodePage);
@@ -587,6 +629,7 @@ begin
 
   if FClientCodePage = ''  then
     CheckCharEncoding(DetermineASACharSet);
+  DetermineClientLanguageCP;
   DetermineHostVersion;
   if FHostVersion >= 17000000 then //chained is deprecated On is comparable with AutoCommit=off
     SetOption(1, 'SET OPTION chained = "on"', 'chained', 'On', lcTransaction);
@@ -752,6 +795,75 @@ begin
   RS := nil;
   Stmt.Close;
   Stmt := nil;
+end;
+
+procedure TZASAConnection.DetermineClientLanguageCP;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  S: String;
+begin
+  Stmt := CreateStatementWithParams(Info);
+  RS := Stmt.ExecuteQuery('SELECT CONNECTION_PROPERTY(''Language'')');
+  if RS.Next
+  then S := RS.GetString(FirstDbcIndex)
+  else S := '';
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
+  if S = 'arabic' then
+    FClientLanguageCP := zCP_WIN1256
+  else if S = 'czech' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'danish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'dutch' then
+    FClientLanguageCP := zCP_WIN1252
+  else if (S = 'us_english') or (S = 'english') then
+    FClientLanguageCP := zCP_us_ascii
+  else if S = 'finnish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'french' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'german' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'greek' then
+    FClientLanguageCP := zCP_WIN1253
+  else if S = 'hebrew' then
+    FClientLanguageCP := zCP_WIN1255
+  else if S = 'hungarian' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'italian' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'japanese' then
+    FClientLanguageCP := zCP_SHIFTJS
+  else if S = 'korean' then
+    FClientLanguageCP := zCP_EUCKR
+  else if S = 'lithuanian' then
+    FClientLanguageCP := zCP_WIN1257
+  else if (S = 'norwegian') or (s = 'norweg') then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'polish' then
+    FClientLanguageCP := zCP_WIN1251
+  else if (S = 'portuguese') or (S = 'portugue') then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'russian' then
+    FClientLanguageCP := zCP_WIN1251
+  else if (S = 'chinese') or (S = 'simpchin') then
+    FClientLanguageCP := zCP_GB2312
+  else if S = 'spanish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'swedish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'thai' then
+    FClientLanguageCP := zCP_WIN874
+  else if (S = 'tchinese') or (S = 'tradchin') then
+    FClientLanguageCP := zCP_Big5
+  else if S = 'turkish' then
+    FClientLanguageCP := zCP_WIN1254
+  else if S = 'ukrainian' then
+    FClientLanguageCP := zCP_WIN1251
+  else FClientLanguageCP := zOSCodePage;
 end;
 
 procedure TZASAConnection.DetermineHostVersion;

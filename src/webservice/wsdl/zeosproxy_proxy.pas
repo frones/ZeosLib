@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_proxy".
-  Date            : "12.01.2020 21:27:15".
+  Date            : "21.09.2024 17:27:26".
 }
 
 Unit zeosproxy_proxy;
@@ -148,6 +148,14 @@ Type
     function GetCharacterSets(
       const  ConnectionID : UnicodeString
     ):UnicodeString;
+    function StartTransaction(
+      const  ConnectionID : UnicodeString
+    ):integer;
+    function GetPublicKeys():UnicodeString;
+    function ExecuteMultipleStmts(
+      const  ConnectionID : UnicodeString; 
+       Statements : TStatementDescriptions
+    ):TStringArray;
   End;
 
   Function wst_CreateInstance_IZeosProxy(const AFormat : string = 'SOAP:'; const ATransport : string = 'HTTP:'; const AAddress : string = ''):IZeosProxy;
@@ -903,6 +911,84 @@ Begin
     locSerializer.BeginCallRead(locCallContext);
       locStrPrmName := 'result';
       locSerializer.Get(TypeInfo(UnicodeString), locStrPrmName, Result);
+
+  Finally
+    locSerializer.Clear();
+  End;
+End;
+
+function TZeosProxy_Proxy.StartTransaction(
+  const  ConnectionID : UnicodeString
+):integer;
+Var
+  locSerializer : IFormatterClient;
+  locCallContext : ICallContext;
+  locStrPrmName : string;
+Begin
+  locCallContext := Self as ICallContext;
+  locSerializer := GetSerializer();
+  Try
+    locSerializer.BeginCall('StartTransaction', GetTarget(),locCallContext);
+      locSerializer.Put('ConnectionID', TypeInfo(UnicodeString), ConnectionID);
+    locSerializer.EndCall();
+
+    MakeCall();
+
+    locSerializer.BeginCallRead(locCallContext);
+      locStrPrmName := 'result';
+      locSerializer.Get(TypeInfo(integer), locStrPrmName, Result);
+
+  Finally
+    locSerializer.Clear();
+  End;
+End;
+
+function TZeosProxy_Proxy.GetPublicKeys():UnicodeString;
+Var
+  locSerializer : IFormatterClient;
+  locCallContext : ICallContext;
+  locStrPrmName : string;
+Begin
+  locCallContext := Self as ICallContext;
+  locSerializer := GetSerializer();
+  Try
+    locSerializer.BeginCall('GetPublicKeys', GetTarget(),locCallContext);
+    locSerializer.EndCall();
+
+    MakeCall();
+
+    locSerializer.BeginCallRead(locCallContext);
+      locStrPrmName := 'result';
+      locSerializer.Get(TypeInfo(UnicodeString), locStrPrmName, Result);
+
+  Finally
+    locSerializer.Clear();
+  End;
+End;
+
+function TZeosProxy_Proxy.ExecuteMultipleStmts(
+  const  ConnectionID : UnicodeString; 
+   Statements : TStatementDescriptions
+):TStringArray;
+Var
+  locSerializer : IFormatterClient;
+  locCallContext : ICallContext;
+  locStrPrmName : string;
+Begin
+  locCallContext := Self as ICallContext;
+  locSerializer := GetSerializer();
+  Try
+    locSerializer.BeginCall('ExecuteMultipleStmts', GetTarget(),locCallContext);
+      locSerializer.Put('ConnectionID', TypeInfo(UnicodeString), ConnectionID);
+      locSerializer.Put('Statements', TypeInfo(TStatementDescriptions), Statements);
+    locSerializer.EndCall();
+
+    MakeCall();
+
+    locSerializer.BeginCallRead(locCallContext);
+      Result := Nil;
+      locStrPrmName := 'result';
+      locSerializer.Get(TypeInfo(TStringArray), locStrPrmName, Result);
 
   Finally
     locSerializer.Clear();

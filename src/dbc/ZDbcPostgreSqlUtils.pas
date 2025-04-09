@@ -147,13 +147,13 @@ procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result
 procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
 procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Double); overload;
 
-function PG2DateTime(Value: Double): TDateTime; overload;
-procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal); overload;
+function PG2DateTime(Value: Double; const TimeZoneOffset: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Double; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
-function PG2DateTime(Value: Int64): TDateTime; overload;
-procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal); overload;
+function PG2DateTime(Value: Int64; const TimeZoneOffset: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Int64; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
 function PG2Time(Value: Double): TDateTime; overload;
 procedure PG2Time(Value: Double; Out Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
@@ -167,7 +167,7 @@ function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Integer2PG(Value: Integer; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+procedure Integer2PG(Value: Integer; Buf: Pointer); {$IF defined(WITH_INLINE) and not defined(WITH_RANG_CHECK_CONSTATANT_EVALUATION_ERROR)}inline;{$IFEND}
 
 function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -175,11 +175,11 @@ procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline
 function PG2Int64(P: Pointer): Int64; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 procedure Int642PG(const Value: Int64; Buf: Pointer); {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
-{** written by EgonHugeist
-  converts a postgres numeric into a native currency value
-   @param P is a pointer to a valid numeric value
-   @return a converted currency value
-}
+/// <summary>converts a postgres "external" numeric value into a native pascal
+///  currency value.
+///  written by EgonHugeist</summary>
+/// <param>"P" is a pointer to a valid numeric value</param>
+/// <returns>a converted currency value</returns>
 function PGNumeric2Currency(P: Pointer): Currency;
 
 {** written by EgonHugeist
@@ -200,12 +200,12 @@ procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Inte
 }
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 
-{** written by EgonHugeist
-  converts a postgres numeric value into a bigdecimal value
-  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
-  @param Src the pointer to a postgres numeric value
-  @param Dst the result value to be converted
-}
+/// <author>EgonHugeist</author>
+/// <summary>converts a postgres numeric value into a formated bcd value</summary>
+/// <param>"Src" the address of the postgres binary numeric value. the buffer
+///  must have a minimum size of 4*SizeOf(Word) and maximum size of
+///  9*SizeOf(Word) bytes</param>
+/// <param>"Dst" a reference of the result value to be converted</param>
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 
 function PGCash2Currency(P: Pointer): Currency; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
@@ -214,7 +214,7 @@ procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFNDEF WITH_C5
 function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Double(P: Pointer): Double; {$IF defined(WITH_INLINE) and not defined(WITH_PG2DOUBLE_INLINE_BUG)}inline;{$IFEND}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
@@ -393,7 +393,7 @@ begin
       //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
         if TypeModifier <> -1 then begin
           Scale := (TypeModifier - VARHDRSZ) and $FFFF;
-          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF < sAlignCurrencyScale2Precision[Scale]) then
+          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF <= sAlignCurrencyScale2Precision[Scale]) then
             Result := stCurrency
         end;
       end;
@@ -916,12 +916,12 @@ begin
   {$ENDIF}
 end;
 
-function PG2DateTime(Value: Double): TDateTime;
+function PG2DateTime(Value: Double; const TimeZoneOffset: Int64): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
   fsec: Cardinal;
 begin
-  PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
+  PG2DateTime(Value, TimeZoneOffset, Year, Month, Day, Hour, Min, Sec, fsec);
   TryEncodeDate(Year, Month, Day, date);
   dt2time(Value, Hour, Min, Sec, fsec);
   TryEncodeTime(Hour, Min, Sec, fsec, Result);
@@ -955,8 +955,8 @@ begin
   {$ENDIF}
 end;
 
-procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal);
+procedure PG2DateTime(value: Double; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal);
 var
   date: Double;
   time: Double;
@@ -964,7 +964,7 @@ begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
-  time := value;
+  time := value + TimeZoneOffset;
   if Time < 0
   then date := Ceil(time / SecsPerDay)
   else date := Floor(time / SecsPerDay);
@@ -980,7 +980,7 @@ begin
   NanoFractions := NanoFractions * 1000;
 end;
 
-function PG2DateTime(Value: Int64): TDateTime;
+function PG2DateTime(Value: Int64; const TimeZoneOffset: Int64): TDateTime;
 var d: TDateTime;
   date: Int64;
   Year, Month, Day, Hour, Min, Sec: Word;
@@ -989,6 +989,8 @@ begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
+  if TimeZoneOffset <> 0 then
+    Value := Value + TimeZoneOffset;
   date := Value div USECS_PER_DAY;
   Value := Value mod USECS_PER_DAY;
   if Value < 0 then begin
@@ -1007,13 +1009,15 @@ begin
   else Result := d + Result;
 end;
 
-procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal);
+procedure PG2DateTime(Value: Int64; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal);
 var date: Int64;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
+  if TimeZoneOffset <> 0 then
+    Value := Value + TimeZoneOffset;
   date := Value div USECS_PER_DAY;
   Value := Value - (date * USECS_PER_DAY);
   if Value < 0 then begin
@@ -1028,22 +1032,42 @@ end;
 
 procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out MicroFractions: Cardinal);
 begin
-  Hour := jd div USECS_PER_HOUR;
-  jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
-  Min := jd div USECS_PER_MINUTE;
-  jd := jd - Int64(Min) * Int64(USECS_PER_MINUTE);
-  Sec := jd div USECS_PER_SEC;
-  MicroFractions := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
+  // The original algorithm has problems with negative durations. (1:00 - 2:00 = -1:00)
+  // These will result in range check errors.
+  // So we limit ourselves to positive durations and times.
+  if jd >= 0 then begin
+    Hour := jd div USECS_PER_HOUR;
+    jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
+    Min := jd div USECS_PER_MINUTE;
+    jd := jd - Int64(Min) * Int64(USECS_PER_MINUTE);
+    Sec := jd div USECS_PER_SEC;
+    MicroFractions := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
+  end else begin
+    Hour := 0;
+    Min := 0;
+    Sec := 0;
+    MicroFractions := 0;
+  end;
 end;
 
 procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out MicroFractions: Cardinal);
 begin
-  Hour := Trunc(jd / SECS_PER_HOUR);
-  jd := jd - Hour * SECS_PER_HOUR;
-  Min := Trunc(jd / SECS_PER_MINUTE);
-  jd := jd - Min * SECS_PER_MINUTE;
-  Sec := Trunc(jd);
-  MicroFractions := Trunc((jd - Sec)) * Int64(USECS_PER_SEC);
+  // The original algorithm has problems with negative durations. (1:00 - 2:00 = -1:00)
+  // These will result in range check errors.
+  // So we limit ourselves to positive durations and times.
+  if jd <= 0 then begin
+    Hour := Trunc(jd / SECS_PER_HOUR);
+    jd := jd - Hour * SECS_PER_HOUR;
+    Min := Trunc(jd / SECS_PER_MINUTE);
+    jd := jd - Min * SECS_PER_MINUTE;
+    Sec := Trunc(jd);
+    MicroFractions := Trunc((jd - Sec)) * Int64(USECS_PER_SEC);
+  end else begin
+    Hour := 0;
+    Min := 0;
+    Sec := 0;
+    MicroFractions := 0;
+  end;
 end;
 
 procedure Time2PG(const Value: TDateTime; out Result: Int64);
@@ -1521,6 +1545,7 @@ begin
   if (FactorIndexOrScale <> 0) then begin
     NBASEDigit := PWord(pWords)^;
     PWord(pWords)^ := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+	Inc(PWords, SizeOf(Word));
   end;
   {$ENDIF !ENDIAN_BIG}
   if (Weight >= 0) or (Integer(Scale) - Y = 1) then
@@ -1556,14 +1581,9 @@ end;
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{** written by EgonHugeist
-  converts a postgres numeric value into a bigdecimal value
-  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
-  @param Src the pointer to a postgres numeric value
-  @param Dst the result value to be converted
-}
 {$Q-} {$R-} //else my shift fail
 {$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
+
 
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
@@ -1807,9 +1827,10 @@ end;
 
 function PG2Double(P: Pointer): Double;
 {$IFNDEF ENDIAN_BIG}
-var i64: Int64 absolute Result;
+var i64: Int64; //circumvent bad FPC optimization
 begin
   i64 := PG2Int64(P);
+  Result:= PDouble(@i64)^;
 {$ELSE}
 begin
   Result := PDouble(P)^;

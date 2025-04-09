@@ -66,7 +66,7 @@ uses
     {$ELSE}
     DBCtrls,
     {$ENDIF}
-  {$ENDIF}
+  {$ENDIF} DB,
   ZCompatibility, ZEncoding, ZDbcProperties;
 type
 
@@ -74,6 +74,7 @@ type
   ZTestCompSQLiteBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
+    procedure Test_SF_Ticket610_ZQueryCalcFields(DataSet : TDataSet);
   published
     procedure TestUndefined_Varchar_AsString_Length;
     procedure TestCompTicket386;
@@ -81,6 +82,10 @@ type
     procedure TestTicket405;
     procedure TestTicket405_Memory;
     procedure TestTicket458;
+    procedure TestTicket503;
+    procedure TestTicket520_1;
+    procedure TestTicket520_2;
+    procedure Test_SF_Ticket610;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -96,7 +101,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE}
 
 uses
-  Variants, DB, ZDatasetUtils, ZSqlProcessor;
+  Variants, DateUtils,
+  ZDatasetUtils, ZSqlProcessor, ZAbstractRODataset, ZSysUtils;
 
 { ZTestCompSQLiteBugReport }
 
@@ -303,6 +309,96 @@ begin
   end;
 end;
 
+procedure ZTestCompSQLiteBugReport.TestTicket503;
+const
+  TABLE_CREATE2_SQL = 'CREATE TABLE IF NOT EXISTS some_table2 (field_one INTEGER PRIMARY KEY AUTOINCREMENT, field_two TEXT);';
+  TABLE_DATA2_SQL   = 'INSERT OR IGNORE INTO some_table2 VALUES (%d, '#39'foo %d'#39');';
+var attached_db, current_db: String;
+  Query: TZQuery;
+begin
+  Check(Connection <> nil);
+  attached_db := ChangeFileExt(ParamStr(0), '.sqlite');
+  if FileExists(attached_db) then
+    SysUtils.DeleteFile(attached_db);
+  current_db := Connection.Database;
+  Query := CreateQuery;
+  try
+    Connection.Database := attached_db;
+    Connection.Connect;
+    Check(Connection.Connected);
+    Connection.ExecuteDirect(TABLE_CREATE2_SQL);
+    Connection.ExecuteDirect(Format(TABLE_DATA2_SQL,[Random(10), Random(10)]));
+    Connection.Disconnect;
+    Connection.Database := DataBase;
+    Connection.Connect;
+    Check(Connection.Connected);
+    // attache second database to main database
+    Connection.ExecuteDirect(Format('ATTACH DATABASE %s AS attached_db ;', [QuotedStr(attached_db)]));
+    // select from attached database
+    Query.SQL.Text := 'SELECT * FROM attached_db.some_table2;';
+    Query.Open;
+    CheckFalse(Query.Eof);
+    with Connection.DbcConnection.GetMetadata.GetCatalogs do try
+      Check(Next);
+      CheckEquals('attached_db', GetString(FirstDbcIndex));
+      Check(Next);
+      CheckEquals('main', GetString(FirstDbcIndex));
+      CheckFalse(Next);
+    finally
+      Close;
+    end;
+  finally
+    Connection.Database := current_db;
+    Connection.Disconnect;
+    if FileExists(attached_db) then
+      SysUtils.DeleteFile(attached_db);
+    FreeAndNil(Query);
+  end;
+
+end;
+
+procedure ZTestCompSQLiteBugReport.TestTicket520_1;
+var
+  Query: TZQuery;
+  Error: Boolean;
+begin
+  Error := false;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'delete from "nonexistingtable"';
+    try
+      Query.ExecSQL;
+    except
+      Error := True;
+    end;
+    Check(Error, 'Checking wether an exception was raised for trying to insert into a nonexisting table.');
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure ZTestCompSQLiteBugReport.TestTicket520_2;
+var
+  Query: TZQuery;
+  Error: Boolean;
+begin
+  Error := false;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'insert into date_values (d_id) values (null)';
+    try
+      Query.ExecSQL;
+    except
+      Error := True;
+    end;
+    Check(Error, 'Checking wether an exception was raised, for inserting null into a not null column.');
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 procedure ZTestCompSQLiteBugReport.TestUndefined_Varchar_AsString_Length;
 var
   Query: TZQuery;
@@ -321,6 +417,55 @@ begin
   finally
     Query.Free;
   end;
+end;
+
+procedure ZTestCompSQLiteBugReport.Test_SF_Ticket610;
+var Query: TZQuery;
+  FieldDefs: TFieldDefs;
+  CalcField: TField;
+  I: Integer;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.OnCalcFields := Test_SF_Ticket610_ZQueryCalcFields;
+    Query.SQL.Text := 'SELECT * FROM TBL_SF610 ORDER BY id';
+    FieldDefs := Query.FieldDefs;
+    FieldDefs.Update;
+
+    for I := 0 to FieldDefs.Count - 1 do
+      FieldDefs[I].CreateField(Query).DataSet := Query;
+
+    CalcField := TTimeField.Create(nil);
+    CalcField.FieldName := 'calc_Zeit_pro_km';
+    CalcField.FieldKind := fkCalculated;
+    CalcField.Visible := True;
+    CalcField.DataSet := Query;
+    Query.Open;
+    Query.Filter := 'calc_Zeit_pro_km=''00:06:20''';
+    Query.Filtered := True;
+    Check(Query.RecordCount > 0);
+    Query.Filter := 'calc_Zeit_pro_km=''00:06:21''';
+    Query.Filtered := True;
+    Check(Query.RecordCount > 0);
+  finally
+    FreeAndNil(Query);
+  end;
+
+end;
+
+procedure ZTestCompSQLiteBugReport.Test_SF_Ticket610_ZQueryCalcFields(
+  DataSet: TDataSet);
+var tt: TZTime;
+    t: TDateTime;
+begin
+  t := (TZTimeField(DataSet.FieldByName('Zeit_gelaufen')).AsDateTime / DataSet.FieldByName('km_gelaufen').AsFloat);
+  ZSysUtils.DecodeDateTimeToTime(t, tt);
+  t := EncodeTime(tt.Hour, tt.Minute, tt.Second, 0);
+  if tt.Fractions >= (500 * NanoSecsPerMSec) then
+    TTimeField(DataSet.FieldByName('calc_Zeit_pro_km')).Value := DateUtils.IncSecond(t,1)
+  else
+    TTimeField(DataSet.FieldByName('calc_Zeit_pro_km')).Value := t;
 end;
 
 { ZTestCompSQLiteBugReportMBCs }
@@ -407,6 +552,7 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str2+'%''';
     {$ELSE}
@@ -416,6 +562,7 @@ begin
     CheckEquals(True, Query.RecordCount = 1);
     CheckColumnValues(Str2);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str3+'%''';
     {$ELSE}
@@ -427,6 +574,7 @@ begin
     Query.Next;
     CheckColumnValues(Str3);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str4+'%''';
     {$ELSE}
@@ -438,6 +586,7 @@ begin
     Query.Next;
     CheckColumnValues(Str4);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str5+'%''';
     {$ELSE}
@@ -449,6 +598,7 @@ begin
     Query.Next;
     CheckColumnValues(Str5);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str6+'%''';
     {$ELSE}
@@ -459,8 +609,8 @@ begin
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str6);
-
   finally
+    If Query.Active Then Query.Close;
     for i := TestRowID to TestRowID+RowCounter do
     begin
       Query.SQL.Text := 'delete from string_values where s_id = '+IntToStr(i);

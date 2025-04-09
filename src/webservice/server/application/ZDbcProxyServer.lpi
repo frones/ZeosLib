@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="11"/>
+    <Version Value="12"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
         <MainUnitHasCreateFormStatements Value="False"/>
+        <MainUnitHasTitleStatement Value="False"/>
         <MainUnitHasScaledStatement Value="False"/>
+        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="Zeos DBC Proxy Server"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
@@ -23,20 +24,16 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0"/>
     </RunParams>
-    <RequiredPackages Count="3">
+    <RequiredPackages Count="2">
       <Item1>
         <PackageName Value="wst_fcltransport"/>
       </Item1>
       <Item2>
         <PackageName Value="wst_core"/>
       </Item2>
-      <Item3>
-        <PackageName Value="sparta_generics"/>
-      </Item3>
     </RequiredPackages>
-    <Units Count="7">
+    <Units Count="17">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -69,6 +66,51 @@
         <Filename Value="..\dbcproxycleanupthread.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit6>
+      <Unit7>
+        <Filename Value="..\dbcproxysecuritymodule.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxySecurityModule"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\dbcproxyldapsecuritymodule.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyLdapSecurityModule"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\fpc_https_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\dbcproxyconfigutils.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\ZPlainProxyMgmtDriver.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="..\ZDbcProxyMgmtMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\ZDbcProxyMgmtStatement.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\ZDbcProxyMgmtDriver.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZDbcProxyMgmt"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="..\dbcproxystartupprocedures.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyStartupProcedures"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="..\dbcproxyconfigstore.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyConfigStore"/>
+      </Unit16>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -79,7 +121,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP;..\..\..\..\..\synapse;..\..\..\..\..\mdns4delphi"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
@@ -96,6 +138,11 @@
       </Checks>
       <VerifyObjMethodCallValidity Value="True"/>
     </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf2"/>
+      </Debugging>
+    </Linking>
     <Other>
       <CustomOptions Value="-dUseCThreads"/>
     </Other>

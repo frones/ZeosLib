@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZSysUtils, ZClasses,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
-  ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver;
+  ZTokenizer, ZGenericSqlAnalyser, ZPlainDriver, ZExceptions;
 
 type
   TDBLibProvider = (dpMsSQL, dpSybase);
@@ -251,10 +251,19 @@ type
     procedure ClearWarnings; override;
 
     function GetHostVersion: Integer; override;
+    function GetClientVersion: Integer; override;
   public
     function GetServerAnsiCodePage: Word;
     function GetPlainDriver: TZDBLIBPLainDriver;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -349,6 +358,7 @@ end;
 {**
   Login procedure can be overriden for special settings.
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbsetluser...." marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.InternalLogin;
 var
   Loginrec: PLOGINREC;
@@ -425,7 +435,7 @@ begin
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLApp(LoginRec, Pointer(RawTemp));
 
-    SetRawFromProperties(ConnProps_AppName);
+    SetRawFromProperties(ConnProps_Language);
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLNatLang(LoginRec, Pointer(RawTemp));
 
@@ -514,6 +524,7 @@ begin
     FPlainDriver.dbLoginFree(LoginRec);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.GetConnectionHandle: PDBPROCESS;
 begin
@@ -543,9 +554,9 @@ end;
 
 function TZDBLibConnection.AbortOperation: Integer;
 begin
- // http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.help.ocs_12.5.1.dblib/html/dblib/X57019.htm
- If FPlainDriver.dbcancel(FHandle) = DBSUCCEED Then Result := 0
-   Else Result := 1;
+  // http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.help.ocs_12.5.1.dblib/html/dblib/X57019.htm
+  If FPlainDriver.dbcancel(FHandle) = DBSUCCEED Then Result := 0
+    Else Result := 1
 end;
 
 const P4ZeroChars: array[0..3] of Byte = (Byte('0'),Byte('0'),Byte('0'),Byte('0')); //Endian save
@@ -566,7 +577,7 @@ begin
     FMetadata := nil;
   FLogMessage := Info.Values[ConnProps_CodePage];
   if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (FLogMessage = '') then
-    {$IF defined(UNICODE) or defined(LCL)}
+    {$IF defined(UNICODE) or defined(LCL) or not defined(MSWINDOWS)}
     Info.Values[ConnProps_CodePage] := 'UTF-8';
     {$ELSE}
     Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
@@ -749,6 +760,7 @@ end;
   Opens a connection to database server with specified parameters.
 }
 const textlimit: PAnsichar = '2147483647';
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbUse" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.Open;
 {$IFDEF UNICODE}
 var Tmp: RawByteString;
@@ -772,7 +784,6 @@ begin
   if FPlainDriver.dbsetopt(FHandle, FPlainDriver.GetDBOption(dboptTEXTSIZE),Pointer(textlimit), -1) <> DBSUCCEED then
     CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
   ExecuteImmediat(RawByteString('set quoted_identifier on'), lcOther);
-
   inherited Open;
 
   if TransactIsolationLevel = tiNone then
@@ -812,6 +823,7 @@ begin
     end;
   //ExecuteImmediat(RawByteString('SET NO_BROWSETABLE ON'), lcOther)
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.PrepareCallWithParams(const Name: String;
   Params: TStrings): IZCallableStatement;
@@ -963,6 +975,7 @@ begin
   end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbCmd" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.DetermineMSDateFormat;
 {$IFDEF UNICODE}
 var
@@ -991,7 +1004,9 @@ begin
     ConSettings^.ReadFormatSettings.DateFormat := 'YYYY/MM/DD';
   ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' HH:NN:SS:ZZZ';
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbcmd" marked as inline is not inlined}{$ENDIF}
 function TZDBLibConnection.DetermineMSServerCollation: String;
 {$IFDEF UNICODE}
 var
@@ -1017,10 +1032,12 @@ begin
     {$ENDIF}
   FPlainDriver.dbCancel(FHandle);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Executes simple statements immediatally.
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbcmd" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
@@ -1043,6 +1060,7 @@ begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.GetServerCollation: String;
 begin
@@ -1200,9 +1218,10 @@ begin
   //sql server and sybase do not support RO-Transaction or Sessions
   //all we have is a readonly database ...
   if Value then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.SetCatalog(const Value: string);
 var
   RawCat: RawByteString;
@@ -1220,6 +1239,7 @@ begin
     DriverManager.LogMessage(lcOther, URL.Protocol, FLogMessage);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Returns the Connection's current catalog name.
@@ -1231,6 +1251,69 @@ begin
   CheckDBLibError(lcOther, 'GETCATALOG', IImmediatelyReleasable(FWeakImmediatRelPtr));
 end;
 
+function TZDBLibConnection.GetClientVersion: Integer;
+Const
+ MAXIMUM_VER_LEN = 4;
+Var
+ pac: PAnsiChar;
+ oldindex, index, len: Cardinal;
+ ver: String;
+
+ Function FindDot: Boolean;
+ Begin
+   Result := False;
+
+   While True Do
+   Begin
+     If index >= len Then Exit;
+
+     If pac[index] = '.' Then Break;
+
+     // Avoid memory corruption. If length would be greater than we previously set, simply
+     // stop adding characters.
+     If index - oldindex <= MAXIMUM_VER_LEN Then
+       ver[index - oldindex + 1] := Char(pac[index]);
+
+     Inc(index);
+   End;
+
+   Result := True;
+ End;
+
+begin
+ Result := 0;
+
+ pac := FPlainDriver.dbVersion;
+ len := StrLen(pac);
+ If len = 0 Then Exit;
+
+ // Result := (Major version * 1000000) + (Minor version * 10000) + (Sub version * 1)
+
+ SetLength(ver, MAXIMUM_VER_LEN);
+ If Copy(pac, 1, 9) = 'freetds v' Then
+ Begin
+   // 'freetds v1.4.dev.20211204'
+
+   oldindex := 9;
+   index := oldindex;
+
+   If Not FindDot Then
+     Exit;
+
+   // Got the major version, multiply by 1000000
+   Result := 1000000 * StrToInt(Copy(ver, 1, index - oldindex));
+
+   Inc(index);
+   oldindex := index;
+
+   If Not FindDot Then
+     Exit;
+
+   // Got the minor version, multiply by 10000
+   Result := Result + 10000 * StrToInt(Copy(ver, 1, index - oldindex));
+ End;
+end;
+
 function TZDBLibConnection.GetServerAnsiCodePage: Word;
 begin
   Result := FServerAnsiCodePage;
@@ -1240,6 +1323,16 @@ function TZDBLibConnection.GetServerProvider: TZServerProvider;
 const DBLib2ServerProv: Array[TDBLIBProvider] of TZServerProvider = (spMSSQL, spASE);
 begin
   Result := DBLib2ServerProv[FProvider];
+end;
+
+function TZDBLibConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSybaseStatementAnalyser.Create;
+end;
+
+function TZDBLibConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSybaseTokenizer.Create;
 end;
 
 {**

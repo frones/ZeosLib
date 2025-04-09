@@ -67,6 +67,8 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcPostgreSQLCase = class(TZAbstractDbcSQLTestCase)
   private
+    FEventName: String;
+    procedure OnEvent(var Event: TZEventData);
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -81,15 +83,19 @@ type
     procedure Test_GENERATED_ALWAYS_64;
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_BatchDelete_equal_operator;
+    procedure Test_BatchInsert_returning;
     procedure Test_BatchDelete_in_operator;
+    procedure Test_TimezoneOffset;
+    procedure Test_Ddbc_PG_EventListener;
   end;
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 implementation
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
-uses Types,
-  SysUtils, ZTestConsts, ZSysUtils, ZVariant;
+uses Types, DateUtils,
+  SysUtils, ZTestConsts, ZSysUtils, ZVariant,
+  ZDbcUtils, ZDbcLogging;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -149,7 +155,6 @@ end;
 procedure TZTestDbcPostgreSQLCase.Test_BatchDelete_equal_operator;
 var
   Statement: IZPreparedStatement;
-  ResultSet: IZResultSet;
   IntArray: TIntegerDynArray;
 begin
   IntArray := nil;
@@ -164,7 +169,6 @@ begin
     IntArray[2] := 3;
     IntArray[3] := 4;
     CheckNotNull(Statement);
-    ResultSet := nil;
     Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
     Statement.ExecuteUpdatePrepared;
   finally
@@ -176,7 +180,6 @@ end;
 procedure TZTestDbcPostgreSQLCase.Test_BatchDelete_in_operator;
 var
   Statement: IZPreparedStatement;
-  ResultSet: IZResultSet;
   IntArray: TIntegerDynArray;
 begin
   IntArray := nil;
@@ -191,12 +194,80 @@ begin
     IntArray[2] := 3;
     IntArray[3] := 4;
     CheckNotNull(Statement);
-    ResultSet := nil;
     Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
     Statement.ExecuteUpdatePrepared;
   finally
     Connection.Rollback;
     Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_BatchInsert_returning;
+var
+  Statement: IZPreparedStatement;
+  BoolArray: TBooleanDynArray;
+  RS: IZResultSet;
+  I: Cardinal;
+begin
+  BoolArray := nil;
+  RS := nil;
+  Statement := Connection.PrepareStatement('insert into high_load(stBoolean) VALUES (?) returning hl_id');
+  Connection.ExecuteImmediat('delete from high_load where 1=1', lcExecute);
+  CheckEquals(1, Connection.StartTransaction);
+  try
+    if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(8, 0, 0) then
+      Exit;
+    SetLength(BoolArray, 4);
+    BoolArray[0] := True;
+    BoolArray[1] := False;
+    BoolArray[2] := True;
+    BoolArray[3] := False;
+    CheckNotNull(Statement);
+    Statement.SetDataArray(FirstDbcIndex, BoolArray, stBoolean);
+    I := 0;
+    RS := Statement.ExecuteQueryPrepared;
+    while RS.Next do begin
+      CheckFalse(Rs.IsNull(FirstDbcIndex));
+      Inc(I);
+    end;
+    Check(I = 4);
+  finally
+    Connection.Rollback;
+    Connection.ExecuteImmediat('delete from high_load where 1=1', lcExecute);
+    Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_Ddbc_PG_EventListener;
+var Listener: IZEventListener;
+    EndTime: TDateTime;
+    Events: TStrings;
+begin
+  Events := TStringList.Create;
+  Listener := Connection.GetEventListener(OnEvent, False, Events);
+  try
+    Check(Listener <> nil);
+    FEventName := '';
+    CheckFalse(Listener.IsListening);
+    Events.Add('zeostest');
+    Listener.Listen(Events, OnEvent);
+    Check(Listener.IsListening);
+    EndTime := IncSecond(Now, 2);
+    Connection.ExecuteImmediat('NOTIFY zeostest', lcExecute);
+    while (FEventName = '') and (EndTime > Now) do
+      Sleep(0);
+    Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+    EndTime := IncSecond(Now, 2);
+    Listener.TriggerEvent('zeostest');
+    while (FEventName = '') and (EndTime > Now) do
+      Sleep(0);
+    Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+    Listener.Unlisten;
+    CheckFalse(Listener.IsListening);
+    Connection.CloseEventListener(Listener);
+    CheckFalse(Connection.IsClosed);
+  finally
+    FreeAndNil(Events);
   end;
 end;
 
@@ -297,6 +368,69 @@ begin
   end;
 end;
 
+procedure TZTestDbcPostgreSQLCase.Test_TimezoneOffset;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  PGConn: IZPostgreSQLConnection;
+  MyTimeZoneOffset: Double;
+  Offset: Int64;
+begin
+  CheckEquals(S_OK, Connection.QueryInterface(IZPostgreSQLConnection, PGCOnn));
+
+  Statement := PGCOnn.CreateStatement;
+  CheckNotNull(Statement);
+  if not Assigned(PGConn.GetPlainDriver.PQexecParams) or not StrToBoolEx(DefineStatementParameter(Statement, DSProps_BinaryWireResultMode, 'TRUE')) then
+    Exit;
+  Statement.ExecuteUpdate('SET TIME ZONE ''Europe/Rome''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  Statement.ExecuteUpdate('SET SESSION TIME ZONE ''America/New_York''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  Statement.ExecuteUpdate('SET TIME ZONE ''Asia/Tokyo''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  Statement.ExecuteUpdate('SET TIMEZONE=''GMT''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+  Statement.Close;
+  Connection.Close;
+end;
+
 procedure TZTestDbcPostgreSQLCase.TestRegularResultSet;
 var
   Statement: IZStatement;
@@ -319,6 +453,11 @@ begin
 
   Statement.Close;
   Connection.Close;
+end;
+
+procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventData);
+begin
+  FEventName := Event.Name;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestBlobs;
@@ -562,3 +701,4 @@ initialization
   RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.
+

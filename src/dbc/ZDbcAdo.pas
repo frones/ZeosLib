@@ -62,8 +62,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainAdoDriver,
-  ZPlainAdo, ZTokenizer, ZDbcLogging;
+  ZCompatibility, ZTokenizer,
+  ZGenericSqlAnalyser, ZPlainAdoDriver, ZPlainAdo,
+  ZDbcConnection, ZDbcIntfs, ZDbcLogging;
 
 type
   {** Implements Ado Database Driver. }
@@ -71,8 +72,6 @@ type
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-    function GetMajorVersion: Integer; override;
-    function GetMinorVersion: Integer; override;
     function GetTokenizer: IZTokenizer; override;
   end;
 
@@ -95,6 +94,10 @@ type
     FHostVersion: Integer;
   protected
     FAdoConnection: ZPlainAdo.Connection;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a UTF16 encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure InternalClose; override;
   public
@@ -218,7 +221,17 @@ type
     function GetCatalog: string; override;
 
     function GetHostVersion: Integer; override;
+    /// <summary>Returns the ServicerProvider for this connection. For ODBC
+    ///  the connection must be opened to determine the provider. Otherwise
+    ///  the provider is tested against the driver names</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -234,8 +247,12 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZFastCode,
   ZPlainOleDBDriver,
+  ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
+  ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
+  ZOracleAnalyser, ZOracleToken,
   ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties, ZDbcAdoStatement,
-  ZDbcAdoMetadata, ZEncoding, ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
+  ZDbcAdoMetadata, ZEncoding, ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils,
+  ZExceptions;
 
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
@@ -257,24 +274,6 @@ end;
 function TZAdoDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZAdoConnection.Create(Url);
-end;
-
-{**
-  Gets the driver's major version number. Initially this should be 1.
-  @return this driver's major version number
-}
-function TZAdoDriver.GetMajorVersion: Integer;
-begin
-  Result := 1;
-end;
-
-{**
-  Gets the driver's minor version number. Initially this should be 0.
-  @return this driver's minor version number
-}
-function TZAdoDriver.GetMinorVersion: Integer;
-begin
-  Result := 0;
 end;
 
 function TZAdoDriver.GetTokenizer: IZTokenizer;
@@ -482,7 +481,7 @@ begin
     end;
   end else begin
     if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
-      raise EZSQLException.Create(SUnsupportedOperation);
+      raise EZUnsupportedException.Create(SUnsupportedOperation);
     S := 'SP'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
     {$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF} :=
       cSavePointSyntaxW[fServerProvider][spqtSavePoint]+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);
@@ -660,6 +659,36 @@ end;
 function TZAdoConnection.GetServerProvider: TZServerProvider;
 begin
   Result := fServerProvider;
+end;
+
+function TZAdoConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  case FServerProvider of
+    //spUnknown, spMSSQL, spMSJet,
+    spOracle: Result := TZOracleStatementAnalyser.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseStatementAnalyser.Create;
+    spPostgreSQL: Result := TZPostgreSQLStatementAnalyser.Create;
+    spIB_FB: Result := TZInterbaseStatementAnalyser.Create;
+    spMySQL: Result := TZMySQLStatementAnalyser.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericStatementAnalyser.Create;
+  end;
+end;
+
+function TZAdoConnection.GetTokenizer: IZTokenizer;
+begin
+  case FServerProvider of
+    //spUnknown, spMSJet,
+    spOracle: Result := TZOracleTokenizer.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseTokenizer.Create;
+    spPostgreSQL: Result := TZPostgreSQLTokenizer.Create;
+    spIB_FB: Result := TZInterbaseTokenizer.Create;
+    spMySQL: Result := TZMySQLTokenizer.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZAdoSQLTokenizer.Create;
+  end;
 end;
 
 procedure TZAdoConnection.HandleErrorOrWarning(

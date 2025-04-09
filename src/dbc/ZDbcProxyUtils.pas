@@ -55,19 +55,17 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
 function XMLEncode(Input: String): String;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 
 implementation
 
-{$I ZDbc.inc}
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
-
-uses SysUtils;
+uses SysUtils, ZExceptions;
 
 function XMLEncode(Input: String): String;
 var
@@ -86,7 +84,7 @@ begin
   for x := 1 to Length(Input) do begin
     case Input[x] of
       #9, #10, #13, '%': CutAndInsert('&#' + IntToStr(Ord(Input[x])) + ';');
-      #00..#8, #11, #12, #14..#31: raise Exception.Create('Character #' + IntToStr(Ord(Input[x])) + ' is not allowed in strings.');
+      #00..#8, #11, #12, #14..#31: raise EZSQLException.Create('Character #' + IntToStr(Ord(Input[x])) + ' is not allowed in strings.');
       '<': CutAndInsert('&lt;');
       '>': CutAndInsert('&gt;');
       '&': CutAndInsert('&amp;');
@@ -97,6 +95,6 @@ begin
   if Position <= Length(Input) then Result := Result + Copy(Input, Position, Length(Input));
 end;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 
 end.

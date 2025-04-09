@@ -69,101 +69,101 @@ type
   end;
 
   {** Implements a CONCAT function. }
-  TZConcatFunction = class (TZAbstractStringFunction)
+  TZConcatFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SUBSTR function. }
-  TZSubStrFunction = class (TZAbstractStringFunction)
+  TZSubStrFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a LEFT function. }
-  TZLeftFunction = class (TZAbstractStringFunction)
+  TZLeftFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a RIGHT function. }
-  TZRightFunction = class (TZAbstractStringFunction)
+  TZRightFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a STRPOS function. }
-  TZStrPosFunction = class (TZAbstractStringFunction)
+  TZStrPosFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a LENGTH function. }
-  TZLengthFunction = class (TZAbstractStringFunction)
+  TZLengthFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a UPPER function. }
-  TZUpperFunction = class (TZAbstractStringFunction)
+  TZUpperFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a LOWER function. }
-  TZLowerFunction = class (TZAbstractStringFunction)
+  TZLowerFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a CAPITALIZE function. }
-  TZCapitalizeFunction = class (TZAbstractStringFunction)
+  TZCapitalizeFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a TRIM function. }
-  TZTrimFunction = class (TZAbstractStringFunction)
+  TZTrimFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a LTRIM function. }
-  TZLTrimFunction = class (TZAbstractStringFunction)
+  TZLTrimFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a RTRIM function. }
-  TZRTrimFunction = class (TZAbstractStringFunction)
+  TZRTrimFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SOUNDEX function. }
-  TZSoundexFunction = class (TZAbstractStringFunction)
+  TZSoundexFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a LEVENSHTEINDIST function. }
-  TZLevenshteinDistanceFunction = class (TZAbstractStringFunction)
+  TZLevenshteinDistanceFunction = class (TZAbstractStringFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 Function Capitalize(const s: string; const Delims : string = '') : string;

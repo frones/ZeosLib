@@ -1,0 +1,267 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'ContactsForm'
+  ClientHeight = 653
+  ClientWidth = 449
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 3
+  object ButtonsP: TPanel
+    Align = Bottom
+    Position.Y = 613.000000000000000000
+    Size.Width = 449.000000000000000000
+    Size.Height = 40.000000000000000000
+    Size.PlatformDefault = False
+    object LoadDataBtn: TButton
+      Align = Left
+      Size.Width = 180.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'create / load data'
+      OnClick = LoadDataBtnClick
+    end
+    object Button2: TButton
+      Align = Right
+      Position.X = 269.000000000000000000
+      Size.Width = 180.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'delete data'
+      OnClick = Button2Click
+    end
+  end
+  object BindNavigator1: TBindNavigator
+    Align = Bottom
+    Position.Y = 576.000000000000000000
+    Size.Width = 449.000000000000000000
+    Size.Height = 37.000000000000000000
+    Size.PlatformDefault = False
+    DataSource = BindSourceDB12
+    xRadius = 4.000000000000000000
+    yRadius = 4.000000000000000000
+  end
+  object NameEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 8.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object SurnameEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 48.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label1: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 13.000000000000000000
+    Text = 'Name:'
+  end
+  object Label2: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 53.000000000000000000
+    Text = 'Surname:'
+  end
+  object PhoneEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 88.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label3: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 93.000000000000000000
+    Text = 'Phone:'
+  end
+  object EmailEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 128.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label4: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 133.000000000000000000
+    Text = 'E-Mail:'
+  end
+  object StreetEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 168.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label5: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 173.000000000000000000
+    Text = 'Street:'
+  end
+  object CityEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 208.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label6: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 213.000000000000000000
+    Text = 'City:'
+  end
+  object ZipCodeEdt: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    Position.X = 88.000000000000000000
+    Position.Y = 248.000000000000000000
+    Size.Width = 353.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label7: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 253.000000000000000000
+    Text = 'ZIP Code:'
+  end
+  object LocalConn: TZConnection
+    ControlsCodePage = cCP_UTF16
+    ClientCodepage = 'UTF8'
+    Catalog = ''
+    Properties.Strings = (
+      'codepage=UTF8'
+      'RawStringEncoding=DB_CP')
+    TransactIsolationLevel = tiReadCommitted
+    HostName = 'localhost'
+    Port = 0
+    Database = 'd:\projekte\let\KSV.FDB'
+    User = 'sysdba'
+    Password = 'masterkey'
+    Protocol = 'firebird'
+    LibraryLocation = 
+      'D:\Projekte\TopSales\additional\firebird-embedded-3.0.5\fbclient' +
+      '.dll'
+    Left = 16
+    Top = 8
+  end
+  object ZQuery1: TZQuery
+    Connection = LocalConn
+    Sequence = GenericS
+    SequenceField = 'ID'
+    SQL.Strings = (
+      'select * from clients')
+    Params = <>
+    Left = 64
+    Top = 8
+  end
+  object StructureProc: TZSQLProcessor
+    Params = <>
+    Script.Strings = (
+      'create generator generic start with 10;'
+      'create table clients ('
+      '  id integer not null,'
+      '  name varchar(50),'
+      '  surname varchar(50),'
+      '  phone varchar(25),'
+      '  email varchar(50),'
+      '  street varchar(50),'
+      '  city varchar(50),'
+      '  zipcode varchar(10),'
+      '  constraint pk_clients primary key (id)'
+      ');')
+    Connection = LocalConn
+    Delimiter = ';'
+    Left = 112
+    Top = 8
+  end
+  object DataProc: TZSQLProcessor
+    Params = <>
+    Script.Strings = (
+      
+        'insert into clients (id, name, surname, phone) values (1, '#39'May'#39',' +
+        ' '#39'Karl'#39', '#39'12345678'#39');'
+      
+        'insert into clients (id, name, surname, street, city) values (2,' +
+        ' '#39'Wallace'#39', '#39'Edgar'#39', '#39' Fleet Street'#39', '#39'London'#39');')
+    Connection = LocalConn
+    Delimiter = ';'
+    Left = 152
+    Top = 8
+  end
+  object GenericS: TZSequence
+    Connection = LocalConn
+    SequenceName = 'GENERIC'
+    Left = 192
+    Top = 8
+  end
+  object BindSourceDB12: TBindSourceDB
+    DataSet = ZQuery1
+    ScopeMappings = <>
+    Left = 248
+    Top = 8
+  end
+  object BindingsList1: TBindingsList
+    Methods = <>
+    OutputConverters = <>
+    Left = 292
+    Top = 5
+    object LinkControlToField1: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'NAME'
+      Control = NameEdt
+      Track = False
+    end
+    object LinkControlToField2: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'SURNAME'
+      Control = SurnameEdt
+      Track = False
+    end
+    object LinkControlToField3: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'PHONE'
+      Control = PhoneEdt
+      Track = False
+    end
+    object LinkControlToField4: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'EMAIL'
+      Control = EmailEdt
+      Track = False
+    end
+    object LinkControlToField5: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'STREET'
+      Control = StreetEdt
+      Track = False
+    end
+    object LinkControlToField6: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'ZIPCODE'
+      Control = ZipCodeEdt
+      Track = False
+    end
+    object LinkControlToField7: TLinkControlToField
+      Category = 'Schnelle Bindungen'
+      DataSource = BindSourceDB12
+      FieldName = 'CITY'
+      Control = CityEdt
+      Track = False
+    end
+  end
+end

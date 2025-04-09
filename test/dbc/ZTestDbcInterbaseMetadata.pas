@@ -185,6 +185,7 @@ begin
 end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetColumns;
+  {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "DatType..." not used} {$ENDIF}
   procedure CheckColumns(Catalog, Schema, TableName, ColumnName: string;
   DataType: SmallInt; TypeName: string; ColumnSize, BufferLength, DecimalDigits,
   Radix, Nullable: Integer; Remarks, ColumnDef: string; SqlDataType,
@@ -210,6 +211,7 @@ procedure TZInterbaseTestDbcMetadata.TestMetadataGetColumns;
     CheckEquals(OrdinalPosition, ResultSet.GetIntByName('ORDINAL_POSITION'));
     CheckEquals(UpperCase(IsNullable), UpperCase(ResultSet.GetStringByName('IS_NULLABLE')));
   end;
+  {$IFDEF FPC} {$POP} {$ENDIF}
 begin
   ResultSet := MD.GetColumns(Catalog, Schema, 'PEOPLE', '');
   CheckNotNull(ResultSet);

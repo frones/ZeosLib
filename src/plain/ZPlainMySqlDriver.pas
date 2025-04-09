@@ -72,7 +72,6 @@ const
   MYSQL_ERRMSG_SIZE    = 512;
   SQLSTATE_LENGTH      = 5;
 
-  MYSQL_PORT           = 3306;
   LOCAL_HOST           = 'localhost';
 
   { Field's flags }
@@ -236,6 +235,61 @@ const
       {MYSQL_OPT_ZSTD_COMPRESSION_LEVEL}        60111
     );
 
+const
+  TMariaDBOptionMinimumVersion: array[TMySqlOption] of Integer =
+    (
+      {MYSQL_OPT_CONNECT_TIMEOUT}               0,
+      {MYSQL_OPT_COMPRESS}                      0,
+      {MYSQL_OPT_NAMED_PIPE}                    0,
+      {MYSQL_INIT_COMMAND}                      0,
+      {MYSQL_READ_DEFAULT_FILE}                 0,
+      {MYSQL_READ_DEFAULT_GROUP}                0,
+      {MYSQL_SET_CHARSET_DIR}                   0,
+      {MYSQL_SET_CHARSET_NAME}                  0,
+      {MYSQL_OPT_LOCAL_INFILE}                  0,
+      {MYSQL_OPT_PROTOCOL}                      0,
+      {MYSQL_SHARED_MEMORY_BASE_NAME}           0,
+      {MYSQL_OPT_READ_TIMEOUT}                  0,
+      {MYSQL_OPT_WRITE_TIMEOUT}                 0,
+      {MYSQL_OPT_USE_RESULT}                    0,
+      {MYSQL_OPT_USE_REMOTE_CONNECTION}         0,
+      {MYSQL_OPT_USE_EMBEDDED_CONNECTION}       0,
+      {MYSQL_OPT_GUESS_CONNECTION}              0,
+      {MYSQL_SET_CLIENT_IP}                     0,
+      {MYSQL_SECURE_AUTH}                       0,
+      {MYSQL_REPORT_DATA_TRUNCATION}            0,
+      {MYSQL_OPT_RECONNECT}                     0,
+      {MYSQL_OPT_SSL_VERIFY_SERVER_CERT}        0,
+      {MYSQL_PLUGIN_DIR}                        0,
+      {MYSQL_DEFAULT_AUTH}                      0,
+      {MYSQL_OPT_BIND}                          0,
+      {MYSQL_OPT_SSL_KEY}                       0,
+      {MYSQL_OPT_SSL_CERT}                      0,
+      {MYSQL_OPT_SSL_CA}                        0,
+      {MYSQL_OPT_SSL_CAPATH}                    0,
+      {MYSQL_OPT_SSL_CIPHER}                    0,
+      {MYSQL_OPT_SSL_CRL}                       0,
+      {MYSQL_OPT_SSL_CRLPATH}                   0,
+      {MYSQL_OPT_CONNECT_ATTR_RESET}            0,
+      {MYSQL_OPT_CONNECT_ATTR_ADD}              0,
+      {MYSQL_OPT_CONNECT_ATTR_DELETE}           0,
+      {MYSQL_SERVER_PUBLIC_KEY}                 0,
+      {MYSQL_ENABLE_CLEARTEXT_PLUGIN}           0,
+      {MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS}  30002,
+      {MYSQL_OPT_SSL_ENFORCE}                   30002,
+      {MYSQL_OPT_MAX_ALLOWED_PACKET}            30002,
+      {MYSQL_OPT_NET_BUFFER_LENGTH}             30002,
+      {MYSQL_OPT_SSL_MODE}                      999999, // not supported
+      {MYSQL_OPT_TLS_VERSION}                   30301,
+      {MYSQL_OPT_GET_SERVER_PUBLIC_KEY}         999999, // not supported
+      {MYSQL_OPT_RETRY_COUNT}                   999999, // not supported
+      {MYSQL_OPT_OPTIONAL_RESULTSET_METADATA}   999999,
+      {MYSQL_OPT_SSL_FIPS_MODE}                 999999,
+      {MYSQL_OPT_TLS_CIPHERSUITES}              999999,
+      {MYSQL_OPT_COMPRESSION_ALGORITHMS}        999999,
+      {MYSQL_OPT_ZSTD_COMPRESSION_LEVEL}        999999
+    );
+
   STMT_INDICATOR_NTS=-1;      //String is null terminated
   STMT_INDICATOR_NONE=0;      //No semantics
   STMT_INDICATOR_NULL=1;      //NULL value
@@ -366,6 +420,11 @@ type
     FIELD_TYPE_NEWDATE   = 14,
     FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
     FIELD_TYPE_BIT       = 16, //<--ADDED by fduenas 20-06-2006
+    (*these types are not used by the client - only for the binary log*)
+    MYSQL_TYPE_TIMESTAMP2= 17,
+    MYSQL_TYPE_DATETIME2 = 18,
+    MYSQL_TYPE_TIME2     = 19,
+    (*----------------------------------------------------------------*)
     MYSQL_TYPE_JSON      = 245,
     FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
     FIELD_TYPE_ENUM      = 247,
@@ -438,6 +497,15 @@ TMYSQL_CLIENT_OPTIONS =
   CLIENT_OPT_29,    {2^29 = 536870912}
   CLIENT_SSL_VERIFY_SERVER_CERT,    {2^30 = 1073741824}
   CLIENT_REMEMBER_OPTIONS	{ = 2147483648; Enable/disable multi-results });
+
+  Tmariadb_stmt_state = (
+    MYSQL_STMT_INITTED,
+    MYSQL_STMT_PREPARED,
+    MYSQL_STMT_EXECUTED,
+    MYSQL_STMT_WAITING_USE_OR_STORE,
+    MYSQL_STMT_USE_OR_STORE_CALLED,
+    MYSQL_STMT_USER_FETCHING,// fetch_row_buff or fetch_row_unbuf
+    MARIADB_STMT_FETCH_DONE);
 
   TMysqlStmtState = (
     MYSQL_STMT_INIT_DONE = 1,
@@ -845,6 +913,8 @@ const
   LINUX_DLL56_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.19';
   LINUX_DLL57_LOCATION = 'libmysqlclient'+SharedSuffix+'.20';
   LINUX_DLL57_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.20';
+  LINUX_DLL58_LOCATION = 'libmysqlclient'+SharedSuffix+'.21';
+  LINUX_DLL58_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.21';
 {$ENDIF}
 
 type
@@ -916,6 +986,26 @@ type
     //mysql_stat:                   function(mysql: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_store_result:           function(mysql: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_thread_id:              function(mysql: PMYSQL): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From the MySQL documentations:
+    ///  Used to initiate the retrieval of a result set from the last
+    ///  query executed using the <c>mysql_real_query()</c> function on the
+    ///  database connection. Either this or the <c>mysql_store_result()</c>
+    ///  function must be called before the results of a query can be retrieved,
+    ///  and one or the other must be called to prevent the next query on that
+    ///  database connection from failing.</summary>
+    /// <param>"mysql" a mysql stmt handle, which was previously allocated by
+    ///  <c>mysql_stmt_init()</c>.</param>
+    /// <returns>an unbuffered result set or NULL if an error occurred.</returns>
+    /// <remarks>The <c>mysql_use_result()</c> function does not transfer the
+    ///  entire result set. Hence several functions like <c>mysql_num_rows()</c>
+    ///  or <c>mysql_data_seek()</c> cannot be used. <c>mysql_use_result()</c>
+    ///  will block the current connection until all result sets are retrieved
+    ///  or result set was released by <c>mysql_free_result()</c>.This reads the
+    ///  result of a querydirectly from the server without storing it in a
+    ///  temporary table or local buffer, which is somewhat faster and uses much
+    ///  less memory than <c>mysql_store_result()</c>. The client allocates
+    ///  memory only for the current row and a communication buffer that may
+    ///  grow up to max_allowed_packet bytes.</remarks>
     mysql_use_result:             function(mysql: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     { Set up and bring down a thread; these function should be called for each thread in an application which
@@ -969,6 +1059,31 @@ type
     mysql_stmt_free_result:       function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_init:              function(mysql: PMYSQL): PMYSQL_STMT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_insert_id:         function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From the MySQL documentations:
+    ///  This function is used when you use prepared CALL statements to
+    ///  execute stored procedures, which can return multiple result sets. Use a
+    ///  loop that calls <c>mysql_stmt_next_result()</c> to determine whether
+    ///  there are more results. If a procedure has OUT or INOUT parameters,
+    ///  their values will be returned as a single-row result set following any
+    ///  other result sets. The values will appear in the order in which they
+    ///  are declared in the procedure parameter list.</summary>
+    /// <returns>a status to indicate whether more results exist. <c>0</c> if
+    ///  Successful and there are more results; <c>-1</c> if Successful and
+    ///  there are no more results; Greater than <c>0</c>An error occurred. If
+    ///  <c>mysql_stmt_next_result()</c> returns an error, there are no more
+    ///  results.</returns>
+    /// <param>"mysql" a mysql stmt handle, which was previously allocated by
+    ///  <c>mysql_stmt_init()</c>.</param>
+    /// <remarks>Before each call to <c>mysql_stmt_next_result()</c>, you must
+    ///  call <c>mysql_stmt_free_result()</c> for the current result if it
+    ///  produced a result set (rather than just a result status). After calling
+    ///  <c>mysql_stmt_next_result()</c> the state of the connection is as if you
+    ///  had called <c>mysql_stmt_execute()</c>. This means that you can call
+    ///  <c>mysql_stmt_bind_result()</c>, <c>mysql_stmt_affected_rows()</c>, and
+    ///  so forth. It is also possible to test whether there are more results by
+    ///  calling <c>mysql_stms_more_results()</c>. However, this function does
+    ///  not change the connection state, so if it returns true, you must still
+    ///  call <c>mysql_stmt_next_result()</c> to advance to the next result.</remarks>
     mysql_stmt_next_result:       function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_num_rows:          function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_param_count:       function(stmt: PMYSQL_STMT): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -1037,6 +1152,10 @@ type
     function GetDescription: string; override;
   end;
 
+  TZMariaDBPlainDriver = class(TZMySQLPlainDriver)
+  public
+    function GetProtocol: string; override;
+  end;
 {$ENDIF ZEOS_DISABLE_MYSQL}
 
 implementation
@@ -1295,6 +1414,8 @@ begin
   FLoader.AddLocation(LINUX_DLL56_LOCATION_EMBEDDED);
   FLoader.AddLocation(LINUX_DLL57_LOCATION);
   FLoader.AddLocation(LINUX_DLL57_LOCATION_EMBEDDED);
+  FLoader.AddLocation(LINUX_DLL58_LOCATION);
+  FLoader.AddLocation(LINUX_DLL58_LOCATION_EMBEDDED);
 {$ENDIF}
   LoadCodePages;
 end;
@@ -1312,6 +1433,13 @@ end;
 function TZMySQLPlainDriver.IsMariaDBDriver: Boolean;
 begin
   Result := FIsMariaDBDriver;
+end;
+
+  { TZMariaDBPlainDriver }
+
+function TZMariaDBPlainDriver.GetProtocol: string;
+begin
+  Result := 'mariadb';
 end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}

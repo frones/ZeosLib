@@ -54,8 +54,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, {Messages, }Classes, ZDbcIntfs, DB, {Forms,}
-  ZCompatibility, ZAbstractConnection, ZSequence, //Dialogs,
+  SysUtils, {Messages, }Classes, ZDbcIntfs, {Forms,}
+  ZCompatibility, ZAbstractConnection, //Dialogs,
   ZConnectionGroup ;
 (*
 {$IFNDEF FPC}
@@ -75,7 +75,7 @@ type
   end;
 
 type
-  TZGroupedConnection  = class(tZAbstractConnection)
+  TZGroupedConnection  = class(TZAbstractConnection)
   protected
     FZConnectionGroup: TZConnectionGroup;
     FZConnectionGroupLink: TZConnectionGroupLink;
@@ -143,19 +143,14 @@ begin
   InternalZConnectionGroupChanged(Self, FZConnectionGroup);
 end;
 *)
-procedure TZGroupedConnection .Notification(AComponent: TComponent;
+procedure TZGroupedConnection.Notification(AComponent: TComponent;
   Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
 
-  if (Operation = opRemove) then
-  begin
-    if (AComponent is TDataset) then
-      UnregisterDataSet(TDataset(AComponent));
-    if (AComponent is TZSequence) then
-      UnregisterSequence(TZSequence(AComponent));
-    if (AComponent = FZConnectionGroup) then
-      FZConnectionGroup := nil;
+  if (Operation = opRemove) then begin
+    if IsZeosConnectionComponent(AComponent) then
+      UnregisterComponent(AComponent);
   end;
 end;
 

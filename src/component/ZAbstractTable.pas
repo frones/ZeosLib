@@ -61,10 +61,9 @@ uses
 
 type
 
-  {**
-    Abstract dataset component which works with one specified table.
-  }
-  TZAbstractTable = class(TZAbstractDataset)
+  /// <summary>Implements an abstract dataset component which works with one
+  ///  specified table.</summary>
+  TZAbstractTable = class(TZAbstractRWTxnUpdateObjDataSet)
   private
     FTableName: string;
 
@@ -73,8 +72,8 @@ type
     procedure SetTableName(const Value: string);
 
   protected
-  {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
+  {$IFDEF WITH_IPROVIDER}
     {$IFDEF  WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     {$ELSE}
@@ -123,11 +122,10 @@ begin
     FTableName := Value;
     if Value <> '' then
       SQL.Text := Format('SELECT * FROM %s', [FTableName])
-    else SQL.Text := '';
+    else
+      SQL.Text := '';
   end;
 end;
-
-{$IFDEF WITH_IPROVIDER}
 
 {**
   Checks if dataset can execute SQL queries?
@@ -138,6 +136,7 @@ begin
   Result := False;
 end;
 
+{$IFDEF WITH_IPROVIDER}
 {**
   Gets the name of the table.
   @returns the name of this table.

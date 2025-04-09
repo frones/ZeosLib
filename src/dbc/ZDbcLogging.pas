@@ -131,7 +131,7 @@ begin
   Result := EmptyRaw;
   SQLWriter := TZSQLStringWriter.Create(100+Length(LoggingEvent.Message)+Length(LoggingEvent.Error));
   try
-    SQLWriter.AddDateTime(LoggingEvent.Timestamp, 'yyyy-mm-dd hh:mm:ss.fff', Result);
+    SQLWriter.AddDateTime(LoggingEvent.Timestamp, 'yyyy-mm-dd hh:nn:ss.fff', Result);
     SQLWriter.AddText(' cat: ', Result);
     case LoggingEvent.Category of
       lcConnect: SQLWriter.AddText('Connect', Result);

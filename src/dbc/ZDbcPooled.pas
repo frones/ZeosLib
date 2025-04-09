@@ -56,8 +56,9 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, DateUtils, SysUtils,
-  ZCompatibility, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
-  ZMessages, ZVariant, ZDbcLogging;
+  ZCompatibility, ZTokenizer, ZMessages, ZVariant,
+  ZGenericSqlAnalyser, ZPlainDriver,
+  ZDbcConnection, ZDbcIntfs, ZDbcLogging, ZExceptions;
 
 type
   TConnectionPool = class;
@@ -121,6 +122,7 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FUseMetadata: Boolean;
+    FConnectionLossHandler: TOnConnectionLostError;
     /// <summary>Get's the owner connection that produced that object instance.
     /// </summary>
     /// <returns>the connection object interface.</returns>
@@ -197,7 +199,6 @@ type
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings): IZCallableStatement;
-    function CreateNotification(const Event: string): IZNotification;
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
     function NativeSQL(const SQL: string): string;
     /// <summary>Sets this connection's auto-commit mode. If a connection is in
@@ -310,6 +311,25 @@ type
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
     function GetServerProvider: TZServerProvider;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
+    /// <c>false</c> otherwise.</returns>
+    function SupportsEventListener: Boolean;
+    /// <summary>Closes the event alerter.</summary>
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventListener(var Value: IZEventListener);
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -463,8 +483,8 @@ begin
     if FWait then
       Sleep(100)
     else
-      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Connection pool reached the maximum limit');
-            //2013-10-13 mse: please replace non ASCII characters (>127) by the 
+      raise EZSQLException.Create(ClassName + '.Acquire'+LineEnding+'Connection pool reached the maximum limit');
+            //2013-10-13 mse: please replace non ASCII characters (>127) by the
             //#nnn notation in order to have encoding independent sources
   until False;
 
@@ -498,7 +518,7 @@ begin
           FConnections[I] := nil;
         finally
           FCriticalSection.Leave;
-          raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Error while trying to acquire a new connection'+LineEnding+LineEnding+E.Message);
+          raise EZSQLException.Create(ClassName + '.Acquire'+LineEnding+'Error while trying to acquire a new connection'+LineEnding+LineEnding+E.Message);
         end;
       end;
     end;
@@ -562,6 +582,7 @@ destructor TZDbcPooledConnection.Destroy;
 begin
   if FConnection <> nil then
   begin
+    FConnection.SetOnConnectionLostErrorHandler(nil);
     FConnectionPool.ReturnToPool(FConnection);
     FConnection := nil;
   end;
@@ -573,8 +594,10 @@ end;
 
 function TZDbcPooledConnection.GetConnection: IZConnection;
 begin
-  if FConnection = nil then
+  if FConnection = nil then begin
     FConnection := FConnectionPool.Acquire;
+    FConnection.SetOnConnectionLostErrorHandler(FConnectionLossHandler);
+  end;
   Result := FConnection;
 end;
 
@@ -598,6 +621,11 @@ begin
   Result := GetConnection.StartTransaction;
 end;
 
+function TZDbcPooledConnection.SupportsEventListener: Boolean;
+begin
+  Result := False;
+end;
+
 {**
   get current connection URL from TZURL. Nice to clone the connection by using
   the IZDriverManager
@@ -612,9 +640,15 @@ procedure TZDbcPooledConnection.Close;
 begin
   if FConnection <> nil then
   begin
+    FConnection.SetOnConnectionLostErrorHandler(nil);
     FConnectionPool.ReturnToPool(FConnection);
     FConnection := nil;
   end;
+end;
+
+procedure TZDbcPooledConnection.CloseEventListener(var Value: IZEventListener);
+begin
+  Value := nil;
 end;
 
 procedure TZDbcPooledConnection.Commit;
@@ -625,11 +659,6 @@ end;
 procedure TZDbcPooledConnection.CommitPrepared(const transactionid: string);
 begin
   GetConnection.CommitPrepared(transactionid);
-end;
-
-function TZDbcPooledConnection.CreateNotification(const Event: string): IZNotification;
-begin
-  Result := GetConnection.CreateNotification(Event);
 end;
 
 function TZDbcPooledConnection.CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
@@ -710,9 +739,19 @@ begin
   Result := GetConnection.GetServerProvider;
 end;
 
+function TZDbcPooledConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := GetConnection.GetStatementAnalyser;
+end;
+
 function TZDbcPooledConnection.GetConnectionTransaction: IZTransaction;
 begin
   Result := GetConnection.GetConnectionTransaction;
+end;
+
+function TZDbcPooledConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := GetConnection.GetTokenizer;
 end;
 
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;
@@ -779,7 +818,9 @@ end;
 procedure TZDbcPooledConnection.SetOnConnectionLostErrorHandler(
   Handler: TOnConnectionLostError);
 begin
-  GetConnection.SetOnConnectionLostErrorHandler(Handler);
+  if Assigned(FConnection) then
+    FConnection.SetOnConnectionLostErrorHandler(Handler);
+  FConnectionLossHandler := Handler;
 end;
 
 procedure TZDbcPooledConnection.RegisterStatement(const Value: IZStatement);
@@ -839,7 +880,10 @@ end;
   side
 }function TZDbcPooledConnection.AbortOperation: Integer;
 begin
-  Result := GetConnection.AbortOperation;
+  If Assigned(FConnection) Then
+    Result := FConnection.AbortOperation
+  Else
+    Result := 0;
 end;
 
 {**
@@ -874,6 +918,14 @@ function TZDbcPooledConnection.GetEscapeString(const Value: RawByteString): RawB
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;
+
+{$IFDEF FPC}{$PUSH}{$WARN 5024 off : Parameter "Handler, Options" not used} {$ENDIF}
+function TZDbcPooledConnection.GetEventListener(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventListener;
+begin
+  Result := nil;
+end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin
@@ -1004,7 +1056,7 @@ begin
   if Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix then
     Result := 'zdbc:' + Copy(URL, 5 + Length(PooledPrefix) + 1, Length(URL))
   else
-    raise Exception.Create('TZDbcPooledConnectionDriver.GetRealURL - URL must start with ''zdbc:' + PooledPrefix+ '''');
+    raise EZSQLException.Create('TZDbcPooledConnectionDriver.GetRealURL - URL must start with ''zdbc:' + PooledPrefix+ '''');
 end;
 
 var
@@ -1054,4 +1106,3 @@ finalization
 
 {$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 end.
-

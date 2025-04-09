@@ -432,7 +432,9 @@ function PosEx(const SubStr, S: UnicodeString; Offset: Integer = 1): Integer; ov
 
 function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$IFDEF HAVE_TRUE_NATIVE_TYPES}//some newer delphi's can't determine the correct overload ):
+{$IFNDEF NATIVEINT_WEAK_REFERENCE}
 function GetOrdinalDigits(const Value: NativeInt; out U: NativeUInt; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$ENDIF}
 {$ENDIF}
 function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Cardinal): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -3952,7 +3954,11 @@ begin
   if Pointer(S) = nil then
     goto jmpFail;
   Buf := Pointer(S);
-  PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  {$IFDEF WITH_INLINE}
+  PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  {$ELSE}
+  PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+  {$ENDIF}
   P := PEnd;
   Result := ValRawUInt32(Buf, PEnd);
   if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -4067,7 +4073,11 @@ begin
   if Pointer(S) = nil then
     goto jmpFail;
   Buf := Pointer(S);
+  {$IFDEF WITH_INLINE}
+  PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  {$ELSE}
   PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+  {$ENDIF}
   P := PEnd;
   Result := ValUnicodeUInt32(Buf, PEnd);
   if (PEnd <> P) and (PWord(PEnd)^ <> Word(' ')) then
@@ -4326,7 +4336,11 @@ begin
   then Result := Default
   else begin
     Buf := Pointer(S);
-    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$IFDEF WITH_INLINE}
+    PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$ELSE}
+    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+    {$ENDIF}
     P := PEnd;
     Result := ValRawUInt32(Buf, PEnd);
     if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -4466,7 +4480,11 @@ begin
   then Result := Default
   else begin
     Buf := Pointer(S);
-    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$IFDEF WITH_INLINE}
+    PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$ELSE}
+    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+    {$ENDIF}
     P := PEnd;
     Result := ValUnicodeUInt32(Buf, PEnd);
     if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -7205,6 +7223,7 @@ begin
 end;
 
 {$IFDEF HAVE_TRUE_NATIVE_TYPES}//some newer delphi's can't determine the correct overload ):
+{$IFNDEF NATIVEINT_WEAK_REFERENCE}
 function GetOrdinalDigits(const Value: NativeInt; out U: NativeUInt; out Negative: Boolean): Byte;
 begin
   Negative := Value < 0;
@@ -7213,6 +7232,7 @@ begin
   else U := Value;
   Result := GetOrdinalDigits(U)
 end;
+{$ENDIF}
 {$ENDIF}
 
 function GetOrdinalDigits(Value: Cardinal): Byte;
@@ -8040,9 +8060,9 @@ begin;
     Result:=0;
     exit;
     end;
-  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  len := Length(Str)-1;
-  lenSub := Length(SubStr)-1;
+  {$IFDEF WITH_INLINE}
+  len := Length(Str){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  lenSub := Length(SubStr){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   {$else}
   len:=PLengthInt(p-StringLenOffSet)^;
   lenSub:=PLengthInt(pSub-StringLenOffSet)^;

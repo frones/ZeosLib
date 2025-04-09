@@ -1,3 +1,54 @@
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{            WebService Proxy Client Library              }
+{                                                         }
+{         Originally written by Jan Baumgarten            }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2020 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
 unit ZDbcProxyIntf;
 
 {$mode delphi}{$H+}
@@ -10,9 +61,10 @@ uses
 
   type IZDbcProxy = Interface(IUnknown)
     ['{374CAA55-95CD-44FE-8FF3-F90BF8D1DF8C}']
-    procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
+    procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
     procedure Disconnect; safecall;
     procedure SetAutoCommit(const Value: LongBool); safecall;
+    function StartTransaction: Integer; safecall;
     procedure Commit; safecall;
     procedure Rollback; safecall;
     function SetProperties(const Properties : WideString): WideString; safecall;
@@ -34,6 +86,7 @@ uses
     function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; safecall;
     function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; safecall;
     function GetCharacterSets(): WideString; safecall;
+    function GetPublicKeys: WideString; safecall;
   end;
 
   type TZDbcProxy = class(TInterfacedObject, IZDbcProxy, ISupportErrorInfo)
@@ -47,9 +100,10 @@ uses
       // this is necessary for safecall exception handling
       function SafeCallException(ExceptObject: TObject; ExceptAddr: Pointer): HResult; override;
 
-      procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
+      procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
       procedure Disconnect; safecall;
       procedure SetAutoCommit(const Value: LongBool); safecall;
+      function StartTransaction: Integer; safecall;
       procedure Commit; safecall;
       procedure Rollback; safecall;
       function SetProperties(const Properties : WideString): WideString; safecall;
@@ -71,6 +125,7 @@ uses
       function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; safecall;
       function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; safecall;
       function GetCharacterSets(): WideString; safecall;
+      function GetPublicKeys: WideString; safecall;
 
       constructor Create;
       destructor Destroy; override;
@@ -79,12 +134,12 @@ uses
 implementation
 
 uses ComObj,
-     fpc_http_protocol, soap_formatter, zeosproxy_proxy;
+     fpc_http_protocol, soap_formatter, zeosproxy_proxy, ZExceptions;
 
 procedure TZDbcProxy.CheckConnected;
 begin
   if not Assigned(FService) then
-    raise Exception.Create('No connection has been established yet!');
+    raise EZSQLException.Create('No connection has been established yet!');
 end;
 
 function TZDbcProxy.InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
@@ -109,26 +164,34 @@ begin
  FService := nil;
 end;
 
-procedure TZDbcProxy.Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
+procedure TZDbcProxy.Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
 var
-  Url: UnicodeString;
   MyDbInfo: UnicodeString;
   MyInProperties: UnicodeString;
   MyOutProperties: UnicodeString;
+
+  Transport: String;
+  ProtocolEnd: Integer;
 begin
- Url := 'http://' + DbHost + ':8000/services/IZeosProxy';
- //FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', 'http://127.0.0.1:8000/services/IZeosProxy');
- FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', Url);
+  // derive the transport from the protocol
+  Transport := UTF8String(ServiceEndpoint);
+  ProtocolEnd := Pos('://', Transport);
+  Transport := UpperCase(Copy(Transport, 1, ProtocolEnd - 1));
 
-// if using a reverse proxy, this seems to work well:
-// Url := 'https://' + DbHost + '/services/IZeosProxy';
-// //FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', 'http://127.0.0.1:8000/services/IZeosProxy');
-// FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', Url);
+  if (Transport <> 'HTTP') and (Transport <> 'HTTPS') then
+    raise EZSQLException.Create('Protocols other than http and https are not supported. Given: ' + LowerCase(Transport));
 
- MyInProperties := Properties;
- FConnectionID := FService.Connect(UserName, Password, DbName, MyInProperties, MyOutProperties, MyDbInfo);
- Properties := MyOutProperties;
- DbInfo := MyDbInfo;
+  if Transport = 'HTTPS' then
+    Transport := 'HTTP';
+  Transport := Transport + ':';
+
+  //Create the webservice proxy
+  FService := wst_CreateInstance_IZeosProxy('SOAP:', Transport, UTF8Encode(ServiceEndpoint));
+
+  MyInProperties := Properties;
+  FConnectionID := FService.Connect(UserName, Password, DbName, MyInProperties, MyOutProperties, MyDbInfo);
+  Properties := MyOutProperties;
+  DbInfo := MyDbInfo;
 end;
 
 procedure TZDbcProxy.Disconnect; safecall;
@@ -145,6 +208,12 @@ procedure TZDbcProxy.SetAutoCommit(const Value: LongBool); safecall;
 begin
   CheckConnected;
   FService.SetAutoCommit(FConnectionID, Value);
+end;
+
+function TZDbcProxy.StartTransaction: Integer; safecall;
+begin
+ CheckConnected;
+ Result := FService.StartTransaction(FConnectionID);
 end;
 
 procedure TZDbcProxy.Commit; safecall;
@@ -273,8 +342,13 @@ begin
  Result := FService.GetCharacterSets(FConnectionID);
 end;
 
+function TZDbcProxy.GetPublicKeys: WideString; safecall;
+begin
+ CheckConnected;
+ Result := FService.GetPublicKeys();
+end;
+
 initialization
   FPC_RegisterHTTP_Transport();
 
 end.
-

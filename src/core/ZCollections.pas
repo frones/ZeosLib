@@ -82,7 +82,7 @@ type
   /// <summary>a reference to Interface list types.</summary>
   PZInterfaceList = ^TZInterfaceList;
 
-  /// <summary>Implenments a collection of interfaces.</summary>
+  /// <summary>Implements a collection of interfaces.</summary>
   TZCollection = class(TZAbstractObject, IZCollection, IZClonnable)
   private
     FList: PZInterfaceList;
@@ -176,7 +176,7 @@ type
     property Items[Index: Integer]: IZInterface read Get write Put; default;
   end;
 
-  {** Implements an unmodifiable collection of interfaces. }
+  /// <summary>Implements an unmodifiable collection of interfaces.</summary>
   TZUnmodifiableCollection = class(TZAbstractObject, IZCollection, IZClonnable)
   private
     FCollection: IZCollection;
@@ -441,7 +441,6 @@ begin
   Result := FCount;
   if Result = FCapacity then
     Grow;
-//  FList^[Result] := Item as IZInterface; // enourmous Memory Hole in FPC > 2.0.2 Release
   FList^[Result] := Item;
   Inc(FCount);
 end;

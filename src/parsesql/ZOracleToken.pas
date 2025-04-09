@@ -55,7 +55,12 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_ORACLE}
+{$IF defined(ZEOS_DISABLE_ORACLE) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZOracleToken}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZOracleToken}
 uses
   Classes, ZTokenizer, ZGenericSqlToken;
 
@@ -95,11 +100,11 @@ type
       out IngoreParam: Boolean): String; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_ORACLE}
+{$ENDIF EMPTY_ZOracleToken}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_ORACLE}
+{$IFNDEF EMPTY_ZOracleToken}
 
 { TZOracleSymbolState }
 
@@ -182,13 +187,12 @@ begin
   P^ := ':';
   Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
   ParamIndex := LookUpList.IndexOf(ParamName);
-  if ParamIndex < 0 then begin
+  if ParamIndex < 0 then
     ParamIndex := LookUpList.Add(ParamName);
-    IngoreParam := False;
-  end else IngoreParam := True;
+  IngoreParam := False;
 end;
 
-{$ENDIF ZEOS_DISABLE_ORACLE}
+{$ENDIF EMPTY_ZOracleToken}
 
 end.
 

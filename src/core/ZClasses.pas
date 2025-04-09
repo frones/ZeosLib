@@ -64,11 +64,24 @@ uses
 const
   ZEOS_MAJOR_VERSION = 8;
   ZEOS_MINOR_VERSION = 0;
-  ZEOS_SUB_VERSION = 0;
+  ZEOS_SUB_VERSION = 1;
   ZEOS_STATUS = 'beta';
-  ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
+  ZEOS_VERSION = {$IF ZEOS_MAJOR_VERSION > 9}
+                 Char(48+ZEOS_MAJOR_VERSION div 10)+Char(48+ZEOS_MAJOR_VERSION mod 10)+'.'+
+                 {$ELSE}
+                 Char(48+ZEOS_MAJOR_VERSION)+'.'+
+                 {$IFEND}
+                 {$IF ZEOS_MINOR_VERSION > 9}
+                 Char(48+ZEOS_MINOR_VERSION div 10)+Char(48+ZEOS_MINOR_VERSION mod 10)+'.'+
+                 {$ELSE}
                  Char(48+ZEOS_MINOR_VERSION)+'.'+
-                 Char(48+ZEOS_SUB_VERSION)+'-'+ZEOS_STATUS;
+                 {$IFEND}
+                 {$IF ZEOS_SUB_VERSION > 9}
+                 Char(48+ZEOS_SUB_VERSION div 10)+Char(48+ZEOS_SUB_VERSION mod 10)+'-'+
+                 {$ELSE}
+                 Char(48+ZEOS_SUB_VERSION)+'-'+
+                 {$IFEND}
+                 ZEOS_STATUS;
 
 type
   {$IFDEF OLDFPC}
@@ -424,7 +437,12 @@ type
     /// <summary>Adds ascii7 text from a UnicodeString.</summary>
     /// <param>"AsciiValue" the source string.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddAscii7UTF16Text(const AsciiValue: UnicodeString; var Result: RawByteString);
+    procedure AddAscii7UTF16Text(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
+    /// <summary>Adds ascii7 text from a UTF16 buffer.</summary>
+    /// <param>"Buf" the source buffer.</param>
+    /// <param>"Len" the length in words of the source buffer.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
+    procedure AddAscii7UTF16Text(Buf: PWideChar; Len: NativeUInt; var Result: RawByteString); overload;
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     /// <summary>Adds ascii7 text from a UnicodeString.</summary>
     /// <param>"AsciiValue" the source string.</param>
@@ -506,7 +524,7 @@ type
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddDecimal(const Value: TBCD; var Result: RawByteString); overload;
+    procedure AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; var Result: RawByteString); overload;
     /// <summary>adds a TDateTime value as sql date representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -518,7 +536,7 @@ type
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Format" the format pattern.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddDate(const Value: TZDate; const Format: String; var Result: RawByteString); overload;
+    procedure AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate; const Format: String; var Result: RawByteString); overload;
     /// <summary>adds a TDateTime value as sql time representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -530,7 +548,7 @@ type
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Format" the format pattern.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddTime(const Value: TZTime; const Format: String; var Result: RawByteString); overload;
+    procedure AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime; const Format: String; var Result: RawByteString); overload;
     /// <summary>adds a TDateTime value as sql timestamp representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -542,13 +560,13 @@ type
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Format" the format pattern.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddTimeStamp(const Value: TZTimeStamp; const Format: String; var Result: RawByteString);
+    procedure AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp; const Format: String; var Result: RawByteString);
     /// <summary>adds a GUID value as sql representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Options" the conversion options.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
+    procedure AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
     /// <summary>finalize the Result, flush the buffer into the string</summary>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure Finalize(var Result: RawByteString);
@@ -567,6 +585,9 @@ type
     /// <summary>add a line feed if neiter buffer nor result is empty.</summary>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddLineFeedIfNotEmpty(var Result: RawByteString);
+    /// <summary>Return the current length if the String get's finalized.</summary>
+    /// <returns>the Length of the string in bytes.</returns>
+    function GetCurrentLength(const Current: RawByteString): Cardinal;
   end;
 
   /// <author>EgonHugeist</author>
@@ -707,7 +728,7 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddDecimal(const Value: TBCD; var Result: UnicodeString); overload;
+    procedure AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; var Result: UnicodeString); overload;
     /// <summary>adds a TDateTime value as sql date representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -717,7 +738,7 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddDate(const Value: TZDate; const Format: String; var Result: UnicodeString); overload;
+    procedure AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate; const Format: String; var Result: UnicodeString); overload;
     /// <summary>adds a TDateTime value as sql time representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -727,7 +748,7 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddTime(const Value: TZTime; const Format: String; var Result: UnicodeString); overload;
+    procedure AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime; const Format: String; var Result: UnicodeString); overload;
     /// <summary>adds a TDateTime value as sql timestamp representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -737,13 +758,13 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddTimeStamp(const Value: TZTimeStamp; const Format: String; var Result: UnicodeString);
+    procedure AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp; const Format: String; var Result: UnicodeString);
     /// <summary>adds a GUID value as sql representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Options" the conversion options.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
+    procedure AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
     /// <summary>finalize the Result, flush the buffer into the string</summary>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure Finalize(var Result: UnicodeString);
@@ -762,6 +783,9 @@ type
     /// <summary>add a line feed if neiter buffer nor result is empty.</summary>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddLineFeedIfNotEmpty(var Result: UnicodeString);
+    /// <summary>Return the current length if the String get's finalized.</summary>
+    /// <returns>the Length of the string in words.</returns>
+    function GetCurrentLength(const Current: UnicodeString): Cardinal;
   end;
 
   /// <author>EgonHugeist</author>
@@ -773,18 +797,12 @@ type
   ///  designed to use one memory block with an untyped array of elements.</summary>
   TZCustomElementList = class(TObject)
   private
-    FCount, FCapacity: NativeInt;
-    FElementSize: Cardinal;
     FElementNeedsFinalize: Boolean;
   protected
+    FCount, FCapacity: NativeInt;
+    FElementSize: Cardinal;
     FElements: Pointer; //the buffer of the elements
   protected
-    /// <summary>Get the address of an element in the list. It is an error
-    ///  remembering the address while the element capacity changes. The address
-    ///  might be invalid then.</summary>
-    /// <param>"Index" the index of the element.</param>
-    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
-    function Get(Index: NativeInt): Pointer;
     /// <summary>Grows the Memory used for the array of elements.
     ///  If ElementNeedsFinalize is set to true, the memory will be zeroed out.
     ///  </summary>
@@ -795,7 +813,6 @@ type
     ///  such as Strings, Objects etc.</summary>
     /// <param>"Ptr" the address of the element an action happens for.</param>
     /// <param>"Index" the index of the element.</param>
-    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     procedure Notify(Ptr: Pointer; Action: TListNotification); virtual;
     /// <summary>Sets a capacity of elementsizes. If capacity is less than Count
     ///  and error get's thrown. Relloc memory Otherwise. If ElementNeedsFinalize
@@ -820,7 +837,7 @@ type
     /// <summary>Raises and EListError.</summary>
     /// <param>"Msg" the error message.</param>
     /// <param>"Data" the error data.</param>
-    class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    class procedure Error(const Msg: string; Data: NativeInt); virtual;
   public
     /// <summary>Create this object and assigns main properties.</summary>
     /// <param>"ElementSize" a size of the element hold in array.</param>
@@ -831,11 +848,17 @@ type
     /// <summary>destroys this object and releases all recources.</summary>
     destructor Destroy; override;
   public
+    /// <summary>Get the address of an element in the list. It is an error
+    ///  remembering the address while the element capacity changes. The address
+    ///  might be invalid then.</summary>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    function Get(Index: NativeInt): Pointer; overload;
     /// <summary>Clears all elements and frees the memory.</summary>
     procedure Clear; virtual;
     /// <summary>Delete an element on given position.</summary>
     /// <param>"Index" the position of the element to be removed.</param>
-    procedure Delete(Index: NativeInt);
+    procedure Delete(Index: NativeInt); overload;
   public
     property Count: NativeInt read FCount write SetCount;
     property Items[Index: NativeInt]: Pointer read Get; default;
@@ -865,10 +888,46 @@ type
 
   /// <author>EgonHugeist</author>
   /// <summary>implements sort compare function.</summary>
-  TZSortCompare = function(Item1, Item2: Pointer): Integer;
+  TZCompareFunc = function(Item1, Item2: Pointer): Integer;
   /// <author>EgonHugeist</author>
   /// <summary>implements list compare object function</summary>
   TZListSortCompare = function(Item1, Item2: Pointer): Integer of object;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list of sorted custom elements</summary>
+  TZCustomUniqueElementBinarySearchList = class(TZCustomElementList)
+  protected
+    FCompare: TZCompareFunc;
+  public
+    /// <summary>Delete an element by given Value comapred to the list.</summary>
+    /// <param>"ValueToCompare" the value compared to the list items to be removed.</param>
+    procedure Delete(Element: Pointer); overload;
+    /// <summary>Get the address of an element in the list.</summary>
+    /// <param>"ValueToCompare" the Value to be found in the list.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    function Get(ValueToCompare: Pointer): Pointer; overload;
+    /// <summary>Get the Index of an element in the list. If the Element does
+    ///  not exisits the method returns the insert index </summary>
+    /// <param>"ValueToCompare" the Value to be found in the list.</param>
+    /// <param>"Index" the index if found or the insert-index if not found.</param>
+    /// <returns>Success if the element has been found in the list.</returns>
+    function Find(ElementToFind: Pointer; out Index: NativeInt): Boolean;
+    /// <summary>Get the Index of an element in the list.</summary>
+    /// <param>"ValueToCompare" the Value to be found in the list.</param>
+    /// <returns>The Index of the Element if found, -1 if otherwise.</returns>
+    function IndexOf(ElementToFind: Pointer): NativeInt;
+  public
+    /// <summary>Create this object and assigns main properties.</summary>
+    /// <param>"ElementSize" a size of the element hold in array.</param>
+    /// <param>"ElementNeedsFinalize" indicate if a users finalize is
+    ///  required on removing the items and if the memory needs to be zeroed out
+    ///  on growing the buffer.</param>
+    /// <param>"Compare" a custom compare function used to get and add the elemenets</param>
+    constructor Create(Compare: TZCompareFunc; ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+  public
+    property Count: NativeInt read FCount;
+    property Items[ValueToCompare: Pointer]: Pointer read Get;
+  end;
 
   /// <author>EgonHugeist</author>
   /// <summary>implements list of sortable custom elements</summary>
@@ -879,18 +938,29 @@ type
     /// <param>"L" an address of an element.</param>
     /// <param>"R" an address of an element.</param>
     /// <param>"Compare" a global comparision function.</param>
-    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZSortCompare); overload;
+    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZCompareFunc); overload;
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
     /// <param>"L" an address of an element.</param>
     /// <param>"R" an address of an element.</param>
     /// <param>"Compare" an object comparision function.</param>
     procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZListSortCompare); overload;
+
+    /// <summary>Performs quick sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" a global comparision function.</param>
+    procedure QuickSort(L, R: Integer; Compare: TZCompareFunc); overload;
+    /// <summary>Performs quick sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" an object comparision function.</param>
+    procedure QuickSort(L, R: Integer; Compare: TZListSortCompare); overload;
   public
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
     /// <param>"Compare" a global comparision function.</param>
-    procedure Sort(Compare: TZSortCompare); overload;
+    procedure Sort(Compare: TZCompareFunc); overload;
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
     /// <param>"Compare" an object comparision function.</param>
@@ -953,9 +1023,10 @@ type
 /// <param>"Compare" the List compare function.</param>
 procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListSortCompare);
 
+procedure QuickSort(List: PPointerList; L, R: integer; Compare: TZListSortCompare);
 implementation
 
-uses ZMessages, ZFastCode
+uses ZMessages, ZFastCode, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF}; //need for inlined FloatToText;
 
 {$IFDEF oldFPC}
@@ -1027,7 +1098,7 @@ end;
 
 function TZAbstractObject.Clone: IZInterface;
 begin
-  raise Exception.Create(SClonningIsNotSupported);
+  raise EZSQLException.Create(SClonningIsNotSupported);
   result := nil;
 end;
 
@@ -1078,8 +1149,10 @@ end;
 destructor TZThreadTimer.Destroy;
 begin
   FThread.Terminate;
-  FSignal.SetEvent; //signal to break the waittime
-  FThread.WaitFor;
+  if not TZIntervalThread(FThread).Suspended then begin
+    FSignal.SetEvent; //signal to break the waittime
+    FThread.WaitFor;
+  end;
   FreeAndNil(FThread);
   FreeAndNil(FSignal);
   inherited;
@@ -1149,7 +1222,7 @@ begin
                     FActive := not FActive;
                     FSignal.ResetEvent;
                   end;
-      else        Break;
+      else        Terminate;
     end;
 end;
 
@@ -1233,6 +1306,25 @@ begin
     Inc(PA);
     Inc(PW);
     Dec(L);
+  end;
+end;
+
+procedure TZRawSQLStringWriter.AddAscii7UTF16Text(Buf: PWideChar;
+  Len: NativeUInt; var Result: RawByteString);
+var PA: PAnsiChar;
+  PEnd: PWideChar;
+begin
+  if Buf = nil then Exit;
+  if Len < NativeUInt(FEnd-FPos) then begin
+    PA := FPos;
+    Inc(FPos, Len);
+  end else
+    PA := FlushBuff(Result, Len);
+  PEnd := Buf + Len;
+  while Buf < PEnd do begin
+    PByte(PA)^ := PWord(Buf)^;
+    Inc(PA);
+    Inc(Buf);
   end;
 end;
 
@@ -1354,6 +1446,12 @@ begin
   end;
 end;
 
+function TZRawSQLStringWriter.GetCurrentLength(
+  Const Current: RawByteString): Cardinal;
+begin
+  Result := Length(Current) + (FPos - FBuf);
+end;
+
 procedure TZRawSQLStringWriter.IncreaseCapacityTo(AnsiCharCapacity: Integer;
   var Result: RawByteString);
 begin
@@ -1439,7 +1537,7 @@ begin
   AddTextQuoted(Pointer(Value), Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, QuoteChar, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddTime(const Value: TZTime;
+procedure TZRawSQLStringWriter.AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime;
   const Format: String; var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
@@ -1455,7 +1553,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddTimeStamp(const Value: TZTimeStamp;
+procedure TZRawSQLStringWriter.AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp;
   const Format: String; var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
@@ -1620,7 +1718,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddDate(const Value: TZDate; const Format: String;
+procedure TZRawSQLStringWriter.AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate; const Format: String;
   var Result: RawByteString);
 var
   L: LengthInt;
@@ -1655,7 +1753,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddDecimal(const Value: TBCD;
+procedure TZRawSQLStringWriter.AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
   var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
@@ -1684,7 +1782,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddGUID(const Value: TGUID;
+procedure TZRawSQLStringWriter.AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID;
   Options: TGUIDConvOptions; var Result: RawByteString);
 var
   L: LengthInt;
@@ -1765,7 +1863,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddDate(const Value: TZDate;
+procedure TZUnicodeSQLStringWriter.AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate;
   const Format: String; var Result: UnicodeString);
 var
   L: LengthInt;
@@ -1799,7 +1897,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddDecimal(const Value: TBCD;
+procedure TZUnicodeSQLStringWriter.AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
   var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
@@ -1853,7 +1951,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddGUID(const Value: TGUID;
+procedure TZUnicodeSQLStringWriter.AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID;
   Options: TGUIDConvOptions; var Result: UnicodeString);
 var
   L: LengthInt;
@@ -2125,7 +2223,7 @@ begin
   AddTextQuoted(Pointer(Value), Length(Value), QuoteChar, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddTime(const Value: TZTime;
+procedure TZUnicodeSQLStringWriter.AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime;
   const Format: String; var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
@@ -2141,7 +2239,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddTimeStamp(const Value: TZTimeStamp;
+procedure TZUnicodeSQLStringWriter.AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp;
   const Format: String; var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
@@ -2244,6 +2342,12 @@ begin
   end;
 end;
 
+function TZUnicodeSQLStringWriter.GetCurrentLength(
+  const Current: UnicodeString): Cardinal;
+begin
+  Result := Length(Current) + (FPos - FBuf);
+end;
+
 procedure TZUnicodeSQLStringWriter.IncreaseCapacityTo(WideCharCapacity: Integer;
   var Result: UnicodeString);
 begin
@@ -2307,7 +2411,7 @@ begin;
       P := PNativeUInt(I)^;
       //replace i by j
       PNativeUInt(I)^ := PNativeUInt(J)^;
-      //replace i by j
+      //replace j by i savedin P
       PNativeUInt(J)^ := P;
     end;
     P := PNativeUInt(T)^;
@@ -2403,11 +2507,36 @@ begin;
     end;
   end;
 end;
-
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+
+procedure QuickSort(List: PPointerList; L, R: Integer; Compare: TZListSortCompare);
+var
+  I, J: Integer;
+  P, T: Pointer;
+begin;
+  repeat
+    I := L;
+    J := R;
+    P := List^[(L + R) shr 1];
+    repeat;
+      while Compare(List^[I], P)<0 do
+        Inc(I);         //*
+      while Compare(List^[J], P)>0 do
+        Dec(J);         //*
+      if I<=J then begin                            //**
+        T := List^[I]; List^[I]:=List^[J]; List^[J]:=T;
+        Inc(I);
+        Dec(J);
+      end;
+    until I>J;
+    if L<J then
+      QuickSort(List, L, J, Compare);      //***
+    L := I;
+  until I >= R;
+end;
 
 {$IFDEF TLIST_IS_DEPRECATED}
 function TZSortedList.Add(Item: Pointer): Integer;
@@ -2584,9 +2713,13 @@ end;
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF TLIST_ISNOT_PPOINTERLIST}
-  HybridSortSha_0AA(@List, Count, Compare);
+  //HybridSortSha_0AA(@List, Count, Compare);
+  if Count > 1 then
+    QuickSort(@List, 0, Count-1, Compare);
   {$ELSE}
-  HybridSortSha_0AA(List, Count, Compare);
+  //HybridSortSha_0AA(List, Count, Compare);
+  if Count > 1 then
+    QuickSort(List, 0, Count-1, Compare);
   {$ENDIF}
 end;
 
@@ -2626,7 +2759,7 @@ var P, P2: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) >= FCount then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   P := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
   Dec(FCount);
@@ -2682,7 +2815,7 @@ function TZCustomElementList.Get(Index: NativeInt): Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) > FCount then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
 end;
@@ -2705,7 +2838,7 @@ var P: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) > FCount then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   if FCount = FCapacity then
     Grow;
@@ -2735,14 +2868,14 @@ var P: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
-    Error(@SListCapacityError, NewCapacity);
+    Error(SListCapacityError, NewCapacity);
   {$ENDIF DISABLE_CHECKING}
   if NewCapacity <> FCapacity then begin
     if NewCapacity < FCount then
       SetCount(NewCapacity);
-    ReallocMem(FElements, NewCapacity * NativeInt(FElementSize*2));
+    ReallocMem(FElements, NewCapacity * NativeInt(FElementSize));
     if FElementNeedsFinalize and (NewCapacity>FCapacity) then begin
-      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCapacity)*FElementSize));
       FillChar(P^, NativeInt(FElementSize)*(NewCapacity-FCapacity), #0);
     end;
     FCapacity := NewCapacity;
@@ -2757,7 +2890,7 @@ var I: NativeInt;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if (NewCount <0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
-    Error(@SListCountError, NewCount);
+    Error(SListCountError, NewCount);
   {$ENDIF DISABLE_CHECKING}
   if NewCount <> FCount then begin
     if NewCount > FCapacity then
@@ -2787,7 +2920,6 @@ procedure TZExchangeableCustomElementList.BeforeDestruction;
 begin
   inherited;
   FreeMem(FElementBuffer);
-
 end;
 
 procedure TZExchangeableCustomElementList.Exchange(Item1, Item2: NativeInt);
@@ -2809,7 +2941,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
-  Compare: TZSortCompare);
+  Compare: TZCompareFunc);
 var
   I, J, T: PAnsiChar;
 begin;
@@ -2856,6 +2988,68 @@ begin;
       R := I;
     end;
   end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZSortableCustomElementList.QuickSort(L, R: Integer;
+  Compare: TZListSortCompare);
+var
+  I, J: Integer;
+  P, T, E: Pointer;
+begin;
+  repeat
+    I := L;
+    J := R;
+    P := PAnsiChar(FElements) + (((L + R) shr 1) * NativeInt(FElementSize));
+    repeat;
+      while Compare(PAnsiChar(FElements) + (I * NativeInt(FElementSize)), P)<0 do
+        Inc(I);
+      while Compare(PAnsiChar(FElements) + (J * NativeInt(FElementSize)), P)>0 do
+        Dec(J);
+      if I<=J then begin
+        T := PAnsiChar(FElements) + (I * NativeInt(FElementSize));
+        E := PAnsiChar(FElements) + (J * NativeInt(FElementSize));
+        InternalExchange(T, E);
+        Inc(I);
+        Dec(J);
+      end;
+    until I>J;
+    if L<J then
+      QuickSort(L, J, Compare);
+    L := I;
+  until I >= R;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZSortableCustomElementList.QuickSort(L, R: Integer;
+  Compare: TZCompareFunc);
+var
+  I, J: Integer;
+  P, T, E: Pointer;
+begin;
+  repeat
+    I := L;
+    J := R;
+    P := PAnsiChar(FElements) + (((L + R) shr 1) * NativeInt(FElementSize));
+    repeat;
+      while Compare(PAnsiChar(FElements) + (I * NativeInt(FElementSize)), P)<0 do
+        Inc(I);
+      while Compare(PAnsiChar(FElements) + (J * NativeInt(FElementSize)), P)>0 do
+        Dec(J);
+      if I<=J then begin
+        T := PAnsiChar(FElements) + (I * NativeInt(FElementSize));
+        E := PAnsiChar(FElements) + (J * NativeInt(FElementSize));
+        InternalExchange(T, E);
+        Inc(I);
+        Dec(J);
+      end;
+    until I>J;
+    if L<J then
+      QuickSort(L, J, Compare);
+    L := I;
+  until I >= R;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2912,8 +3106,8 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 
-procedure TZSortableCustomElementList.Sort(Compare: TZSortCompare);
-var
+procedure TZSortableCustomElementList.Sort(Compare: TZCompareFunc);
+(*var
   I, J, L, R: PAnsiChar;
 begin;
   if (FCount>1) then begin
@@ -2946,11 +3140,13 @@ begin;
       until not (Compare(L,I) < 0);
       Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
     end;
-  end;
+  end;*)
+begin
+  QuickSort(0, Count-1, Compare);
 end;
 
 procedure TZSortableCustomElementList.Sort(Compare: TZListSortCompare);
-var
+(*var
   I, J, L, R: PAnsiChar;
 begin;
   if (FCount>1) then begin
@@ -2983,7 +3179,79 @@ begin;
       until not (Compare(L,I) < 0);
       Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
     end;
+  end;*)
+begin
+  QuickSort(0, Count-1, Compare);
+end;
+
+{ TZCustomUniqueElementBinarySearchList }
+
+constructor TZCustomUniqueElementBinarySearchList.Create(Compare: TZCompareFunc;
+  ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+begin
+  inherited Create(ElementSize, ElementNeedsFinalize);
+  FCompare := Compare;
+end;
+
+procedure TZCustomUniqueElementBinarySearchList.Delete(Element: Pointer);
+var Idx: NativeInt;
+begin
+  if Find(Element, Idx) then
+    inherited Delete(Idx);
+end;
+
+function TZCustomUniqueElementBinarySearchList.Find(ElementToFind: Pointer;
+  out Index: NativeInt): Boolean;
+var
+  First, Last, Pivot: NativeInt;
+  CompareResult: Integer;
+  ElementOfList: Pointer;
+label Found;
+begin
+  Result := false;//init Result
+  Index := -1;
+  if ElementToFind = nil then
+    Exit;
+
+  First := 0; //Sets the first item of the range
+  Last := FCount-1; //Sets the last item of the range
+  //If First > Last then the searched item doesn't exist
+  //If the item is found the loop will stop
+  Pivot := 0;
+  CompareResult := 0;
+  while (First <= Last) do begin
+    Pivot := (First + Last) shr 1; //Gets the middle of the selected range
+    ElementOfList := inherited Get(Pivot);
+    CompareResult := Self.FCompare(ElementOfList, ElementToFind); //Compares the Elements in the middle with the searched one
+    if CompareResult < 0 then
+      First := Pivot + 1
+    else begin
+      Last := Pivot - 1;
+      if CompareResult = 0 then begin
+        Result := true;
+        goto Found;
+      end;
+    end;
   end;
+  if (CompareResult < 0) then
+    Inc(Pivot); //element not found return the insert index
+Found:
+  Index := Pivot;
+end;
+
+function TZCustomUniqueElementBinarySearchList.Get(ValueToCompare: Pointer): Pointer;
+var Idx: NativeInt;
+begin
+  if Find(ValueToCompare, Idx)
+  then Result := inherited Get(Idx)
+  else Result := nil;
+end;
+
+function TZCustomUniqueElementBinarySearchList.IndexOf(
+  ElementToFind: Pointer): NativeInt;
+begin
+  if not Find(ElementToFind, Result) then
+    Result := -1;
 end;
 
 end.

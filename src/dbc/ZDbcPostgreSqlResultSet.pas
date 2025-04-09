@@ -57,17 +57,20 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility, ZDbcCache, ZDbcGenericResolver,
-  ZClasses, ZDbcCachedResultSet, ZDbcPostgreSql;
+  ZClasses, ZDbcCachedResultSet, ZDbcPostgreSql, ZExceptions;
 
 type
+  /// <summary>Implements Postgres column information object.</summary>
   TZPGColumnInfo = class(TZColumnInfo)
   public
     TableOID: OID;
@@ -75,19 +78,28 @@ type
     TypeOID: OID;
   end;
 
-  {** Implements Postgres ResultSet Metadata. }
+  /// <summary>Implements Postgres ResultSet Metadata.</summary>
   TZPostgresResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
+    /// <summary>Initializes columns with additional data.</summary>
     procedure LoadColumns; override;
+    /// <summary>Clears specified column information.</summary>
+    /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
 
   { Postgres Error Class}
   EZPGConvertError = class(EZSQLException);
 
+  /// <summary>Defines a Postgres ResultSet interface.</summary>
   IZPostgresResultSet = interface(IZResultSet)
     ['{FFCDB099-053C-45B1-99D3-2099AEFBEBC8}']
+    /// <summary>Assigns the Column-Information to a Destination object list.
+    /// </summary>
+    /// <param>"Dest" a column information list.</param>
     procedure AssignColumnsInfo(const Dest: TObjectList);
+    /// <summary>Get the IZPostgreSQLConnection of the current object.</summary>
+    /// <returns>The postgres connection interface.</returns>
     function GetConnection: IZPostgreSQLConnection;
   end;
 
@@ -108,59 +120,345 @@ type
     FDecimalSeps: array[Boolean] of Char;
     FPGConnection: IZPostgreSQLConnection;
     FByteBuffer: PByteBuffer;
-    procedure ClearPGResult;
     function CreatePGConvertError(ColumnIndex: Integer; DataType: OID): EZPGConvertError;
   protected
+    /// <summary>Opens this recordset.</summary>
     procedure Open; override;
+    /// <summary>Converts a PostgreSQL native types into ZDBC SQL types.</summary>
+    /// <param>"ColumnInfo" the postgres column information object to be filled.</param>
+    /// <param>"TypeOid" a type oid.</param>
+    /// <param>"TypeModifier" a type modifier.</param>
     procedure DefinePostgreSQLToSQLType({$IFDEF AUTOREFCOUNT}var{$ENDIF}ColumnInfo: TZPGColumnInfo;
       TypeOid: Oid; TypeModifier: Integer);
     function PGRowNo: Integer;
-  public //implement
+  public //implement IZPostgresResultSet
+    /// <summary>Get the IZPostgreSQLConnection of the current object.</summary>
+    /// <returns>The postgres connection interface.</returns>
     function GetConnection: IZPostgreSQLConnection;
+    /// <summary>Assigns the Column-Information to a Destination object list.
+    /// </summary>
+    /// <param>"Dest" a column information list.</param>
     procedure AssignColumnsInfo(const Dest: TObjectList);
   public
+    /// <summary>Constructs this object, assignes main properties and
+    ///  opens the record set.</summary>
+    /// <param>"Statement" a related SQL statement interface.</param>
+    /// <param>"SQL" a SQL statement.</param>
+    /// <param>"Connection" a postgres connection interface.</param>
+    /// <param>"resAddress" a reference to the PGResult pointer.</param>
+    /// <param>"ResultFormat" a reference to the posgres result indicator.</param>
+    /// <param>"SingleRowMode" is the SingleRowMode turned on?.</param>
+    /// <param>"UndefinedVarcharAsStringLength" obsolate, sets the varchar()
+    ///  columns to a stringtype if the values is greater than zero. Note this
+    ///  leads to string truncations.</param>
     constructor Create(const Statement: IZStatement; const SQL: string;
       const Connection: IZPostgreSQLConnection; resAddress: PPGresult;
       ResultFormat: PInteger; SingleRowMode: Boolean;
       const UndefinedVarcharAsStringLength: Integer);
 
+    /// <summary>Resets the Cursor position to beforeFirst, releases server and
+    ///  client resources but keeps buffers or Column-Informations alive.</summary>
     procedure ResetCursor; override;
 
+    /// <summary>Indicates if the value of the designated column in the current
+    ///  row of this <c>ResultSet</c> object is Null.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>true</c>. <c>false</c> otherwise.</returns>
     function IsNull(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PAnsiChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver try convert the value if it's not a
+    ///  raw text value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PWideChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver will try to convert the value if it's
+    ///  not a UTF16 text value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in words.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Boolean</c> value.The driver will
+    ///  try to convert the value if it's not a Boolean value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>False</c>. The value otherwise.</returns>
     function GetBoolean(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Integer</c> value.The driver will
+    ///  try to convert the value if it's not a Integer value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetInt(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Cardinal</c> value.The driver will
+    ///  try to convert the value if it's not a Cardinal value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetUInt(ColumnIndex: Integer): Cardinal;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Single</c> value.The driver will
+    ///  try to convert the value if it's not a Single value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetLong(ColumnIndex: Integer): Int64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Int64</c> value.The driver will
+    ///  try to convert the value if it's not a Int64 value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetULong(ColumnIndex: Integer): UInt64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Single</c> value.The driver will
+    ///  try to convert the value if it's not a Single value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetFloat(ColumnIndex: Integer): Single;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Double</c> value.The driver will
+    ///  try to convert the value if it's not a Double value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDouble(ColumnIndex: Integer): Double;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Currency</c> value.The driver will
+    ///  try to convert the value if it's not a Currency value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetCurrency(ColumnIndex: Integer): Currency;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBCD</c> value.The driver will
+    ///  try to convert the value if it's not a TBCD value. The value will be
+    ///  filled with the minimum of digits and precision.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZDate</c> value. The driver will
+    ///  try to convert the value if it's not a Date value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZDATE</c>. The value otherwise.</param>
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTime</c>. The value otherwise.</returns>
     procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); reintroduce; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTimestamp</c> value. The driver
+    ///  will try to convert the value if it's not a Timestamp value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTimestamp</c>. The value otherwise.</param>
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); reintroduce; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TGUID</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-UID</c>. The value otherwise.</param>
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PByte</c> binary reference.
+    ///  Live time is per call. It's not guaranteed the address is valid after
+    ///  the row position changed, or another column of same row has been
+    ///  accessed. It is an error to write into the buffer. The driver will try
+    ///  to convert the value if it's not a binary value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZBlob</c> object.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>Blob</c> object representing the SQL <c>BLOB</c> value in
+    ///  the specified column otherwise</returns>
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
+    //---------------------------------------------------------------------
+    // Traversal/Positioning
+    //---------------------------------------------------------------------
+
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.</summary>
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
     function Next: Boolean; reintroduce;
-    {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
-    {$ENDIF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
+  public
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
-  {** Represents an interface, specific for PostgreSQL blobs. }
+  /// <summary>Defines a Postgres OID Blob interface</summary>
   IZPostgreSQLOidBlob = interface(IZBlob)
     ['{BDFB6B80-477D-4CB1-9508-9541FEA6CD72}']
+    /// <summary>Get the OID of the BLOB. A zero value represents an
+    ///  invalid OID.</summary>
+    /// <returns>the BLOB OID</returns>
     function GetBlobOid: Oid;
   end;
 
-  {** Implements external blob wrapper object for PostgreSQL. }
-  TZPostgreSQLOidBlob = class(TZAbstractStreamedLob, IZLob, IZBlob, IZPostgreSQLOidBlob,
-    IImmediatelyReleasable)
+  /// <summary>Implements a Postgres OID Blob object</summary>
+  TZPostgreSQLOidBlob = class(TZAbstractStreamedLob, IZLob, IZBlob,
+    IZPostgreSQLOidBlob, IImmediatelyReleasable)
   private
     FBlobOid: Oid;
     FPlainDriver: TZPostgreSQLPlainDriver;
@@ -170,8 +468,16 @@ type
   public
     constructor Create(const Connection: IZPostgreSQLConnection; BlobOid: Oid; LobStreamMode: TZLobStreamMode; const OpenLobStreams: TZSortedList);
     constructor CreateFromBlob(const Value: IZBlob; const Connection: IZPostgreSQLConnection; const OpenLobStreams: TZSortedList);
-  public
+  public //implement IZPostgreSQLOidBlob
+    /// <summary>Get the OID of the BLOB. A zero value represents an
+    ///  invalid OID.</summary>
+    /// <returns>the BLOB OID</returns>
     function GetBlobOid: Oid;
+  public // implement IZBlob
+    /// <summary>Clones this blob object.</summary>
+    /// <param>"LobStreamMode" the mode the cloned object is used for is one of:
+    ///  <c>lsmRead, lsmWrite, lsmReadWrite</c></param>
+    /// <returns> a cloned blob object.</returns>
     function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
   public //IImmediatelyReleasable
     /// <summary>Releases all driver handles and set the object in a closed
@@ -243,6 +549,11 @@ type
   {** Implements a specialized cached resolver for PostgreSQL version 7.4 and up. }
   TZPostgreSQLCachedResolverV74up = class(TZPostgreSQLCachedResolver)
   public
+    /// <summary>Forms a where clause for UPDATE or DELETE DML statements.</summary>
+    /// <param>"SQLWriter" a TZSQLStringWriter object used for buffered writes</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"Result" a reference to the Result String the SQLWriter uses
+    ///  for the buffered writes.</param>
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
@@ -264,6 +575,9 @@ type
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
   public
+    /// <summary>Forms an INSERT statement.</summary>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
+    /// <returns>the composed insert SQL.</returns>
     function FormInsertStatement(NewRowAccessor: TZRowAccessor): SQLString; override;
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
@@ -284,9 +598,9 @@ type
   { TZPostgreSQLRowAccessor }
 
   TZPostgreSQLRowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
@@ -302,180 +616,210 @@ uses
 
 { TZPostgreSQLResultSet }
 
-{$IFDEF USE_SYNCOMMONS}
-procedure TZPostgreSQLResultSet.ColumnsToJSON(
-  JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+{$IFDEF WITH_COLUMNS_TO_JSON}
+procedure TZPostgreSQLResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
+  JSONComposeOptions: TZJSONComposeOptions);
 var
   C: Cardinal;
   L: NativeUInt;
   P, pgBuff: PAnsiChar;
-  RNo, H, I: Integer;
+  TimeZoneOffset: Int64;
+  RNo: Integer;
+  H, I: Integer;
   TS: TZTimeStamp;
-  DT: TDateTime absolute TS;
-label ProcBts, jmpDate, jmpTime, jmpTS, jmpOIDBLob;
+  Months: Integer absolute TS;
+  Days: Integer absolute TS;
+label jmpTime, jmpTS, jmpOIDBLob;
 begin
   RNo := PGRowNo;
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     if FPlainDriver.PQgetisnull(Fres, RNo, C) <> 0 then
-      if JSONWriter.Expand then begin
+      if ResultsWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+          ResultsWriter.AddShort('null,')
         end;
       end else
-        JSONWriter.AddShort('null,')
+        ResultsWriter.AddShort('null,')
     else begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[i]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[i]);
       P := FPlainDriver.PQgetvalue(Fres, RNo, C);
       with TZPGColumnInfo(ColumnsInfo[C]) do begin
         if FBinaryValues then
           case ColumnType of
-            stUnknown     : JSONWriter.AddShort('null');
-            stBoolean     : JSONWriter.AddShort(JSONBool[PByte(P)^<>0]);
-            stSmall       : JSONWriter.Add(PG2SmallInt(P));
-            stInteger     : JSONWriter.Add(PG2Integer(P));
-            stLong        : JSONWriter.Add(PG2Int64(P));
+            stUnknown     : ResultsWriter.AddShort('null');
+            stBoolean     : ResultsWriter.AddShort(JSONBool[PByte(P)^<>0]);
+            stSmall       : ResultsWriter.Add(PG2SmallInt(P));
+            stInteger     : ResultsWriter.Add(PG2Integer(P));
+            stLong        : ResultsWriter.Add(PG2Int64(P));
             stCurrency    : if TypeOID = CASHOID
-                            then JSONWriter.AddCurr64(PGCash2Currency(P))
-                            else JSONWriter.AddCurr64(PGNumeric2Currency(P));
-            stFloat       : JSONWriter.AddSingle(PG2Single(P));
-            stDouble      : JSONWriter.AddDouble(PG2Double(P));
+                            {$IFDEF MORMOT2}
+                            then ResultsWriter.AddCurr(PGCash2Currency(P))
+                            else ResultsWriter.AddCurr(PGNumeric2Currency(P));
+                            {$ELSE !MORMOT2}
+                            then ResultsWriter.AddCurr64(PGCash2Currency(P))
+                            else ResultsWriter.AddCurr64(PGNumeric2Currency(P));
+                            {$ENDIF MORMOT2}
+            stFloat       : ResultsWriter.AddSingle(PG2Single(P));
+            stDouble      : ResultsWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
                               pgBuff := PAnsiChar(FByteBuffer)+SizeOf(TBCD);
                               PGNumeric2BCD(P, PBCD(FByteBuffer)^);
-                              JSONWriter.AddNoJSONEscape(pgBuff,
+                              ResultsWriter.AddNoJSONEscape(pgBuff,
                                 BCDToRaw(PBCD(FByteBuffer)^, pgBuff, '.'));
                             end;
             stBytes,
             stBinaryStream: if TypeOID = BYTEAOID then
-                              JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True)
+                              ResultsWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True)
                             else begin
                               PPointer(FByteBuffer)^ := nil; //init avoid gpf
                               L := PG2Cardinal(P);
 jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create(FPGConnection, L , lsmRead, FOpenLobStreams);
                               P := PIZlob(FByteBuffer)^.GetBuffer(fRawTemp, L);
-                              JSONWriter.WrBase64(P, L, True);
+                              ResultsWriter.WrBase64(P, L, True);
                               PIZlob(FByteBuffer)^ := nil;
                               fRawTemp := '';
                             end;
             stGUID        : begin
-                              JSONWriter.Add('"');
+                              {$IFNDEF MORMOT2}ResultsWriter.Add('"');{$ENDIF}
                               {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
                               PGUID(fByteBuffer)^.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
                               PGUID(fByteBuffer)^.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
                               PGUID(fByteBuffer)^.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
                               PInt64(@PGUID(fByteBuffer)^.D4)^ := PInt64(@PGUID(P).D4)^;
-                              JSONWriter.Add(PGUID(fByteBuffer)^);
+                              ResultsWriter.Add(PGUID(fByteBuffer){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
                               {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
                               {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
                               {$ELSE}
-                              JSONWriter.Add(PGUID(P)^);
+                              ResultsWriter.Add(PGUID(P){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
                               {$ENDIF}
-                              JSONWriter.Add('"');
+                              {$IFNDEF MORMOT2}ResultsWriter.Add('"');{$ENDIF}
                             end;
             stDate        : begin
-jmpDate:                      if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('ISODate("')
-                              else if jcoDATETIME_MAGIC in JSONComposeOptions
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                                else JSONWriter.Add('"');
-                              PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
-                              DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 10);
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z)"')
-                              else JSONWriter.Add('"');
+                              then ResultsWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
+                                else ResultsWriter.Add('"');
+                              PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
+                              DateToIso8601PChar(Pointer(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), 10);
+                              if jcoMongoISODate in JSONComposeOptions
+                              then ResultsWriter.AddShort('Z)"')
+                              else ResultsWriter.Add('"');
                             end;
             stTime        : begin
-jmpTime:                      if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('ISODate("0000-00-00')
-                              else if jcoDATETIME_MAGIC in JSONComposeOptions
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                                else JSONWriter.Add('"');
                               if Finteger_datetimes
                               then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
                               else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
-                              TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
+jmpTime:                      if jcoMongoISODate in JSONComposeOptions
+                              then ResultsWriter.AddShort('ISODate("0000-00-00')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
+                                else ResultsWriter.Add('"');
+                              TimeToIso8601PChar(Pointer(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z)"')
-                              else JSONWriter.Add('"');
+                              then ResultsWriter.AddShort('Z)"')
+                              else ResultsWriter.Add('"');
                             end;
             stTimestamp   : begin
-jmpTS:                        if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('ISODate("')
-                              else if jcoDATETIME_MAGIC in JSONComposeOptions
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                                else JSONWriter.Add('"');
+                              if TypeOID = TIMESTAMPTZOID
+                              then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                              else TimeZoneOffset := 0;
                               if Finteger_datetimes
-                              then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
-                              else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
-                              DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
-                              TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
+                              then PG2DateTime(PInt64(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
+                              else PG2DateTime(PDouble(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
+jmpTS:                        if jcoMongoISODate in JSONComposeOptions
+                              then ResultsWriter.AddShort('ISODate("')
+                              else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
+                                else ResultsWriter.Add('"');
+                              DateToIso8601PChar(Pointer(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
+                              TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z)"')
-                              else JSONWriter.Add('"');
+                              then ResultsWriter.AddShort('Z)"')
+                              else ResultsWriter.Add('"');
                             end;
             stString,
             stUnicodeString:if (TypeOID = MACADDROID) then begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
+                              ResultsWriter.Add('"');
                             end else if (TypeOID = INETOID) or (TypeOID = CIDROID) then begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
+                              ResultsWriter.Add('"');
                             end else if TypeOID = INTERVALOID then begin
                               if Finteger_datetimes
-                              then DT := PG2DateTime(PInt64(P)^)
-                              else DT := PG2DateTime(PDouble(P)^);
-                              DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
-                              P := PAnsiChar(FByteBuffer);
-                              if Int(DT) = 0 then begin
-                                DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                                Date2PG(DT, PInteger(P)^);
-                                goto jmpDate;
+                              then PG2Time(PInt64(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                              else PG2Time(PDouble(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                              Months := PG2Integer(P+12);
+                              TS.IsNegative := Months < 0;
+                              if Months < 0 then
+                                Months := -Months;
+                              if Months > 12 then begin
+                                TS.Year := Months div 12;
+                                TS.Month := Months mod 12;
                               end else begin
-                                if Finteger_datetimes
-                                then DateTime2PG(DT, PInt64(P)^)
-                                else DateTime2PG(DT, PDouble(P)^);
-                                if Frac(DT) = 0
-                                then goto jmpTime
-                                else goto jmpTS;
+                                TS.Year := 0;
+                                TS.Month := Months;
                               end;
+                              Days := PG2Integer(P+8);
+                              if Days < 0 then begin
+                                TS.IsNegative := True;
+                                Days := -Days;
+                              end;
+                              TS.Day := Days;
+                              if (TS.Day > 0) or (TS.Month > 0)
+                              then goto jmpTS
+                              else goto jmpTime;
                             end else begin
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
-                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
-                              else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
+                              else ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             stAsciiStream,
-            stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then
-                              JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
-                            else begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+            stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then begin
+                              if (TypeOID = JSONBOID) then Inc(P);//skip the leading #1 byte of the binary result
+                              ResultsWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
+                            end else begin
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             //stArray, stDataSet,
           end
         else
           case ColumnType of
-            stUnknown     : JSONWriter.AddShort('null');
-            stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (TypeOID = CHAROID) or (TypeOID = BPCHAROID))]);
-            stByte..stDouble, stBigDecimal  : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
-            stCurrency    : JSONWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
+            stUnknown     : ResultsWriter.AddShort('null');
+            stBoolean     : ResultsWriter.AddShort(JSONBool[StrToBoolEx(P, True, (TypeOID = CHAROID) or (TypeOID = BPCHAROID))]);
+            stByte..stDouble, stBigDecimal  : ResultsWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
+            stCurrency    : ResultsWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
             stBytes,
             stBinaryStream: if TypeOID = BYTEAOID then begin
                               pgBuff := nil;
@@ -485,109 +829,113 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                                 try
                                   GetMem(pgBuff, L);
                                   HexToBin(P+2, pgBuff, L);
-                                  JSONWriter.WrBase64(pgBuff, L, True);
+                                  ResultsWriter.WrBase64(pgBuff, L, True);
                                 finally
                                   FreeMem(pgBuff);
                                 end;
                               end else if Assigned(FPlainDriver.PQUnescapeBytea) then
                                 try
                                   pgBuff := FPlainDriver.PQUnescapeBytea(P, @L);
-                                  JSONWriter.WrBase64(pgBuff, L, True);
+                                  ResultsWriter.WrBase64(pgBuff, L, True);
                                 finally
                                   FPlainDriver.PQFreemem(pgBuff);
                                 end
                               else
-                                JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
+                                ResultsWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
                             end else begin
                               L := RawToUint64(P);
                               goto jmpOIDBLob;
                             end;
             stGUID        : begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(P);//
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(P);//
+                              ResultsWriter.Add('"');
                             end;
             stDate        : if jcoMongoISODate in JSONComposeOptions then begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.AddShort('Z)"');
+                              ResultsWriter.AddShort('ISODate("');
+                              ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.Add('"');
+                              {$IFDEF MORMOT2}
+                              then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
+                              then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
+                              else ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.Add('"');
                             end;
             stTime        : if jcoMongoISODate in JSONComposeOptions then begin
-                              JSONWriter.AddShort('ISODate("0000-00-00T');
-                              JSONWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
-                              JSONWriter.AddShort('Z)"');
+                              ResultsWriter.AddShort('ISODate("0000-00-00T');
+                              ResultsWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
+                              ResultsWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
-                              JSONWriter.Add('T');
+                              {$IFDEF MORMOT2}
+                              then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
+                              then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
+                              else ResultsWriter.Add('"');
+                              ResultsWriter.Add('T');
                               if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
-                              then JSONWriter.AddNoJSONEscape(P, 8)
-                              else JSONWriter.AddNoJSONEscape(P, 12);
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddNoJSONEscape(P, 8)
+                              else ResultsWriter.AddNoJSONEscape(P, 12);
+                              ResultsWriter.Add('"');
                             end;
             stTimestamp   : if jcoMongoISODate in JSONComposeOptions then begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.Add('T');
-                              JSONWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
-                              JSONWriter.AddShort('Z)"');
+                              ResultsWriter.AddShort('ISODate("');
+                              ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.Add('T');
+                              ResultsWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
+                              ResultsWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                              else JSONWriter.Add('"');
+                              {$IFDEF MORMOT2}
+                              then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
+                              then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
+                              else ResultsWriter.Add('"');
                               (P+10)^ := 'T';
-                              {JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.Add('T');
+                              {ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.Add('T');
                               if ((P+19)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions)
-                              then JSONWriter.AddNoJSONEscape(P+11, 8)
-                              else} JSONWriter.AddNoJSONEscape(P{+11, 12});
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddNoJSONEscape(P+11, 8)
+                              else} ResultsWriter.AddNoJSONEscape(P{+11, 12});
+                              ResultsWriter.Add('"');
                             end;
             stString,
             stUnicodeString:begin
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
-                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
-                              else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
+                              else ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             stAsciiStream,
             stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then
-                              JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
+                              ResultsWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
                             else begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             //stArray, stDataSet,
           end;
       end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
-{**
-  Constructs this object, assignes main properties and
-  opens the record set.
-  @param PlainDriver a PostgreSQL plain driver.
-  @param Statement a related SQL statement object.
-  @param SQL a SQL statement.
-  @param Handle a PostgreSQL specific query handle.
-}
 constructor TZPostgreSQLResultSet.Create(const Statement: IZStatement;
   const SQL: string; const Connection: IZPostgreSQLConnection; resAddress: PPGresult;
   ResultFormat: PInteger; SingleRowMode: Boolean;
@@ -614,9 +962,13 @@ begin
   FBinaryValues := FResultFormat^ = ParamFormatBin;
   FClientCP := ConSettings.ClientCodePage.CP;
   FSingleRowMode := SingleRowMode;
-  if FSingleRowMode
-  then SetType(rtForwardOnly)
-  else SetType(rtScrollSensitive);
+  if FSingleRowMode then begin
+    SetType(rtForwardOnly);
+    FCursorLocation := rctServer;
+  end else begin
+    SetType(rtScrollInsensitive);
+    FCursorLocation := rctClient;
+  end;
   Open;
 end;
 
@@ -668,22 +1020,6 @@ begin
   end;
 end;
 
-procedure TZPostgreSQLResultSet.ClearPGResult;
-begin
-  if Fres <> nil then
-  begin
-    FPlainDriver.PQclear(Fres);
-    Fres := nil;
-  end;
-end;
-
-{**
-  Converts a PostgreSQL native types into ZDBC SQL types.
-  @param ColumnIndex a column index.
-  @param ColumnInfo a column description object.
-  @param TypeOid a type oid.
-  @return a SQL undepended type.
-}
 procedure TZPostgreSQLResultSet.DefinePostgreSQLToSQLType(
   {$IFDEF AUTOREFCOUNT}var{$ENDIF}ColumnInfo: TZPGColumnInfo; TypeOid: Oid;
   TypeModifier: Integer);
@@ -711,7 +1047,14 @@ begin
     CIDROID: ColumnInfo.Precision := 100; { cidr }
     INETOID: ColumnInfo.Precision := 100{39}; { inet }
     MACADDROID: ColumnInfo.Precision := 17; { macaddr }
-    INTERVALOID: ColumnInfo.Precision := 32; { interval }
+    INTERVALOID: begin
+        ColumnInfo.Precision := 32; { interval }
+        {EH: the datasets are not able to handle to display timespans having no date-part value
+        if FBinaryValues then begin
+          ColumnInfo.ColumnType := stTimestamp;
+          goto asignTScaleAndPrec;
+        end;}
+      end;
     REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
     BYTEAOID: begin{ bytea }
         if TypeModifier >= VARHDRSZ then begin
@@ -730,7 +1073,7 @@ begin
     NUMERICOID: if TypeModifier <> -1 then begin
         ColumnInfo.Precision := (TypeModifier - VARHDRSZ) shr 16 and $FFFF;
         ColumnInfo.Scale     := (TypeModifier - VARHDRSZ)        and $FFFF;
-        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision <= sAlignCurrencyScale2Precision[ColumnInfo.Scale])
+        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision < sAlignCurrencyScale2Precision[ColumnInfo.Scale])
         then ColumnInfo.ColumnType := stCurrency
         else ColumnInfo.ColumnType := stBigDecimal;
         Exit;
@@ -743,7 +1086,9 @@ begin
       ColumnInfo.ColumnType := stTime;
 asignTScaleAndPrec:
       if TypeModifier = -1 //variable precision of second fractions
-      then ColumnInfo.Scale := {-}6 //tag variable
+      then if Finteger_datetimes
+        then ColumnInfo.Scale := {-}6 //tag variable
+        else ColumnInfo.Scale := 3
       else ColumnInfo.Scale := TypeModifier; //fixed second fractions..
       Exit;
     end;
@@ -760,9 +1105,6 @@ asignTScaleAndPrec:
   end;
 end;
 
-{**
-  Opens this recordset.
-}
 procedure TZPostgreSQLResultSet.Open;
 var
   I: Integer;
@@ -852,29 +1194,20 @@ begin
   else Result := RowNo-1;
 end;
 
-{**
-  Resets cursor position of this recordset and
-  reset the prepared handles.
-}
 procedure TZPostgreSQLResultSet.ResetCursor;
 begin
   if not Closed then begin
     if FSingleRowMode and not IsAfterLast then begin
       while next do ;
-    end else
-      ClearPGResult;
+    end else if Fres <> nil then begin
+      FPlainDriver.PQclear(Fres);
+      Fres := nil;
+    end;
     FFirstRow := True;
     inherited ResetCursor;
   end;
 end;
-{**
-  Indicates if the value of the designated column in the current row
-  of this <code>ResultSet</code> object is Null.
 
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return if the value is SQL <code>NULL</code>, the
-    value returned is <code>true</code>. <code>false</code> otherwise.
-}
 function TZPostgreSQLResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -886,32 +1219,23 @@ begin
     ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var L: LongWord;
   PEnd: PAnsiChar;
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
+  TimeZoneOffset: Int64;
   {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
-  DT: TDateTime absolute BCD;
-  MS: Word;
   ROW_IDX: Integer;
+  Days: Integer absolute ROW_IDX;
+  Months: Integer absolute ROW_IDX;
   function FromOIDLob(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
   begin
     FRawTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetString;
     Result := Pointer(FRawTemp);
     Len := Length(FRawTemp);
   end;
-label JmpPEndTinyBuf, JmpStr, jmpTime, jmpDate, jmpTS;
+label JmpPEndTinyBuf, JmpStr, jmpTime, jmpTS;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -968,7 +1292,7 @@ JmpPEndTinyBuf:       Result := PAnsiChar(fByteBuffer);
                     end;
         stDate:     begin
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
-jmpDate:              Result := PAnsiChar(fByteBuffer);
+                      Result := PAnsiChar(fByteBuffer);
                       Len := DateToRaw(TS.Year, TS.Month, TS.Day, Result,
                         ConSettings.ReadFormatSettings.DateFormat, False, False);
                     end;
@@ -981,9 +1305,12 @@ jmpTime:              Result := PAnsiChar(fByteBuffer);
                         Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                     end;
         stTimestamp:begin
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
-                      else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      then PG2DateTime(PInt64(Result)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(Result)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
@@ -1014,24 +1341,37 @@ jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Result := PAnsiChar(fByteBuffer);
                     end else if TypeOID = INTERVALOID then begin
                       if Finteger_datetimes
-                      then DT := PG2DateTime(PInt64(Result)^)
-                      else DT := PG2DateTime(PDouble(Result)^);
-                      DT := DT + (PG2Integer(Result+8)-102) * SecsPerDay + PG2Integer(Result+12) * SecsPerDay * 30;
-                      if Frac(DT) = 0 then begin
-                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                        Ts.Fractions := 0;
-                        goto jmpTime
-                      end else if Int(DT) = 0 then begin
-                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                        goto jmpDate;
+                      then PG2Time(PInt64(Result)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2Time(PDouble(Result)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      Months := PG2Integer(Result+12);
+                      TS.IsNegative := Months < 0;
+                      if Months < 0 then
+                        Months := -Months;
+                      if Months > 12 then begin
+                        TS.Year := Months div 12;
+                        TS.Month := Months mod 12;
+                      end else begin
+                        TS.Year := 0;
+                        TS.Month := Months;
                       end;
-                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                      Ts.Fractions := 0;
-                      goto jmpTS;
+                      Days := PG2Integer(Result+8);
+                      if Days < 0 then begin
+                        TS.IsNegative := True;
+                        Days := -Days;
+                      end;
+                      TS.Day := Days;
+                      if (TS.Day > 0) or (TS.Month > 0)
+                      then goto jmpTS
+                      else goto jmpTime;
                     end else goto jmpStr;
         stAsciiStream,
-        stUnicodeStream:Len := ZFastCode.StrLen(Result);
+        stUnicodeStream:begin
+                          Len := ZFastCode.StrLen(Result);
+                          if TypeOID = JSONBOID then begin //ship the leading #1 byte
+                            Dec(Len);
+                            Inc(Result);
+                          end;
+                        end;
         stBytes:        Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
         stBinaryStream: if TypeOID = OIDOID
                         then Result := FromOIDLob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len)
@@ -1083,13 +1423,14 @@ function TZPostgreSQLResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var P: PAnsiChar;
   PEnd: PWideChar;
+  TimeZoneOffset: Int64;
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
   UUID: TGUID absolute BCD;
-  DT: TDateTime absolute BCD;
   C: Currency absolute BCD;
-  MS: Word;
   ROW_IDX: Integer;
+  Months: Integer absolute ROW_IDX;
+  Days: Integer absolute ROW_IDX;
   procedure FromOIDLob(ColumnIndex: Integer);
   var Lob: IZBlob;
   begin
@@ -1097,7 +1438,7 @@ var P: PAnsiChar;
     P := Lob.GetBuffer(fRawTemp, Len);
     FUniTemp := Ascii7ToUnicodeString(P, len);
   end;
-label JmpPEndTinyBuf, JmpUni, jmpStr, jmpTxt, jmpRaw, jmpBin, jmpLen, jmpTime, jmpDate, jmpTS;
+label JmpPEndTinyBuf, JmpUni, jmpStr, jmpTxt, jmpRaw, jmpBin, jmpLen, jmpTime, jmpTS;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -1155,7 +1496,7 @@ JmpPEndTinyBuf:       Result := PWideChar(fByteBuffer);
                     end;
         stDate:     begin
                       PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
-jmpDate:              Result := PWideChar(fByteBuffer);
+                      Result := PWideChar(fByteBuffer);
                       Len := DateToUni(TS.Year, TS.Month, TS.Day,
                         Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                     end;
@@ -1168,9 +1509,12 @@ jmpTime:              Result := PWideChar(fByteBuffer);
                         Result, ConSettings.ReadFormatSettings.TimeFormat, False, tS.IsNegative);
                     end;
         stTimestamp:begin
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
-                      else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      then PG2DateTime(PInt64(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PWideChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToUni(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
@@ -1201,24 +1545,34 @@ jmpTS:                Result := PWideChar(fByteBuffer);
                       Result := PWideChar(fByteBuffer);
                     end else if TypeOID = INTERVALOID then begin
                       if Finteger_datetimes
-                      then DT := PG2DateTime(PInt64(P)^)
-                      else DT := PG2DateTime(PDouble(P)^);
-                      DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
-                      if Frac(DT) = 0 then begin
-                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                        Ts.Fractions := 0;
-                        goto jmpTime
-                      end else if Int(DT) = 0 then begin
-                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                        goto jmpDate;
+                      then PG2Time(PInt64(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2Time(PDouble(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      Months := PG2Integer(P+12);
+                      TS.IsNegative := Months < 0;
+                      if Months < 0 then
+                        Months := -Months;
+                      if Months > 12 then begin
+                        TS.Year := Months div 12;
+                        TS.Month := Months mod 12;
+                      end else begin
+                        TS.Year := 0;
+                        TS.Month := Months;
                       end;
-                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                      Ts.Fractions := 0;
-                      goto jmpTS;
+                      Days := PG2Integer(P+8);
+                      if Days < 0 then begin
+                        TS.IsNegative := True;
+                        Days := -Days;
+                      end;
+                      TS.Day := Days;
+                      if (TS.Day > 0) or (TS.Month > 0)
+                      then goto jmpTS
+                      else goto jmpTime;
                     end else goto jmpStr;
         stUnicodeStream,
-        stAsciiStream: goto JmpTxt;
+        stAsciiStream:  begin
+                          if (TypeOID = JSONBOID) then Inc(P); //skip the leading #1 byte
+                          goto JmpTxt;
+                        end;
         stBytes:        begin
 jmpBin:                   Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
                           goto jmpRaw;
@@ -1256,15 +1610,6 @@ jmpLen:
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>boolean</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>false</code>
-}
 function TZPostgreSQLResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var P: PAnsiChar;
     ROW_IDX: Integer;
@@ -1308,17 +1653,6 @@ begin
   end;
 end;
 
-{**
-  Gets the address of value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param Len return the length of the addressed buffer
-  @return the adressed column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZPostgreSQLResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
 var
@@ -1399,15 +1733,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  an <code>int</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZPostgreSQLResultSet.GetInt(ColumnIndex: Integer): Integer;
 var P: PAnsiChar;
     ROW_IDX: Integer;
@@ -1457,15 +1782,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>long</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZPostgreSQLResultSet.GetLong(ColumnIndex: Integer): Int64;
 var P: PAnsiChar;
     ROW_IDX: Integer;
@@ -1521,15 +1837,6 @@ begin
   Result := GetLong(ColumnIndex);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UInt64</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZPostgreSQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var P: PAnsiChar;
@@ -1582,18 +1889,10 @@ begin
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>float</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZPostgreSQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var P: PAnsiChar;
     ROW_IDX: Integer;
+    TimeZoneOffset: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -1624,9 +1923,14 @@ begin
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
                                       else Result := PG2Time(PDouble(P)^);
-         stTimestamp:                 if Finteger_datetimes
-                                      then Result := PG2DateTime(PInt64(P)^)
-                                      else Result := PG2DateTime(PDouble(P)^);
+         stTimestamp:                 begin
+                                        if TypeOID = TIMESTAMPTZOID
+                                        then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                                        else TimeZoneOffset := 0;
+                                        if Finteger_datetimes
+                                        then Result := PG2DateTime(PInt64(P)^, TimeZoneOffset)
+                                        else Result := PG2DateTime(PDouble(P)^, TimeZoneOffset);
+                                      end;
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
@@ -1640,15 +1944,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UUID</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>ZERO-UUID</code>
-}
 procedure TZPostgreSQLResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
 var
@@ -1678,7 +1973,7 @@ begin
         {skip trailing /x}
         Len := (ZFastCode.StrLen(Buffer)-2) shr 1;
         if Len = SizeOf(TGUID)
-        then {$IFDEF USE_SYNCOMMONS}SynCommons.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
+        then {$IFDEF WITH_COLUMNS_TO_JSON}{$IFDEF MORMOT2}mormot.core.text{$ELSE}SynCommons{$ENDIF}.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
         else goto Fail;
       end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
         pgBuff := FPlainDriver.PQUnescapeBytea(Buffer, @Len);
@@ -1732,18 +2027,10 @@ Fail:       raise CreatePGConvertError(ColumnIndex, TypeOID);
   end else FillChar(Result, SizeOf(TGUID), #0);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>double</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
 var P: PAnsiChar;
     ROW_IDX: Integer;
+    TimeZoneOffset: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -1775,9 +2062,14 @@ begin
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
                                       else Result := PG2Time(PDouble(P)^);
-        stTimestamp:                  if Finteger_datetimes
-                                      then Result := PG2DateTime(PInt64(P)^)
-                                      else Result := PG2DateTime(PDouble(P)^);
+        stTimestamp:                  begin
+                                        if TypeOID = TIMESTAMPTZOID
+                                        then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                                        else TimeZoneOffset := 0;
+                                        if Finteger_datetimes
+                                        then Result := PG2DateTime(PInt64(P)^, TimeZoneOffset)
+                                        else Result := PG2DateTime(PDouble(P)^, TimeZoneOffset);
+                                      end;
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
@@ -1791,16 +2083,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.BigDecimal</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param scale the number of digits to the right of the decimal point
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZPostgreSQLResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var P: PAnsiChar;
     ROW_IDX: Integer;
@@ -1845,15 +2127,7 @@ begin
   Result := FPGConnection;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>currency</code>.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function TZPostgreSQLResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
 var P: PAnsiChar;
@@ -1896,21 +2170,16 @@ begin
     else SQLStrToFloatDef(P, 0, FDecimalSeps[TypeOID = CASHOID], Result);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
+    Months: Integer absolute ROW_IDX;
+    Days: Integer absolute ROW_IDX;
+    TimeZoneOffset: Int64;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1938,13 +2207,18 @@ from_str:             Len := ZFastCode.StrLen(P);
       stTime:       goto jmpZero;
       stTimestamp:  if FBinaryValues then begin
                       Result.IsNegative := False;
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(P)^, Result.Year, Result.Month, Result.Day,
-                        PZTime(fByteBuffer)^.Hour, PZTime(fByteBuffer)^.Minute,
-                        PZTime(fByteBuffer)^.Second, PZTime(fByteBuffer)^.Fractions)
-                      else PG2DateTime(PDouble(P)^, Result.Year, Result.Month, Result.Day,
-                        PZTime(fByteBuffer)^.Hour, PZTime(fByteBuffer)^.Minute,
-                        PZTime(fByteBuffer)^.Second, PZTime(fByteBuffer)^.Fractions);
+                      then PG2DateTime(PInt64(P)^, TimeZoneOffset, Result.Year,
+                        Result.Month, Result.Day, PZTime(fByteBuffer)^.Hour,
+                        PZTime(fByteBuffer)^.Minute, PZTime(fByteBuffer)^.Second,
+                        PZTime(fByteBuffer)^.Fractions)
+                      else PG2DateTime(PDouble(P)^, TimeZoneOffset, Result.Year,
+                        Result.Month, Result.Day, PZTime(fByteBuffer)^.Hour,
+                        PZTime(fByteBuffer)^.Minute, PZTime(fByteBuffer)^.Second,
+                        PZTime(fByteBuffer)^.Fractions);
                     end else begin
                       Len := ZFastCode.StrLen(P);
                       LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings,
@@ -1960,27 +2234,37 @@ jmpZero:                PInt64(@Result.Year)^ := 0
       stInteger, stLong, stLongWord,
       stFloat, stDouble,
       stCurrency, stBigDecimal:  DecodeDateTimeToDate(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
-      stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:    goto from_str;
+      stAsciiStream, stUnicodeStream: goto from_str;
+      stString, stUnicodeString: if FBinaryValues and (TypeOID = INTERVALOID) then begin
+                    Months := PG2Integer(P+12);
+                    Result.IsNegative := Months < 0;
+                    if Months < 0 then
+                      Months := -Months;
+                    if Months > 12 then begin
+                      Result.Year := Cardinal(Months) div 12;
+                      Result.Month := Cardinal(Months) mod 12;
+                    end else begin
+                      Result.Year := 0;
+                      Result.Month := Months;
+                    end;
+                    Days := PG2Integer(P+8);
+                    if Days < 0 then begin
+                      Result.IsNegative := True;
+                      Days := -Days;
+                    end;
+                    Result.Day := Days;
+                  end else goto from_str;
       else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end;
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZPostgreSQLResultSet.GetTime(ColumnIndex: Integer;
   var Result: TZTime);
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
+    TimeZoneOffset: Int64;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2009,11 +2293,14 @@ from_str:           Len := StrLen(P);
                   end;
       stTimestamp:if FBinaryValues then begin
                     Result.IsNegative := False;
+                    if TypeOID = TIMESTAMPTZOID
+                    then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                    else TimeZoneOffset := 0;
                     if Finteger_datetimes
-                    then PG2DateTime(PInt64(P)^, PZDate(fByteBuffer)^.Year,
+                    then PG2DateTime(PInt64(P)^, TimeZoneOffset, PZDate(fByteBuffer)^.Year,
                       PZDate(fByteBuffer)^.Month, PZDate(fByteBuffer)^.Day,
                       Result.Hour, Result.Minute, Result.Second, Result.Fractions)
-                    else PG2DateTime(PDouble(P)^, PZDate(fByteBuffer)^.Year,
+                    else PG2DateTime(PDouble(P)^, TimeZoneOffset, PZDate(fByteBuffer)^.Year,
                       PZDate(fByteBuffer)^.Month, PZDate(fByteBuffer)^.Day,
                       Result.Hour, Result.Minute, Result.Second, Result.Fractions);
                   end else begin
@@ -2032,29 +2319,26 @@ jmpZero:              PCardinal(@Result.Hour)^ := 0;
       stInteger, stLong, stLongWord,
       stFloat, stDouble,
       stCurrency, stBigDecimal: DecodeDateTimeToTime(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
-      stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:    goto from_str;
+      stAsciiStream, stUnicodeStream: goto from_str;
+      stString, stUnicodeString: if FBinaryValues and (TypeOID = INTERVALOID) then
+                    if Finteger_datetimes
+                    then PG2Time(PInt64(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                    else PG2Time(PDouble(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                  else goto from_str;
       else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Timestamp</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-  value returned is <code>null</code>
-  @exception SQLException if a database access error occurs
-}
 procedure TZPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer;
   var Result: TZTimeStamp);
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
-label from_str, jmpZero;
+    Months: Integer absolute ROW_IDX;
+    Days: Integer absolute ROW_IDX;
+    TimeZoneOffset: Int64;
+label from_str, jmpZero, jmpTimespan;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimeStamp);
@@ -2097,15 +2381,41 @@ begin
                   end;
       stTimestamp:begin
                   if FBinaryValues then begin
-                    if Finteger_datetimes
-                    then PG2DateTime(PInt64(P)^, Result.Year,
-                      Result.Month, Result.Day, Result.Hour, Result.Minute,
-                      Result.Second, Result.Fractions)
-                    else PG2DateTime(PDouble(P)^, Result.Year,
-                      Result.Month, Result.Day, Result.Hour, Result.Minute,
-                      Result.Second, Result.Fractions);
-                    PCardinal(@Result.TimeZoneHour)^ := 0;
-                    Result.IsNegative := False;
+jmpTimespan:        PCardinal(@Result.TimeZoneHour)^ := 0;
+                    if TypeOID = INTERVALOID then begin
+                      if Finteger_datetimes
+                      then PG2Time(PInt64(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                      else PG2Time(PDouble(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+                      Months := PG2Integer(P+12);
+                      Result.IsNegative := Months < 0;
+                      if Months < 0 then
+                        Months := -Months;
+                      if Months > 12 then begin
+                        Result.Year := Months div 12;
+                        Result.Month := Months mod 12;
+                      end else begin
+                        Result.Year := 0;
+                        Result.Month := Months;
+                      end;
+                      Days := PG2Integer(P+8);
+                      if Days < 0 then begin
+                        Result.IsNegative := True;
+                        Days := -Days;
+                      end;
+                      Result.Day := Days;
+                    end else begin
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
+                      if Finteger_datetimes
+                      then PG2DateTime(PInt64(P)^, TimeZoneOffset, Result.Year,
+                        Result.Month, Result.Day, Result.Hour, Result.Minute,
+                        Result.Second, Result.Fractions)
+                      else PG2DateTime(PDouble(P)^, TimeZoneOffset, Result.Year,
+                        Result.Month, Result.Day, Result.Hour, Result.Minute,
+                        Result.Second, Result.Fractions);
+                      Result.IsNegative := False;
+                    end
                   end else begin
 from_str:           Len := StrLen(P);
                     LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
@@ -2120,21 +2430,14 @@ jmpZero:              PInt64(@Result.Year)^ := 0;
       stFloat, stDouble,
       stCurrency, stBigDecimal: DecodeDateTimeToTimeStamp(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
       stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:    goto from_str;
+      stString, stUnicodeString:  if FBinaryValues and (TypeOID = INTERVALOID)
+        then goto jmpTimespan
+        else goto from_str;
       else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
 end;
 
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Blob</code> object
-  in the Java programming language.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
-    the specified column
-}
 function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var P: PAnsiChar;
@@ -2162,6 +2465,7 @@ begin
       stUnicodeString,
       stAsciiStream,
       stUnicodeStream:  begin
+          if (TypeOID = JSONBOID) then Inc(P); //skip the leading #1 byte
           Len := ZFastCode.StrLen(P);
           Result := TZAbstractCLob.CreateWithData(P, Len, FClientCP, ConSettings);
         end;
@@ -2182,33 +2486,6 @@ begin
   end;
 end;
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 function TZPostgreSQLResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
   if FFirstRow then begin
@@ -2244,26 +2521,14 @@ begin
     end else
       Result := False;
     if not Result and FSingleRowMode then
-      ClearPGResult;
+      if Fres <> nil then begin
+        FPlainDriver.PQclear(Fres);
+        Fres := nil;
+      end;
   end else
     raise CreateForwardOnlyException;
 end;
 
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
 function TZPostgreSQLResultSet.Next: Boolean;
 var Status: TZPostgreSQLExecStatusType;
 label jmpRes;
@@ -2394,10 +2659,6 @@ begin
   FOwner.ReleaseImmediat(Sender, AError);
 end;
 
-{**
-  Clones this blob object.
-  @return a clonned blob object.
-}
 procedure TZPostgreSQLOidBlob.Clear;
 begin
   FBlobOid := 0;
@@ -2443,7 +2704,7 @@ begin
   BinSize := ZFastCode.StrLen(Data) shr 1;
   if BinSize > 0 then begin
     SetCapacity(BinSize);
-    HexToBin(Data, {$IFDEF USE_SYNCOMMONS}PAnsiChar{$ENDIF}(@FDataRefAddress.VarLenData.Data), BinSize);
+    HexToBin(Data, {$IFDEF WITH_COLUMNS_TO_JSON}PAnsiChar{$ENDIF}(@FDataRefAddress.VarLenData.Data), BinSize);
     FDataRefAddress.IsNotNull := 1;
     FDataRefAddress.VarLenData.Len := BinSize;
   end;
@@ -2471,15 +2732,13 @@ var
   I: Integer;
   TableColumns: IZResultSet;
   Connection: IZConnection;
-  Driver: IZDriver;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
   PGMetaData: IZPGDatabaseMetadata;
 begin
   Connection := Metadata.GetConnection;
-  Driver := Connection.GetDriver;
-  Analyser := Driver.GetStatementAnalyser;
-  Tokenizer := Driver.GetTokenizer;
+  Analyser := Connection.GetStatementAnalyser;
+  Tokenizer := Connection.GetTokenizer;
   PGMetaData := MetaData as IZPGDatabaseMetadata;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
@@ -2498,7 +2757,6 @@ begin
         end;
       end;
   finally
-    Driver := nil;
     Connection := nil;
     Analyser := nil;
     Tokenizer := nil;
@@ -2598,35 +2856,24 @@ end;
 
 { TZPostgreSQLRowAccessor }
 
-constructor TZPostgreSQLRowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
-var RAColumns: TObjectList;
-  I: Integer;
-  PGCurrent: TZPGColumnInfo;
-  RACurrent: TZColumnInfo;
+class function TZPostgreSQLRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
 begin
   {EH: usuall this code is NOT nessecary if we would handle the types as the
   providers are able to. But in current state we just copy all the incompatibilities
   from the DataSets into dbc... grumble. the only streamed data pg supports are
   oid-lobs. Those we leave as streams, doesn't matter if cached or not, just
   identify purpose}
-  RAColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, RAColumns);
-  for I := 0 to RAColumns.Count -1 do begin
-    PGCurrent := TZPGColumnInfo(ColumnsInfo[i]);
-    RACurrent := TZColumnInfo(RAColumns[i]);
-    if RACurrent.ColumnType in [stUnicodeString, stUnicodeStream] then
-      RACurrent.ColumnType := TZSQLType(Byte(RACurrent.ColumnType)-1);// no national chars 4 PG
-    if (RACurrent.ColumnType = stAsciiStream) or ((RACurrent.ColumnType = stBinaryStream) and (PGCurrent.TypeOID <> OIDOID)) then begin
-      RACurrent.ColumnType := TZSQLType(Byte(RACurrent.ColumnType)-3); // no lob streams 4 posgres except OID-BLobs
-      RACurrent.Precision := -1;
-    end;
-    if RACurrent.ColumnType in [stBytes, stBinaryStream] then
-      RACurrent.ColumnCodePage := zCP_Binary;
+  Result := ColumnInfo.ColumnType;
+  if Result in [stUnicodeString, stUnicodeStream] then begin
+    Result := TZSQLType(Byte(Result)-1); // no national chars 4
   end;
-  inherited Create(RAColumns, ConSettings, OpenLobStreams, CachedLobs);
-  RAColumns.Free;
+  if (Result = stAsciiStream) or ((Result = stBinaryStream) and (TZPGColumnInfo(ColumnInfo).TypeOID <> OIDOID)) then
+    Result := TZSQLType(Byte(Result)-3); // no lob streams 4 posgres except OID-BLobs
+  if Result = stString then
+    ColumnCodePage := ConSettings.ClientCodePage.CP;
 end;
+
 
 { TZPostgreSQLOidBlobStream }
 
@@ -2673,7 +2920,7 @@ const PGOidLopOpenMode: Array[TZLobStreamMode] of Integer = (INV_READ or INV_WRI
 procedure TZPostgreSQLOidBlobStream.CreateLob;
 begin
   { Creates a new large object. }
-  FOwnerLob.FBlobOid := FPlainDriver.lo_creat(FHandle, PGOidLopOpenMode[FLobStreamMode]);
+  FOwnerLob.FBlobOid := FPlainDriver.lo_creat(FHandle, 0);
   if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
     FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Create Large Object', Self, nil);
 end;
@@ -2797,10 +3044,6 @@ begin
   FreeAndNil(FInsertReturningFields);
 end;
 
-{**
-  Forms a INSERT statements.
-  @return the composed insert SQL
-}
 function TZPostgreSQLCachedResolverV10up.FormInsertStatement(
   NewRowAccessor: TZRowAccessor): SQLString;
 var

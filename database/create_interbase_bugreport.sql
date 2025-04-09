@@ -183,3 +183,13 @@ create table Ticket418 (
   num DECIMAL(18,8),
   constraint pk_ticket418 primary key (id)
 );
+
+/*==============================================================*/
+/* Table for Ticket#595 on Sourceforge                          */
+/*==============================================================*/
+create table Ticket595 (
+  id Integer not null,
+  string Varchar(20),
+  clob BLOB SUB_TYPE 1 SEGMENT SIZE 4096,
+  constraint pk_ticket595 primary key (id)
+);

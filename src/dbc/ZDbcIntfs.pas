@@ -57,25 +57,27 @@ interface
 {$Z-}
 
 uses
-  {$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-  {$ENDIF USE_SYNCOMMONS}
-  {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   FmtBcd, Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}SysUtils,
-  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}, {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF}
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema, ZSysUtils,
-  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
+  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZExceptions;
 
 const
-  /// <summary>generic constant for first column/parameter index.
-  ///  Note in zeos 8.1+ we use zero based index. Means the <c>GENERIC_INDEX</c>
-  ///  will be removed.</summary>
+  /// <author>EgonHugeist</author>
+  /// <summary>generic constant for first column/parameter index.</summary>
+  /// <remarks>Since zeos 8.0up we use zero based index. Means the
+  ///  <c>GENERIC_INDEX</c> will be removed in future releases.</remarks>
   FirstDbcIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  { generic constant for invalid column/parameter index }
-  /// <summary>generic constant for an invalid column/parameter index.
-  ///  Note in zeos 8.1+ we use based zero index. Means the <c>GENERIC_INDEX</c>
-  ///  will be removed.</summary>
-  InvalidDbcIndex = {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
+  /// <author>EgonHugeist</author>
+  /// <summary>generic constant for an invalid column/parameter index.</summary>
+  /// <remarks>Since zeos 8.0up we use zero based index. Means the
+  ///  <c>GENERIC_INDEX</c> define will be removed in future releases.</remarks>
+  InvalidDbcIndex = FirstDbcIndex-1;
 const
   { Constants from JDBC DatabaseMetadata }
   TypeSearchable            = 3;
@@ -83,68 +85,46 @@ const
   procedureNoResult         = 1;
   ProcedureReturnsResult    = 2;
 
-// Exceptions
 type
-  TZExceptionSpecificData = class
-  public
-    function Clone: TZExceptionSpecificData; virtual; abstract;
-  end;
-
-  {** Abstract SQL exception. }
-  EZSQLThrowable = class({$IFDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}Exception{$ELSE}EDATABASEERROR{$ENDIF})
-  private
-    FErrorCode: Integer;
-    FStatusCode: String;
-  protected
-    FSpecificData: TZExceptionSpecificData;
-  public
-    constructor Create(const Msg: string);
-    constructor CreateWithCode(const ErrorCode: Integer; const Msg: string);
-    constructor CreateWithStatus(const StatusCode: String; const Msg: string);
-    constructor CreateWithCodeAndStatus(ErrorCode: Integer; const StatusCode: String; const Msg: string);
-    constructor CreateClone(const E:EZSQLThrowable);
-    destructor Destroy; override;
-
-    property ErrorCode: Integer read FErrorCode;
-    property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
-    property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
-  end;
-
-  EZSQLThrowableClass = class of EZSQLThrowable;
-
-  {** Generic SQL exception. }
-  EZSQLException = class(EZSQLThrowable);
-
-  {** Generic SQL warning. }
-  EZSQLWarning = class(EZSQLThrowable);
-
-  {** Reqquested operation is not (yet) supported by Zeos }
-  EZUnsupportedException = class(EZSQLException);
-
-  /// <summary>
-  ///   Generic connection lost exception.
-  /// </summary>
-  EZSQLConnectionLost = class(EZSQLException);
-
+  /// <summary>A on connection Lost event methode.</summary>
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
+  /// <summary>A on connect event.</summary>
   TOnConnect = procedure of Object;
 
-  TZW2A2WEncodingSource = (encDB_CP, encUTF8, encDefaultSystemCodePage);
-  {** hold some connection parameters }
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines an enumerator for UTF16 to raw or vice verca encodings.
+  ///  <c>encDB_CP</c> defines the raw string encoding is the characterset of
+  ///  the database, <c>encUTF8</c> defines the raw string encoding as UTF8,
+  ///  <c>encDefaultSystemCodePage</c> defines the raw string encoding is
+  ///  the DefaultSystemCodePage.</summary>
+  TZW2A2WEncodingSource = (encDB_CP,encUTF8, encDefaultSystemCodePage);
+  /// <author>EgonHugeist</author>
+  /// <summary>defines a reference to the connection settings record.</summary>
   PZConSettings = ^TZConSettings;
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines the connection settings record.</summary>
   TZConSettings = record
-    W2A2WEncodingSource: TZW2A2WEncodingSource; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
-    ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    ReadFormatSettings: TZFormatSettings;
-    WriteFormatSettings: TZFormatSettings;
+    /// <summary>Target/Source CP of raw string conversion.</summary>
+    W2A2WEncodingSource: TZW2A2WEncodingSource;
+    /// <summary>A reference to the database characterset information.</summary>
+    ClientCodePage: PZCodePage;
+    /// <summary>The database ReadFormatSettings.</summary>
+    ReadFormatSettings: TZClientFormatSettings;
+    /// <summary>The database WriteFormatSettings.</summary>
+    WriteFormatSettings: TZClientFormatSettings;
   end;
 
-  {** a base class for most dbc-layer objects }
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements an interfaced object containing the connection
+  ///  settings reference.</summary>
   TZCodePagedObject = Class(TInterfacedObject)
   private
     FConSettings: PZConSettings;
   protected
+    /// <summary>Fills the ConSettings record from a given parameter list.</summary>
+    /// <param>"Info" the Parameter list.</param>
     procedure SetConSettingsFromInfo(Info: TStrings);
+    /// <summary>Specifies the Connection settings reference.</summary>
     property ConSettings: PZConSettings read FConSettings write FConSettings;
   public
     /// <summary>Get a reference to the actual connection settings.</summary>
@@ -152,26 +132,37 @@ type
     function GetConSettings: PZConSettings;
   end;
 
-  {** a base class for most dbc-layer objects }
-
-  { TZImmediatelyReleasableObject }
-
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements an abstract immediately releasable object.</summary>
   TZImmediatelyReleasableObject = Class(TZCodePagedObject)
   protected
     FWeakImmediatRelPtr: Pointer;
   public
+    /// <summary>Responds after the last constructor has executed.
+    ///  AfterConstruction is called automatically after the object's last
+    ///  constructor has executed. Do not call it explicitly in your applications.
+    ///  The AfterConstruction method implemented in TInterfacedObject
+    ///  decrements the class constructors RefCount. So don't forget to call
+    ///  the inherited Afterconstruction which is triggered as an OnCreate event.
+    /// </summary>
     procedure AfterConstruction; override;
   end;
 
-  // List of URL properties that could operate with URL-escaped strings
+  /// <summary>Implements an URL String List</summary>
   TZURLStringList = Class(TStringList)
   protected
+    /// <summary>Get the URL text as escaped String.</summary>
+    /// <returns>the as escaped URL String.</returns>
     function GetURLText: String;
+    /// <summary>Set an URL and unascapes the String.</summary>
+    /// <param>"Value" the escaped URL String.</param>
     procedure SetURLText(const Value: string);
   public
+    /// <summary>Represents an escaped URL String property.</summary>
     property URLText: String read GetURLText write SetURLText;
   end;
 
+  /// <summary>Implements an URL object used for generating the URL strings.</summary>
   TZURL = class
   private
     FPrefix: string;
@@ -196,10 +187,11 @@ type
     procedure SetPassword(const Value: string);
     function GetLibLocation: String;
     procedure SetLibLocation(const Value: String);
-    function GetURL: string;
-    procedure SetURL(const Value: string);
     procedure DoOnPropertiesChange(Sender: TObject);
     procedure AddValues(Values: TStrings);
+  protected
+    function GetURL: string; virtual;
+    procedure SetURL(const Value: string); virtual;
   public
     constructor Create; overload;
     constructor Create(const AURL: String); overload;
@@ -223,9 +215,8 @@ type
     property OnPropertiesChange: TNotifyEvent read FOnPropertiesChange write FOnPropertiesChange;
   end;
 
-  // Data types
 type
-  /// <summary>Defines supported SQL types.</summary>
+  /// <summary>Defines ZDBC supported SQL types.</summary>
   TZSQLType = (stUnknown,
     //fixed size DataTypes first
     stBoolean,
@@ -247,8 +238,9 @@ type
     stJSON, stXML, stVariant,
     {$ENDIF ZEOS90UP}
     //finally the object types
-    stArray, {$IFDEF ZEOS90UP}stResultSet, stStatement{$ELSE}stDataSet{$ENDIF});
+    stArray, stResultSet{$IFDEF ZEOS90UP}, stStatement{$ENDIF});
 
+  /// <summary>Defines a dynamic array of TZSQLType(s).</summary>
   TZSQLTypeArray = array of TZSQLType;
 
   /// <summary>Defines a transaction isolation level.</summary>
@@ -262,7 +254,63 @@ type
   TZFetchDirection = (fdForward, fdReverse, fdUnknown);
 
   /// <summary>Defines a type of result set.</summary>
-  TZResultSetType = (rtForwardOnly, rtScrollInsensitive, rtScrollSensitive);
+  TZResultSetType = (
+    /// <summary>The result set cannot be scrolled; its cursor moves forward
+    ///  only, from first row to last row. The rows contained in the result set
+    ///  depend on how the underlying database generates the results. That is,
+    ///  it contains the rows that satisfy the query at either the time the
+    ///  query is executed or as the rows are retrieved.</summary>
+    rtForwardOnly,
+    /// <summary>The result can be scrolled; its cursor can move both forward
+    ///  and backward relative to the current position, and it can move to an
+    ///  absolute position. The result set is insensitive to changes made to the
+    ///  underlying data source while it is open. It contains the rows that
+    ///  satisfy the query at either the time the query is executed or as the
+    ///  rows are retrieved.</summary>
+    rtScrollInsensitive,
+    /// <summary>Deprecated not implemented anymore. Yet it's the same as
+    ///  <c>rtScrollInsensitive</c>. Purpose: The result set reflects changes
+    ///  made to the underlying data source while the result set remains open.</summary>
+    /// <remarks>Use the IZResultSet RefreshCurrentRow method instead.</remarks>
+    rtScrollSensitive);
+
+  /// <author>EgonHugeist</author>
+  /// <remarks>please fix the documentation, i just reflect the purpose of the
+  ///  enums</remarks>
+  /// <summary>Defines a cursor type of result set. it's one of:
+  ///   <c>rctDriver</c>,<c>rctClient</c>,<c>rctServer</c></summary>
+  TZCursorLocation = (
+    /// <summary>The driver dicides if a Client or a Server cursor is used.</summary>
+    rctDefault,
+    /// <summary>The results are copied into a client buffer handled by provider.
+    ///  This mode is default for <c>libpq</c> or <c>libmariadb/libmysql</c>. see
+    ///  <c>mysql_store_result;mysql_stmt_store_result</c>. This usually is done
+    ///  to break the tabular streamed lock of the protocol. That than means the
+    ///  server can process the next query. If the library doesn't support it
+    ///  a server cursor will be used instead. It's drivers implementation task
+    ///  to dicide if a fetchall needs to be performed. This mode is valid
+    ///  for ResultSets having a ReadOnly ResultSetConcurrency. If the
+    ///  ResultSetConcurrency is set to rcUpdatable a CachedResultSet will be
+    ///  created. If a driver supports a ServerCursor the underlaying native
+    ///  resultset uses a ServerCursor. Drivers having a lob-descriptor in any
+    ///  kind do not load the lobs to local memory.</summary>
+    rctClient,
+    /// <summary>Use a forward only server cursor. This usually is the fastest
+    ///  way to read the data from a server. Drivers having no multiple active
+    ///  resultset support usually require read data to end or discard the
+    ///  results to query another request. This mode is available
+    ///  only for ResultSets having a ReadOnly ResultSetConcurrency. If the
+    ///  ResultSetConcurrency is set to rcUpdatable a or the ResultSetType is
+    ///  not ForwardOnly a CachedResultSet will be created consumes the input
+    ///  from the underlaying native resultset having a server cursor. Drivers
+    ///  having a lob-descriptor in any kind do not load the lobs to local
+    ///  memory.</summary>
+    rctServer);
+
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a batch array dml statement type</summary>
+  TZArrayDMLStatementType = (
+    astUnknown, astDelete, astInsert, astUpdate, astOther);
 
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
@@ -309,7 +357,7 @@ type
   /// <summary>Defines the server type.</summary>
   TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
-    spInformix, spCUBRID, spFoxPro);
+    spInformix, spCUBRID, spFoxPro, spDuckDB);
 
   /// <summary>Defines a LOB stream mode.</summary>
   TZLobStreamMode = (lsmRead, lsmWrite, lsmReadWrite);
@@ -317,13 +365,26 @@ type
   /// <summary>Defines a reference to the static TByteBuffer.</summary>
   PByteBuffer = ^TByteBuffer;
   /// <summary>Defines a static TByteBuffer.</summary>
-  TByteBuffer = array[0..1024] of Byte;
+  TByteBuffer = array[0..1023] of Byte; //1 kb
 
   /// <summary>Defines a reference to the static TWordBuffer.</summary>
   PWordBuffer = ^TWordBuffer;
   /// <summary>Defines a static TWordBuffer.</summary>
-  TWordBuffer = array[0..512] of Word;
+  TWordBuffer = array[0..511] of Word; //1 kb
 
+  /// <summary>LobCacheModes</summary>
+  //   lcmNone:      Lobs are not cached.
+  //   lcmOnLoad:    Lobs are cached on record fetch.
+  //   lcmOnAccess:  Lobs are cached only if they are accessed.  If TryKeepDataOnDisconnect
+  //                 is True then uncached lobs are cached as Clobs containing '[Disc]' on disconnect.
+  const
+    LcmNoneStr = 'None';
+    LcmOnLoadStr = 'OnLoad';
+    LcmOnAccessStr = 'OnAccess';
+  type
+  TLobCacheMode = (lcmNone, lcmOnLoad, lcmOnAccess);
+  /// <summary>Converts the LobCacheMode property string to a TLobCacheMode.</summary>
+  function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
 
 // Interfaces
 type
@@ -340,9 +401,8 @@ type
   IZResultSetMetadata = interface;
   IZBlob = interface;
   IZClob = interface;
-  IZNotification = interface;
   IZSequence = interface;
-  IZDataSet = interface;
+  IZEventListener = interface;
 
   /// <summary>Defines the Driver Manager interface.</summary>
   IZDriverManager = interface(IZInterface)
@@ -515,10 +575,10 @@ type
     function GetSubVersion: Integer;
     /// <summary>Creates a generic tokenizer interface.</summary>
     /// <returns>a created generic tokenizer object.</returns>
-    function GetTokenizer: IZTokenizer;
+    function GetTokenizer: IZTokenizer; deprecated {$IFDEF WITH_DEPRECATED_MESSAGE}'Use IZConnection.GetTokenizer instead'{$ENDIF};
     /// <summary>Creates a generic statement analyser object.</summary>
     /// <returns>a created generic tokenizer object as interface.</returns>
-    function GetStatementAnalyser: IZStatementAnalyser;
+    function GetStatementAnalyser: IZStatementAnalyser; deprecated {$IFDEF WITH_DEPRECATED_MESSAGE}'Use IZConnection.GetStatementAnalyser instead'{$ENDIF};
   end;
 
   /// <author>EgonHugeist</author>
@@ -543,7 +603,7 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>Implements a transaction interface.</summary>
+  /// <summary>Defines a transaction interface.</summary>
   IZTransaction = interface(IImmediatelyReleasable)
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
     /// <summary>If the current transaction is saved the current savepoint get's
@@ -581,10 +641,12 @@ type
     function GetTransactionLevel: Integer;
     /// <summary>Attempts to change the transaction isolation level to the one
     ///  given. The constants defined in the interface <c>Connection</c> are the
-    ///  possible transaction isolation levels. Note: This method cannot be
-    ///  called while in the middle of a transaction.
-    /// <param>"value" one of the TRANSACTION_* isolation values with the
-    ///  exception of TRANSACTION_NONE; some databases may not support other
+    ///  possible transaction isolation levels. </summary>
+    /// <remarks>This method cannot be called while a explicit transaction is
+    ///  started.</remarks>
+    /// <param>"Value" one of <c>tiNone, tiReadUncommitted, tiReadCommitted,
+    ///  tiRepeatableRead, tiSerializable</c> isolation values with the
+    ///  exception of <c>tiNone</c>; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
@@ -597,15 +659,16 @@ type
     ///  otherwise.</returns>
     function IsReadOnly: Boolean;
     /// <summary>Puts this transaction in read-only mode as a hint to enable
-    ///  database optimizations. Note: This method cannot be called while in the
-    ///  middle of a transaction.</summary>
-    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  database optimizations.</summary>
+    /// <remarks>This method cannot be called while a explicit transaction is
+    ///  started.</remarks>
+    /// <param>"Value" true enables read-only mode; false disables read-only
     ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     /// <summary>Releases a transaction and resources immediately
     ///  instead of waiting for them to be automatically released. If the
     ///  transaction is underway a rollback will be done. Note: A
-    ///  Transaction is automatically closed when the Conenction closes or it is
+    ///  Transaction is automatically closed when the connection closes or it is
     ///  garbage collected. Certain fatal errors also result in a closed
     //// Transaction.</summary>
     procedure Close;
@@ -616,16 +679,17 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>Implements a transaction manager interface.</summary>
+  /// <summary>Defines a transaction manager interface.</summary>
   IZTransactionManager = interface(IImmediatelyReleasable)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
     /// <summary>Creates a <c>Transaction</c></summary>
     /// <param>"AutoCommit" the AutoCommit mode.</param>
     /// <param>"ReadOnly" the ReadOnly mode.</param>
-    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of the
-    ///  TRANSACTION_* isolation values with the exception of TRANSACTION_NONE;
+    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of of
+    ///  <c>tiNone, tiReadUncommitted, tiReadCommitted, tiRepeatableRead,
+    ///  tiSerializable</c> isolation values with the exception of <c>tiNone</c>;
     ///  some databases may not support other values see
-    ///  DatabaseInfo.supportsTransactionIsolationLevel</param>
+    ///  DatabaseInfo.SupportsTransactionIsolationLevel</param>
     /// <param>"Params" a list of properties used for the transaction.</param>
     /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
@@ -647,25 +711,68 @@ type
     procedure ClearTransactions;
   end;
 
-  {** Implements a variant manager with connection related convertion rules. }
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a variant manager with connection related convertion
+  ///  rules.</summary>
   IZClientVariantManager = Interface(IZVariantManager)
     ['{73A1A2C7-7C38-4620-B7FE-2426BF839BE5}']
     function UseWComparsions: Boolean;
   End;
 
-  /// <summary>Database Connection interface.</summary>
+  TZEventState = (esSignaled, esTimeout);
+
+  TZEventData = class(TObject)
+  protected
+    fEventState: TZEventState;
+    fCreationTime: TDateTime;
+    fName, fKind: SQLString;
+  public
+    procedure AfterConstruction; override;
+  public
+    function ToString: string; {$IFDEF TOBJECT_HAS_TOSTRING}override;{$ELSE}virtual;{$ENDIF}
+  public
+    property Name: SQLString read fName;
+    /// <summary>represents the kind of the received event i.e. Notfication,Event etc.</summary>
+    property Kind: String read fKind;
+    property EventState: TZEventState read fEventState;
+    property CreationTime: TDateTime read fCreationTime;
+  end;
+
+  TZOnEventHandler = procedure(var Event: TZEventData) of object;
+
+  /// <summary>Defines the Database Connection interface.</summary>
   IZConnection = interface(IImmediatelyReleasable)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a raw encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a UTF16 encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload;
-
+    /// <summary>Sets a OnConnectionLost event.</summary>
+    /// <param>"Handler" the event to be called on triggering the connection
+    ///  lost.</param>
+    /// <remarks> The handler must raise an exception to abort
+    ///  the code serialization.</remarks>
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+    /// <summary>Add the SQL to the EZSQLException?</summary>
+    /// <param>"Value" if <c>True</c> the SQL will be added to the exception.</param>
     procedure SetAddLogMsgToExceptionOrWarningMsg(Value: Boolean);
+    /// <summary>Should SQL-Warnings be raised?</summary>
+    /// <param>"Value" if <c>True</c> the EZSQLWarning will be thrown.</param>
     procedure SetRaiseWarnings(Value: Boolean);
-
+    /// <summary>Register an active statement on the connection.</summary>
+    /// <param>"Value" the statement interface to be registered.</param>
+    /// <remarks>This refrence is stored as a weak reference to avoid circular
+    ///  refrences.</remarks>
     procedure RegisterStatement(const Value: IZStatement);
+    /// <summary>Deregister a tatement from the connection if it's closing.</summary>
+    /// <param>"Value" the statement interface to be deregistered.</param>
     procedure DeregisterStatement(const Statement: IZStatement);
-
     /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
     ///  to the database. SQL statements without parameters are normally
     ///  executed using Statement objects. If the same SQL statement
@@ -710,7 +817,7 @@ type
     /// <param>"Name" a procedure or function name.</param>
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement </returns>
-    function PrepareCall(const SQL: string): IZCallableStatement;
+    function PrepareCall(const Name: string): IZCallableStatement;
     /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
     ///  to the database. SQL statements without parameters are normally
     ///  executed using Statement objects. If the same SQL statement
@@ -761,10 +868,19 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
-
-    function CreateNotification(const Event: string): IZNotification;
+    /// <summary>Creates a sequence generator object.</summary>
+    /// <param>"Sequence" a name of the sequence generator.</param>
+    /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
+    ///  server.</param>
+    /// <returns>returns a created sequence object.</returns>
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
-
+    /// <summary>Converts the given SQL statement into the system's native SQL
+    ///  grammar. A driver may convert the ZDBC sql grammar into its system's
+    ///  native SQL grammar prior to sending it; this method returns the
+    /// native form of the statement that the driver would have sent.</summary>
+    /// <param>"SQL" a SQL statement that may contain one or more '?'/
+    /// questionmark parameter placeholders</param>
+    /// <returns>the native form of this statement</returns>
     function NativeSQL(const SQL: string): string;
     /// <summary>Sets this connection's auto-commit mode. If a connection is in
     ///  auto-commit mode, then all its SQL statements will be executed and
@@ -780,7 +896,7 @@ type
     ///  cases the commit occurs when all results and output parameter values
     ///  have been retrieved. It is not recommented setting autoCommit to false
     ///  because a call to either the method <c>commit</c> or the method
-    ///  <c>rollback</c> will restart the transaction. It's use full only if
+    ///  <c>rollback</c> will restart the transaction. It is useful only if
     ///  repeately many opertions are done and no startTransaction is intended
     ///  to use. If you change mode to true the current Transaction and it's
     ///  nested SavePoints are committed then.</summary>
@@ -801,6 +917,7 @@ type
     ///  Connection. This method should be used only when auto-commit has been
     ///  disabled. See setAutoCommit.</summary>
     procedure Rollback;
+    /// <author>EgonHugeist</author>
     /// <summary>Starts transaction support or saves the current transaction.
     ///  If the connection is closed, the connection will be opened.
     ///  If a transaction is underway a nested transaction or a savepoint will
@@ -808,43 +925,84 @@ type
     ///  property is set to False. Ending up the transaction with a
     ///  commit/rollback the autocommit property will be restored if changing
     ///  the autocommit mode was triggered by a starttransaction call.</summary>
-    /// <returns>The current txn-level. 1 means a expicit transaction
+    /// <returns>The current txn-level. 1 means a explicit transaction
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the active transaction interces of the connection.</summary>
+    /// <returns>The transaction object</returns>
     function GetConnectionTransaction: IZTransaction;
-
-    //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
+    /// <author>firmos</author>
+    /// <summary>Prepares a two phase transaction.</summary>
     procedure PrepareTransaction(const transactionid: string);
+    /// <author>firmos</author>
+    /// <summary>commits the two phase transaction.</summary>
     procedure CommitPrepared(const transactionid: string);
+    /// <author>firmos</author>
+    /// <summary>Rolls back the two phase transaction.</summary>
     procedure RollbackPrepared(const transactionid: string);
-
-    //Ping Server Support (firmos) 27032006
-
+    /// <author>firmos (initially for MySQL 27032006)</author>
+    /// <summary>Ping Current Connection's server, if client was disconnected,
+    ///  the connection is resumed.</summary>
+    /// <returns>0 if succesfull or error code if any error occurs</returns>
     function PingServer: Integer;
+    /// <author>aehimself</author>
+    /// <summary>Immediately abort any kind of queries.</summary>
+    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
     function AbortOperation: Integer;
-    function EscapeString(const Value: RawByteString): RawByteString;
-
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open;
+    /// <summary>Releases a Connection's database and resources immediately
+    ///  instead of waiting for them to be automatically released. Note: A
+    ///  Connection is automatically closed when it is garbage collected.
+    ///  Certain fatal errors also result in a closed Connection.</summary>
     procedure Close;
+    /// <summary>Is the connection object closed?</summary>
+    /// <returns><c>True</c> if Closed; <c>False</c> otherwise</returns>
     function IsClosed: Boolean;
-
+    /// <summary>Gets the parent ZDBC driver.</summary>
+    /// <returns>the parent ZDBC driver interface.</returns>
     function GetDriver: IZDriver;
+    /// <summary>Gets the plain driver.</summary>
+    /// <returns>the plain driver interface.</returns>
     function GetIZPlainDriver: IZPlainDriver;
+    /// <summary>Gets the metadata regarding this connection's database.
+    ///  A Connection's database is able to provide information
+    ///  describing its tables, its supported SQL grammar, its stored
+    ///  procedures, the capabilities of this connection, and so on. This
+    ///  information is made available through a DatabaseMetaData object.</summary>
+    /// <returns>a DatabaseMetaData object for this Connection.</returns>
     function GetMetadata: IZDatabaseMetadata;
+    /// <summary>Gets a connection parameters.</summary>
+    /// <returns>a list with connection parameters.</returns>
     function GetParameters: TStrings;
+    /// <author>fduenas</author>
+    /// <summary>Gets the client's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this clients's full version number</returns>
     function GetClientVersion: Integer;
+    /// <author>fduenas</author>
+    /// <summary>Gets the host's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this server's full version number</returns>
     function GetHostVersion: Integer;
-
     /// <summary>Puts this connection in read-only mode as a hint to enable
-    ///  database optimizations. Note: This method cannot be called while in the
-    ///  middle of a transaction.</summary>
-    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  database optimizations.</summary>
+    /// <remarks>This method cannot be called while a explicit transaction is
+    ///  started.</remarks>
+    /// <param>"Value" true enables read-only mode; false disables read-only
     ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
-    /// <summary>Check if the current conenction is readonly. See setReadonly.
+    /// <summary>Check if the current connection is readonly. See setReadonly.
     ///  </summary>
-    /// <returns><c>True</c> if the conenction is readonly; <c>False</c>
+    /// <returns><c>True</c> if the connection is readonly; <c>False</c>
     ///  otherwise.</returns>
     function IsReadOnly: Boolean;
     /// <summary>Sets a catalog name in order to select a subspace of this
@@ -852,73 +1010,405 @@ type
     ///  catalogs, it will silently ignore this request.</summary>
     /// <param>"value" new catalog name to be used.</param>
     procedure SetCatalog(const Value: string);
+    /// <summary>Returns the Connection's current catalog name.</summary>
+    /// <returns>the current catalog name or an empty string.</returns>
     function GetCatalog: string;
-
     /// <summary>Attempts to change the transaction isolation level to the one
     ///  given. The constants defined in the interface <c>Connection</c> are the
     ///  possible transaction isolation levels. Note: This method cannot be
     ///  called while in the middle of a transaction.
-    /// <param>"value" one of the TRANSACTION_* isolation values with the
-    ///  exception of TRANSACTION_NONE; some databases may not support other
+    /// <param>"value" one of <c>tiNone, tiReadUncommitted, tiReadCommitted,
+    ///  tiRepeatableRead, tiSerializable</c> isolation values with the
+    ///  exception of <c>tiNone</c>; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
+    /// <summary>Gets this Connection's current transaction isolation level.</summary>
+    /// <returns>the current TRANSACTION_* mode value.</returns>
     function GetTransactionIsolation: TZTransactIsolationLevel;
-
+    /// <summary>Returns the first warning reported by calls on this Connection.</summary>
+    /// <remarks>Subsequent warnings will be chained to this EZSQLWarning.</remarks>
+    /// <returns>the first SQLWarning or nil.</returns>
     function GetWarnings: EZSQLWarning;
+    /// <summary>Clears all warnings reported for this <c>Connection</c> object.
+    ///  After a call to this method, the method <c>getWarnings</c> returns nil
+    ///  until a new warning is reported for this Connection.</summary>
     procedure ClearWarnings;
-
+    /// <summary>Are metadata used? If <c>True</c> then we can determine if
+    ///  columns are writeable or not. This is required for generating automatic
+    ///  updates.</summary>
+    /// <returns><c>True</c> if metainformations are turned on; <c>False</c>
+    ///  otherwise.</returns>
     function UseMetadata: boolean;
+    /// <summary>Sets the use of metadata informations. This is required for
+    ///  generating automatic updates.</summary>
+    /// <param>"Value" enables or disables the metadata loading.</param>
     procedure SetUseMetadata(Value: Boolean);
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
 
+    /// <summary>Escape a string so it's acceptable for the Connection's server.</summary>
+    /// <param>"value" a string that should be escaped</param>
+    /// <returns>an escaped string</returns>
     function GetEscapeString(const Value: UnicodeString): UnicodeString; overload;
+    /// <summary>Escape a string so it's acceptable for the Connection's server.</summary>
+    /// <param>"value" a string that should be escaped</param>
+    /// <returns>an escaped string</returns>
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
 
+    function EscapeString(const Value: RawByteString): RawByteString;
+
     function GetEncoding: TZCharEncoding;
+    /// <summary>Gets a VariantManager object which is able to convert values
+    ///  according the client character set informations.</summary>
+    /// <returns>The variant manager object; never <c>nil</c>.</returns>
     function GetClientVariantManager: IZClientVariantManager;
+    /// <summary>Get's the escaped URL used for establishing this connection.</summary>
+    /// <returns>the escaped URL.</returns>
     function GetURL: String;
+    /// <summary>Returns the ServicerProvider for this connection. For some
+    ///  drivers the connection mist be opened to determine the provider.</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
+    /// <c>false</c> otherwise.</returns>
+    function SupportsEventListener: Boolean;
+    /// <summary>Closes the event alerter.</summary>
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventListener(var Value: IZEventListener);
   end;
 
-  /// <summary>
-  ///   Database metadata interface.
-  /// </summary>
+  /// <summary>Defines the database metadata interface.</summary>
   IZDatabaseMetadata = interface(IZInterface)
     ['{FE331C2D-0664-464E-A981-B4F65B85D1A8}']
-
-    function GetURL: string;
-    function GetUserName: string;
-
+    /// <author>technobot</author>
+    /// <summary>Returns general information about the database (version,
+    ///  capabilities,  policies, etc).</summary>
+    /// <returns>the database information object as interface.</returns>
     function GetDatabaseInfo: IZDatabaseInfo;
+    /// <author>EgonHugeist</author>
     function GetTriggers(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugeist 30.03.2011
-    function GetCollationAndCharSet(const Catalog, Schema, TableName, ColumnName: String): IZResultSet; //EgonHugeist 10.01.2012
-    function GetCharacterSets: IZResultSet; //EgonHugeist 19.01.2012
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
+    /// <author>EgonHugeist</author>
+    function GetCollationAndCharSet(const Catalog, Schema, TableName, ColumnName: String): IZResultSet;
+    /// <author>EgonHugeist</author>
+    function GetCharacterSets: IZResultSet;
+    /// <summary>Gets a description of the stored procedures available in a
+    ///  catalog.
+    ///  Only procedure descriptions matching the schema and procedure name
+    ///  criteria are returned. They are ordered by
+    ///  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+    ///  Each procedure description has the the following columns:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>PROCEDURE_OVERLOAD</c> => a overload indicator (may be null)
+    ///  <c>RESERVED1</c> => for future use
+    ///  <c>RESERVED2</c> => for future use
+    ///  <c>REMARKS</c> String => explanatory comment on the procedure
+    ///  <c>PROCEDURE_TYPE</c> short => kind of procedure:
+    ///   procedureResultUnknown - May return a result
+    ///   procedureNoResult - Does not return a result
+    ///   procedureReturnsResult - Returns a result</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a procedure description.</returns>
+    /// <remarks>see getSearchStringEscape</remarks>
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of a catalog's stored procedure parameters
+    ///  and result columns.
+    ///  Only descriptions matching the schema, procedure and
+    ///  parameter name criteria are returned.  They are ordered by
+    ///  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
+    ///  if any, is first. Next are the parameter descriptions in call
+    ///  order. The column descriptions follow in column number order.
+    ///  Each row in the <c>ResultSet</c> is a parameter description or
+    ///  column description with the following fields:
+ 	  ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+ 	  ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+ 	  ///  <c>PROCEDURE_NAME</c> String => procedure name
+ 	  ///  <c>COLUMN_NAME</c> String => column/parameter name
+ 	  ///  <c>COLUMN_TYPE</c> Short => kind of column/parameter:
+    ///      Ord(pctUnknown) - nobody knows
+    ///      Ord(pctIn) - IN parameter
+    ///      Ord(pctInOut) - INOUT parameter
+    ///      Ord(pctOut) - OUT parameter
+    ///      Ord(pctReturn) - procedure return value
+    ///      Ord(pctResultSet) - result column in <c>ResultSet</c>
+    ///  <c>DATA_TYPE</c> short => ZDBC SQL type
+ 	  ///  <c>TYPE_NAME</c> String => SQL type name, for a UDT type the
+    ///   type name is fully qualified
+ 	  ///  <c>PRECISION</c> int => precision
+ 	  ///  <c>LENGTH</c> int => length in bytes of data
+ 	  ///  <c>SCALE</c> short => scale, second fractions
+ 	  ///  <c>RADIX</c> short => radix
+ 	  ///  <c>NULLABLE</c> short => can it contain NULL?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+ 	  ///  <c>REMARKS</c> String => comment describing parameter/column</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop
+    ///  schema pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <param>"columnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row describes a stored procedure
+    ///  parameter or column</returns>
+    /// <remarks>Some databases may not return the column descriptions for a
+    ///  procedure. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string; const ColumnNamePattern: string): IZResultSet;
-
+    /// <summary>Gets a description of tables available in a catalog.
+    ///  Only table descriptions matching the catalog, schema, table
+    ///  name and type criteria are returned.  They are ordered by
+    ///  TABLE_TYPE, TABLE_SCHEM and TABLE_NAME.
+    ///  Each table description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>TABLE_TYPE</c> String => table type.  Typical types are "TABLE",
+ 	  ///  		"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
+ 	  ///  		"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+ 	  ///  <c>REMARKS</c> String => explanatory comment on the table</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"Types" an array of table types to include; nil returns all
+    ///  types.</param>
+    /// <returns><c>ResultSet</c> - each row is a table description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet;
+    /// <summary>Gets the schema names available in this database. The results
+    ///  are ordered by schema name.
+    ///  The schema column is:
+    ///  <C>TABLE_SCHEM</C> String => schema name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a schema name</returns>
     function GetSchemas: IZResultSet;
+    /// <summary>Gets the catalog names available in this database. The results
+    ///  are ordered by catalog name.
+    ///  The catalog column is:
+    ///  <C>TABLE_CAT</C> String => catalog name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a catalog name</returns>
     function GetCatalogs: IZResultSet;
+    /// <summary>Gets the table types available in this database from a cache.
+    ///  The results are ordered by table type.
+    ///  The table type is:
+    ///  <c>TABLE_TYPE</c> String => table type. Typical types are "TABLE",
+    ///  "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY","LOCAL TEMPORARY", "ALIAS",
+    ///  "SYNONYM".</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a table type</returns>
     function GetTableTypes: IZResultSet;
+    /// <summary>Gets a description of table columns available in
+    ///  the specified catalog.
+    ///  Only column descriptions matching the catalog, schema pattern, table
+    ///  name pattern and column name criteria are returned. They are ordered by
+    ///  TABLE_SCHEM, TABLE_NAME and ORDINAL_POSITION.
+    ///  Each column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>DATA_TYPE</c> short => SQL type from java.sql.Types
+    ///  <c>TYPE_NAME</c> String => Data source dependent type name,
+    ///   for a UDT the type name is fully qualified
+    ///  <c>COLUMN_SIZE</c> int => column size.  For char or date
+    ///      types this is the maximum number of characters, for numeric or
+    ///      decimal types this is precision.
+    ///  <c>BUFFER_LENGTH</c> is not used.
+    ///  <c>DECIMAL_DIGITS</c> int => the number of fractional digits
+    ///  <c>NUM_PREC_RADIX</c> int => Radix (typically either 10 or 2)
+    ///  <c>NULLABLE</c> int => is NULL allowed?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+    ///  <c>REMARKS</c> String => comment describing column (may be null)
+    ///  <c>COLUMN_DEF</c> String => default value (may be null)
+    ///  <c>SQL_DATA_TYPE</c> int => unused
+    ///  <c>SQL_DATETIME_SUB</c> int => unused
+    ///  <c>CHAR_OCTET_LENGTH</c> int => for char types the
+    ///        maximum number of bytes in the column
+    ///  <c>ORDINAL_POSITION</c> int	=> index of column in table
+    ///       (starting at 1)
+    ///  <c>IS_NULLABLE</c> String => "NO" means column definitely
+    ///       does not allow NULL values; "YES" means the column might
+    ///       allow NULL values. An empty string means nobody knows.</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" retrieves those
+    ///  without a schema</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a column description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond IS_NULLABLE can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet;
-
+    /// <summary>Gets a description of the access rights for each table
+    ///  available in a catalog from a cache. Note that a table privilege
+    ///  applies to one or more columns in the table. It would be wrong to
+    ///  assume that this priviledge applies to all columns (this may be true
+    ///  for some systems but is not true for all.)
+    ///
+    ///  Only privileges matching the schema and table name
+    ///  criteria are returned. They are ordered by TABLE_SCHEM,
+    ///  TABLE_NAME, and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///      INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    ///
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema from
+    ///  the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a table privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet;
     function GetBestRowIdentifier(const Catalog: string; const Schema: string;
       const Table: string; Scope: Integer; Nullable: Boolean): IZResultSet;
     function GetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
-
+    /// <summary>Gets a description of a table's primary key columns from a
+    ///  cache. They are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>KEY_SEQ</c> short => sequence number within primary key
+ 	  ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetPrimaryKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table) from a cache.  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
     function GetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
     function GetExportedKeys(const Catalog: string; const Schema: string;
@@ -926,7 +1416,6 @@ type
     function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
       const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
       const ForeignTable: string): IZResultSet;
-
     function GetTypeInfo: IZResultSet;
 
     function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
@@ -937,12 +1426,16 @@ type
 
     function GetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
-
+    /// <summary>Get's the owner connection that produced that object instance.
+    /// </summary>
+    /// <returns>the connection object interface.</returns>
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor; deprecated;
     function GetIdentifierConverter: IZIdentifierConverter; //typo fixed
-
+    /// <summary>Clears all cached metadata.</summary>
     procedure ClearCache; overload;
+    /// <summary>Clears specific cached metadata by a key.</summary>
+    /// <param>"Key" a resultset unique key value.</summary>
     procedure ClearCache(const Key: string); overload;
 
     function AddEscapeCharToWildcards(const Pattern: string): string;
@@ -950,33 +1443,76 @@ type
     function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
   end;
 
-  /// <summary>
-  ///  Database information interface. Used to describe the database as a whole
-  ///  (version, capabilities, policies, etc).
-  /// </summary>
+  /// <author>technobot</author>
+  /// <summary>Defines the Database information interface. Used to describe the
+  ///  database as a whole (version, capabilities, policies, etc).</summary>
   IZDatabaseInfo = interface(IZInterface)
     ['{107CA354-F594-48F9-8E08-CD797F151EA0}']
-
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string;
+    /// <summary>What's the version of this database product?</summary>
+    /// <returns>database version</returns>
     function GetDatabaseProductVersion: string;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string;
+    /// <summary>What's the version of this ZDBC driver?</summary>
+    /// <returns>the ZDBC driver version as string.</returns>
     function GetDriverVersion: string;
+    /// <summary>What's this ZDBC driver's major version number?</summary>
+    /// <returns>ZDBC driver major version</returns>
     function GetDriverMajorVersion: Integer;
+    /// <summary>What's this ZDBC driver's minor version number?</summary>
+    /// <returns>The ZDBC driver minor version number as Integer.</returns>
     function GetDriverMinorVersion: Integer;
+    /// <summary>What's the server version?</summary>
+    /// <returns>The server version string.</returns>
     function GetServerVersion: string;
 
     // capabilities (what it can/cannot do):
+
+    /// <summary>Can all the procedures returned by getProcedures be called by
+    ///  the current user?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function AllProceduresAreCallable: Boolean;
+    /// <summary>Can all the tables returned by getTable be SELECTed by the
+    ///  current user?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function AllTablesAreSelectable: Boolean;
+    /// <summary>Does the database treat mixed case unquoted SQL identifiers as
+    ///  case sensitive and as a result store them in mixed case?
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsMixedCaseIdentifiers: Boolean;
+    /// <summary>Does the database treat mixed case quoted SQL identifiers as
+    ///  case sensitive and as a result store them in mixed case?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsMixedCaseQuotedIdentifiers: Boolean;
+    /// <summary>Is "ALTER TABLE" with add column supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsAlterTableWithAddColumn: Boolean;
+    /// <summary>Is "ALTER TABLE" with drop column supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsAlterTableWithDropColumn: Boolean;
+    /// <summary>Is column aliasing supported? If so, the SQL AS clause can be
+    ///  used to provide names for computed columns or to provide alias names
+    ///  for columns as required.<summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsColumnAliasing: Boolean;
+    /// <summary>Is the CONVERT function between SQL types supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvert: Boolean;
+    /// <summary>Not Yet implemented. Is CONVERT between the given SQL types
+    ///  supported?</summary>
+    /// <param><c>"FromType"</c> the type to convert from</param>
+    /// <param><c>"ToType"</c> the type to convert to</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
       Boolean;
+    /// <summary>Are table correlation names supported?
+    /// A Zeos Compliant <c>TM</c> driver always returns true.</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function SupportsTableCorrelationNames: Boolean;
     function SupportsDifferentTableCorrelationNames: Boolean;
     function SupportsExpressionsInOrderBy: Boolean;
@@ -1098,178 +1634,125 @@ type
     function GetExtraNameCharacters: string;
   end;
 
-  /// <summary>
-  ///  Generic SQL statement interface.
-  /// </summary>
+  /// <summary>Generic SQL statement interface.</summary>
   IZStatement = interface(IImmediatelyReleasable)
     ['{22CEFA7E-6A6D-48EC-BB9B-EE66056E90F1}']
-
-    /// <summary>
-    ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
-    /// </summary>
-    /// <param name="SQL">
-    ///  typically this is a static SQL <c>SELECT</c> statement
-    /// </param>
-    /// <returns>
-    ///  a <c>ResultSet</c> object that contains the data produced by the
-    ///  given query; never <c>nil</c>
-    /// </returns>
+    /// <summary> Executes an SQL statement that returns a single
+    ///  <c>ResultSet</c> object.</summary>
+    /// <param>"SQL" typically this is a static SQL <c>SELECT</c> statement</param>
+    /// <returns>a <c>ResultSet</c> object that contains the data produced by
+    ///  the given query; never <c>nil</c></returns>
     function ExecuteQuery(const SQL: UnicodeString): IZResultSet; overload;
-    /// <summary>
-    ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
-    ///  <c>DELETE</c> statement. In addition,
-    ///  SQL statements that return nothing, such as SQL DDL statements,
-    ///  can be executed.
-    /// </summary>
-    /// <param name="SQL">
-    ///  an SQL <c>INSERT</c>, <c>UPDATE</c> or
-    ///  <c>DELETE</c> statement or an SQL statement that returns nothing
-    /// </param>
-    /// <returns>
-    ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
-    ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
+    /// <summary>Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or <c>DELETE</c>
+    ///  statement. In addition, SQL statements that return nothing, such as SQL
+    ///  DDL statements, can be executed. </summary>
+    /// <param>"SQL" an SQL <c>INSERT</c>, <c>UPDATE</c> or <c>DELETE</c>
+    /// statement or an SQL statement that returns nothing.</param>
+    /// <returns>either the row count for <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statements, or 0 for SQL statements that return nothing
     /// </returns>
     function ExecuteUpdate(const SQL: UnicodeString): Integer; overload;
-    /// <summary>
-    ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    ///  <code>DELETE</code> statement. In addition,
-    ///  SQL statements that return nothing, such as SQL DDL statements,
-    ///  can be executed.
-    /// </summary>
-    /// <param name="SQL">
-    ///  an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    ///  <code>DELETE</code> statement or an SQL statement that returns nothing
-    /// </param>
-    /// <returns>
-    ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-    /// </returns>
+    /// <summary>Executes an SQL statement that may return multiple results.
+    ///  Under some (uncommon) situations a single SQL statement may return
+    ///  multiple result sets and/or update counts.  Normally you can ignore
+    ///  this unless you are (1) executing a stored procedure that you know may
+    ///  return multiple results or (2) you are dynamically executing an
+    ///  unknown SQL string.  The  methods <c>execute</c>, <c>getMoreResults</c>
+    ///  , <c>getResultSet</c>, and <c>getUpdateCount</c> let you navigate
+    ///  through multiple results. The <c>execute</c> method executes an SQL
+    ///  statement and indicates the form of the first result. You can then use
+    ///  the methods <c>getResultSet</c> or <c>getUpdateCount</c> to retrieve
+    ///  the result, and <c>getMoreResults</c> to move to any subsequent
+    ///  result(s).</summary>
+    /// <param>"SQL" any SQL statement.</param>
+    /// <returns><c>true</c> if the next result is a <c>ResultSet</c> object;
+    ///  <c>false</c> if it is an update count or there are no more results.</returns>
     function Execute(const SQL: UnicodeString): Boolean; overload;
-    /// <summary>
-    ///  Executes an SQL statement that returns a single <c>ResultSet</c> object.
-    /// </summary>
-    /// <param name="SQL">
-    ///  typically this is a static SQL <c>SELECT</c> statement
-    /// </param>
-    /// <returns>
-    ///  a <c>ResultSet</c> object that contains the data produced by the
-    ///  given query; never <c>nil</c>
-    /// </returns>
+    /// <summary> Executes an SQL statement that returns a single
+    ///  <c>ResultSet</c> object.</summary>
+    /// <param>"SQL" typically this is a static SQL <c>SELECT</c> statement</param>
+    /// <returns>a <c>ResultSet</c> object that contains the data produced by
+    ///  the given query; never <c>nil</c></returns>
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload;
-    /// <summary>
-    ///  Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or
-    ///  <c>DELETE</c> statement. In addition,
-    ///  SQL statements that return nothing, such as SQL DDL statements,
-    ///  can be executed.
-    /// </summary>
-    /// <param name="SQL">
-    ///  an SQL <c>INSERT</c>, <c>UPDATE</c> or
-    ///  <c>DELETE</c> statement or an SQL statement that returns nothing
-    /// </param>
-    /// <returns>
-    ///  either the row count for <c>INSERT</c>, <c>UPDATE</c>
-    ///  or <c>DELETE</c> statements, or 0 for SQL statements that return nothing
+    /// <summary>Executes an SQL <c>INSERT</c>, <c>UPDATE</c> or <c>DELETE</c>
+    ///  statement. In addition, SQL statements that return nothing, such as SQL
+    ///  DDL statements, can be executed. </summary>
+    /// <param>"SQL" an SQL <c>INSERT</c>, <c>UPDATE</c> or <c>DELETE</c>
+    /// statement or an SQL statement that returns nothing.</param>
+    /// <returns>either the row count for <c>INSERT</c>, <c>UPDATE</c> or
+    ///  <c>DELETE</c> statements, or 0 for SQL statements that return nothing
     /// </returns>
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload;
-    /// <summary>
-    ///  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    ///  <code>DELETE</code> statement. In addition,
-    ///  SQL statements that return nothing, such as SQL DDL statements,
-    ///  can be executed.
-    /// </summary>
-    /// <param name="SQL">
-    ///  an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    ///  <code>DELETE</code> statement or an SQL statement that returns nothing
-    /// </param>
-    /// <returns>
-    ///  either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    ///  or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-    /// </returns>
+    /// <summary>Executes an SQL statement that may return multiple results.
+    ///  Under some (uncommon) situations a single SQL statement may return
+    ///  multiple result sets and/or update counts.  Normally you can ignore
+    ///  this unless you are (1) executing a stored procedure that you know may
+    ///  return multiple results or (2) you are dynamically executing an
+    ///  unknown SQL string.  The  methods <c>execute</c>, <c>getMoreResults</c>
+    ///  , <c>getResultSet</c>, and <c>getUpdateCount</c> let you navigate
+    ///  through multiple results. The <c>execute</c> method executes an SQL
+    ///  statement and indicates the form of the first result. You can then use
+    ///  the methods <c>getResultSet</c> or <c>getUpdateCount</c> to retrieve
+    ///  the result, and <c>getMoreResults</c> to move to any subsequent
+    ///  result(s).</summary>
+    /// <param>"SQL" any SQL statement.</param>
+    /// <returns><c>true</c> if the next result is a <c>ResultSet</c> object;
+    ///  <c>false</c> if it is an update count or there are no more results.</returns>
     function Execute(const SQL: RawByteString): Boolean; overload;
-
-    /// <summary>
-    ///  get the current SQL string
-    /// </summary>
+    /// <summary>get the current SQL string</summary>
+    /// <returns>the SQL string</returns>
     function GetSQL : String;
-
-    /// <summary>
-    ///  Releases this <c>Statement</c> object's database
-    ///  resources immediately instead of waiting for
-    ///  this to happen when it is automatically closed.
-    ///  It is generally good practice to release resources as soon as
-    ///  you are finished with them to avoid tying up database
-    ///  resources.
-    ///  <para><b>Note:</b> A <c>Statement</c> object is automatically closed when its
-    ///    reference counter becomes zero. When a <c>Statement</c> object is closed, its current
-    ///    <c>ResultSet</c> object, if one exists, is also closed.
-    ///  </para>
-    /// </summary>
+    /// <summary>Releases this <c>Statement</c> object's database
+    ///  resources immediately instead of waiting for this to happen when it is
+    ///  automatically closed. It is generally good practice to release
+    ///  resources as soon as you are finished with them to avoid tying up
+    ///  database resources. <b>Note:</b> A <c>Statement</c> object is
+    ///  automatically closed when its reference counter becomes zero. When a
+    ///  <c>Statement</c> object is closed, its current <c>ResultSet</c> object,
+    ///  if one exists, is also closed.</summary>
     procedure Close;
+    /// <summary>Test if the <c>Statement</c></summary>
+    /// <returns><c>true</c> if the <c>Statement</c> is closed; <c>false</c>
+    ///  otherwise.</returns>
     function IsClosed: Boolean;
-
-    /// <summary>
-    ///  Returns the maximum number of bytes allowed
-    ///  for any column value.
-    ///  This limit is the maximum number of bytes that can be
-    ///  returned for any column value.
-    ///  The limit applies only to <c>BINARY</c>,
-    ///  <c>VARBINARY</c>, <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>, and <c>LONGVARCHAR</c>
-    ///  columns.  If the limit is exceeded, the excess data is silently
-    ///  discarded.
-    /// </summary>
-    /// <returns>
-    ///  the current max column size limit; zero means unlimited
-    /// </returns>
+    /// <summary>Returns the maximum number of bytes allowed for any column
+    ///  value. This limit is the maximum number of bytes that can be returned
+    ///  for any column value. The limit applies only to <c>BINARY</c>,
+    ///  <c>VARBINARY</c>, <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>,
+    ///  and <c>LONGVARCHAR</c> columns.  If the limit is exceeded, the excess
+    ///  data is silently discarded. </summary>
+    /// <returns>the current max column size limit; zero means unlimited.</returns>
     function GetMaxFieldSize: Integer;
-    /// <summary>
-    ///  Sets the limit for the maximum number of bytes in a column to
-    ///  the given number of bytes.  This is the maximum number of bytes
-    ///  that can be returned for any column value.  This limit applies
-    ///  only to <c>BINARY</c>, <c>VARBINARY</c>,
-    ///  <c>LONGVARBINARY</c>, <c>CHAR</c>, <c>VARCHAR</c>, and
-    ///  <c>LONGVARCHAR</c> fields.  If the limit is exceeded, the excess data
-    ///  is silently discarded. For maximum portability, use values
-    ///  greater than 256.
-    /// </summary>
-    /// <param name="Value">
-    ///  the new max column size limit; zero means unlimited
-    /// </param>
+    /// <summary>Sets the limit for the maximum number of bytes in a column to
+    ///  the given number of bytes.  This is the maximum number of bytes that
+    ///  can be returned for any column value.  This limit applies only to
+    ///  <c>BINARY</c>, <c>VARBINARY</c>, <c>LONGVARBINARY</c>, <c>CHAR</c>,
+    ///  <c>VARCHAR</c>, and <c>LONGVARCHAR</c> fields.  If the limit is
+    ///  exceeded, the excess data is silently discarded. For maximum
+    ///  portability, use values greater than 256.</summary>
+    /// <param>"Value" the new max column size limit; zero means unlimited</param>
     procedure SetMaxFieldSize(Value: Integer);
-    /// <summary>
-    ///  Retrieves the maximum number of rows that a
-    ///  <c>ResultSet</c> object can contain.  If the limit is exceeded, the excess
-    ///  rows are silently dropped.
-    /// </summary>
-    /// <returns>
-    ///  the current max row limit; zero means unlimited
-    /// </returns>
+    /// <summary>Retrieves the maximum number of rows that a <c>ResultSet</c>
+    ///  object can contain.  If the limit is exceeded, the excess rows are
+    ///  silently dropped.</summary>
+    /// <returns>the current max row limit; zero means unlimited</returns>
     function GetMaxRows: Integer;
-    /// <summary>
-    ///  Sets the limit for the maximum number of rows that any
-    ///  <c>ResultSet</c> object can contain to the given number.
-    ///  If the limit is exceeded, the excess rows are silently dropped.
-    /// </summary>
-    /// <param name="Value">
-    ///  the new max rows limit; zero means unlimited
-    /// </param>
+    /// <summary>Sets the limit for the maximum number of rows that any
+    ///  <c>ResultSet</c> object can contain to the given number. If the limit
+    ///  is exceeded, the excess rows are silently dropped.</summary>
+    /// <param>"Value" the new max rows limit; zero means unlimited</param>
     procedure SetMaxRows(Value: Integer);
-    /// <summary>
-    ///  Retrieves the number of seconds the driver will
-    ///  wait for a <c>Statement</c> object to execute. If the limit is exceeded, a
-    ///  <c>SQLException</c> is thrown.
-    /// </summary>
-    /// <returns>
-    ///  the current query timeout limit in seconds; zero means unlimited
-    /// </returns>
+    /// <summary>Retrieves the number of seconds the driver will wait for a
+    ///  <c>Statement</c> object to execute. If the limit is exceeded, a
+    ///  <c>SQLException</c> is thrown.</summary>
+    /// <returns>the current query timeout limit in seconds; zero means
+    ///  unlimited.</returns>
     function GetQueryTimeout: Integer;
-    /// <summary>
-    ///  Sets the number of seconds the driver will
-    ///  wait for a <c>Statement</c> object to execute to the given number of seconds.
-    ///  If the limit is exceeded, an <c>SQLException</c> is thrown.
-    /// </summary>
-    /// <param name="Value">
-    ///  the new query timeout limit in seconds; zero means unlimited
-    /// </param>
+    /// <summary>Sets the number of seconds the driver will wait for a
+    ///  <c>Statement</c> object to execute to the given number of seconds. If
+    ///  the limit is exceeded, an <c>SQLException</c> is thrown.</summary>
+    /// <param>"Value" the new query timeout limit in seconds; zero means
+    ///  unlimited.</param>
     procedure SetQueryTimeout(Value: Integer);
     /// <summary>
     ///  Cancels this <c>Statement</c> object if both the DBMS and
@@ -1278,48 +1761,36 @@ type
     ///  is being executed by another thread.
     /// </summary>
     procedure Cancel;
-    /// <summary>
-    ///  Defines the SQL cursor name that will be used by
+    /// <summary>Defines the SQL cursor name that will be used by
     ///  subsequent <c>Statement</c> object <c>execute</c> methods.
-    ///  This name can then be
-    ///  used in SQL positioned update / delete statements to identify the
-    ///  current row in the <c>ResultSet</c> object generated by this statement.  If
-    ///  the database doesn't support positioned update/delete, this
-    ///  method is a noop.  To insure that a cursor has the proper isolation
-    ///  level to support updates, the cursor's <c>SELECT</c> statement should be
-    ///  of the form 'select for update ...'. If the 'for update' phrase is
-    ///  omitted, positioned updates may fail.
-    ///  <note>
-    ///   <para><B>Note:</B> By definition, positioned update/delete
-    ///   execution must be done by a different <c>Statement</c> object than the one
-    ///   which generated the <c>ResultSet</c> object being used for positioning. Also,
-    ///   cursor names must be unique within a connection.</para>
-    ///  </note>
-    /// </summary>
-    /// <param name="Value">
-    ///    the new cursor name, which must be unique within a connection
-    /// </param>
+    ///  This name can then be used in SQL positioned update / delete statements
+    ///  to identify the current row in the <c>ResultSet</c> object generated by
+    ///  this statement. If the database doesn't support positioned update/
+    ///  delete, this method is a noop. To insure that a cursor has the proper
+    ///  isolation level to support updates, the cursor's <c>SELECT</c>
+    ///  statement should be of the form 'select for update ...'. If the
+    ///  'for update' phrase is omitted, positioned updates may fail.
+    ///  <B>Note:</B> By definition, positioned update/delete execution must be
+    ///  done by a different <c>Statement</c> object than the one which
+    ///  generated the <c>ResultSet</c> object being used for positioning. Also,
+    ///  cursor names must be unique within a connection.</summary>
+    /// <param>"Value" the new cursor name, which must be unique within a
+    ///  connection</param>
     procedure SetCursorName(const Value: String);
-
-    /// <summary>
-    ///  Returns the current result as a <c>ResultSet</c> object.
-    ///  This method should be called only once per result.
-    /// </summary>
-    /// <returns>
-    ///  the current result as a <c>ResultSet</c> object;
-    ///  <c>nil</c> if the result is an update count or there are no more results
-    /// </returns>
-    /// <seealso cref="Execute">Execute</seealso>
+    /// <summary>Returns the current result as a <c>ResultSet</c> object.
+    ///  This method should be called only once per result. The last obtained
+    ///  resultset get's flushed. So this method can be called only once
+    ///  per result.</summary>
+    /// <returns>the current result as a <c>ResultSet</c> object; <c>nil</c> if
+    ///  the result is an update count or there are no more results</returns>
+    /// <remarks>see execute</remarks>
     function GetResultSet: IZResultSet;
-    /// <summary>
-    ///  Returns the current result as an update count;
+    /// <summary>Returns the current result as an update count;
     ///  if the result is a <c>ResultSet</c> object or there are no more results, -1
     ///  is returned. This method should be called only once per result.
     /// </summary>
-    /// <returns>
-    ///  the current result as an update count; -1 if the current result is a
-    ///  <c>ResultSet</c> object or there are no more results
-    /// </returns>
+    /// <returns>the current result as an update count; -1 if the current result is a
+    ///  <c>ResultSet</c> object or there are no more results</returns>
     /// <seealso cref="Execute">Execute</seealso>
     function GetUpdateCount: Integer;
     /// <summary>Moves to a <c>Statement</c> object's next result.  It returns
@@ -1335,7 +1806,6 @@ type
     /// </returns>
     /// <seealso cref="Execute">Execute</seealso>
     function GetMoreResults: Boolean;
-
     /// <summary>
     ///  Gives the driver a hint as to the direction in which
     ///  the rows in a result set
@@ -1347,9 +1817,7 @@ type
     ///  Each result set has its own methods for getting and setting
     ///  its own fetch direction.</para>
     /// </summary>
-    /// <param name="Value">
-    ///  the initial direction for processing rows
-    /// </param>
+    /// <param>"Value" the initial direction for processing rows</param>
     procedure SetFetchDirection(Value: TZFetchDirection);
     /// <summary>
     ///  Retrieves the direction for fetching rows from
@@ -1364,7 +1832,6 @@ type
     ///  from this <c>Statement</c> object
     /// </returns>
     function GetFetchDirection: TZFetchDirection;
-
     /// <summary>
     ///  Gives the DBC driver a hint as to the number of rows that should
     ///  be fetched from the database when more rows are needed.  The number
@@ -1373,51 +1840,32 @@ type
     ///  The default value is zero.
     ///  <para><b>Note:</b> Most drivers will ignore this.</para>
     /// </summary>
-    /// <param name="Value">
-    ///  the number of rows to fetch
-    /// </param>
+    /// <param>"Value" the number of rows to fetch</param>
     procedure SetFetchSize(Value: Integer);
-    /// <summary>
-    ///  Retrieves the number of result set rows that is the default
+    /// <summary>Retrieves the number of result set rows that is the default
     ///  fetch size for result sets
     ///  generated from this <c>Statement</c> object.
     ///  If this <c>Statement</c> object has not set
     ///  a fetch size by calling the method <c>setFetchSize</c>,
     ///  the return value is implementation-specific.
-    ///  <para><b>Note:</b> Most drivers will ignore this.</para>
-    /// </summary>
+    ///  <b>Note:</b> Most drivers will ignore this.</summary>
     /// <returns>
     ///  the default fetch size for result sets generated
     ///  from this <c>Statement</c> object
     /// </returns>
     function GetFetchSize: Integer;
-    /// <summary>
-    ///  Sets a result set concurrency for <c>ResultSet</c> objects
-    ///  generated by this <c>Statement</c> object.
-    /// </summary>
-    /// <param name="Value">
-    ///  either <c>rcReadOnly</code> or
-    ///  <code>rcUpdateable</code>
-    /// </param>
+    /// <summary>Sets a result set concurrency for <c>ResultSet</c> objects
+    ///  generated by this <c>Statement</c> object.</summary>
+    /// <param>"Value"either <c>rcReadOnly</c> or <c>rcUpdateable</c></param>
     procedure SetResultSetConcurrency(Value: TZResultSetConcurrency);
-    /// <summary>
-    ///  Retrieves the result set concurrency for <c>ResultSet</c> objects
-    ///  generated by this <c>Statement</c> object.
-    /// </summary>
-    /// <returns>
-    ///  either <c>rcReadOnly</c> or
-    ///  <c>rcUpdateable</c>
-    /// </returns>
+    /// <summary>Retrieves the result set concurrency for <c>ResultSet</c>
+    ///  objects generated by this <c>Statement</c> object.</summary>
+    /// <returns>either <c>rcReadOnly</c> or <c>rcUpdateable</c></returns>
     function GetResultSetConcurrency: TZResultSetConcurrency;
-    /// <summary>
-    ///  Sets a result set type for <c>ResultSet</c> objects
-    ///  generated by this <c>Statement</c> object.
-    /// </summary>
-    /// <param name="Value">
-    ///  one of <c>rtForwardOnly</c>,
-    ///  <c>rtScrollInsensitive</c>, or
-    ///  <c>rtScrollSensitive</c>
-    /// </param>
+    /// <summary>Sets a result set type for <c>ResultSet</c> objects generated
+    ///  by this <c>Statement</c> object.</summary>
+    /// <param>"Value" one of <c>rtForwardOnly</c>, <c>rtScrollInsensitive</c>,
+    ///  or <c>rtScrollSensitive</c></param>
     procedure SetResultSetType(Value: TZResultSetType);
     /// <summary>
     ///  Retrieves the result set type for <c>ResultSet</c> objects
@@ -1429,61 +1877,49 @@ type
     ///  <c>rcScrollSensitive</c>
     /// </returns>
     function GetResultSetType: TZResultSetType;
-
-    /// <summary>
-    ///  Sets a new value for post updates.
-    /// </summary>
-    /// <param name="Value">
-    ///  a new value for post updates.
-    /// </param>
+    /// <summary>Note yet implemented. Propably omitted in future.
+    ///  Sets a new value for post updates.</summary>
+    /// <param>"Value" a new value for post updates.</param>
     procedure SetPostUpdates(Value: TZPostUpdatesMode);
-    /// <summary>
-    ///  Gets the current value for post updates.
-    /// </summary>
-    /// <returns>
-    ///  the current value for post updates.
-    /// </returns>
+    /// <author>EgonHugeist</author>
+    /// <summary>Set the cursor type of the resultset to be genarated if any.</summary>
+    /// <param>"Value" one of <c>rctClient</c>, <c>rctServer</c>,
+    ///  or <c>rctLocalMemory</c></param>
+    procedure SetCursorLocation(Value: TZCursorLocation);
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the CursorLocation of this resultset</returns>
+    function GetCursorLocation: TZCursorLocation;
+    /// <summary>Note yet implemented. Propably omitted in future.
+    ///  Gets the current value for post updates.</summary>
+    /// <returns>the current value for post updates.</returns>
     function GetPostUpdates: TZPostUpdatesMode;
-    /// <summary>
-    ///  Sets a new value for locate updates.
-    /// </summary>
-    /// <param name="Value">
-    ///  Value a new value for locate updates.
-    /// </param>
+    /// <summary>Note yet implemented. Propably omitted in future.
+    ///  Sets a new value for locate updates.</summary>
+    /// <param>"Value" a new value for locate updates.</param>
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
-    /// <summary>
-    ///  Gets the current value for locate updates.
-    /// </summary>
-    /// <returns>
-    ///  the current value for locate updates.
-    /// </returns>
+    /// <summary>Note yet implemented. Propably omitted in future.
+    ///  Gets the current value for locate updates.</summary>
+    /// <returns>the current value for locate updates.</returns>
     function GetLocateUpdates: TZLocateUpdatesMode;
-
-    /// <summary>Not yet implemented.
+    /// <summary>Not yet implemented. Propably omitted in future.
     ///  Adds an SQL command to the current batch of commmands for this
-    ///  <c>Statement</c> object. This method is optional.
-    /// </summary>
-    /// <param name="SQL">
-    ///  typically this is a static SQL <c>INSERT</c> or
-    ///  <c>UPDATE</c> statement
-    /// </param>
+    ///  <c>Statement</c> object. This method is optional.</summary>
+    /// <param>"SQL" typically this is a static SQL <c>INSERT</c> or
+    ///  <c>UPDATE</c> statement</param>
     procedure AddBatch(const SQL: string);
-    /// <summary>Not yet implemented.
+    /// <summary>Not yet implemented. Propably omitted in future.
     ///  Adds an SQL command to the current batch of commmands for this
-    ///  <c>Statement</c> object. This method is optional.
-    /// </summary>
-    /// <param name="SQL">
-    ///  typically this is a static SQL <c>INSERT</c> or
-    ///  <c>UPDATE</c> statement
-    /// </param>
+    ///  <c>Statement</c> object. This method is optional.</summary>
+    /// <param>"SQL" typically this is a static SQL <c>INSERT</c> or
+    ///  <c>UPDATE</c> statement </param>
     procedure AddBatchRequest(const SQL: string);
-
-    /// <summary> Not yet implemented.
+    /// <summary> Not yet implemented. Propably omitted in future.
     ///  Makes the set of commands in the current batch empty.
     ///  This method is optional.
     /// </summary>
     procedure ClearBatch;
-    /// <summary> Not yet implemented.
+    /// <summary> Not yet implemented. Propably omitted in future.
     ///  Submits a batch of commands to the database for execution and if all
     ///  commands execute successfully, returns an array of update counts. The
     ///  <c>int</c> elements of the array that is returned are ordered to
@@ -1515,29 +1951,16 @@ type
     ///  command in the batch. The elements of the array are ordered according
     ///  to the order in which commands were added to the batch.</returns>
     function ExecuteBatch: TIntegerDynArray;
-    /// <summary>
-    ///  Returns the <c>Connection</c> object
-    ///  that produced this <c>Statement</c> object.
-    /// </summary>
-    /// <returns>
-    /// <see cref="IZConnection"></see>
-    ///  the connection that produced this statement
-    /// </returns>
+    /// <summary>Returns the <c>Connection</c> object that produced this
+    ///  <c>Statement</c> object.</summary>
+    /// <returns>the connection that produced this statement</returns>
     function GetConnection: IZConnection;
-
-    /// <summary>
-    ///  Gets statement parameters.
-    /// </summary>
-    /// <returns>
-    ///  a list with statement parameters.
-    /// </returns>
+    /// <summary>Gets statement parameters.</summary>
+    /// <returns>a list with statement parameters.</returns>
     function GetParameters: TStrings;
-    /// <summary>
-    ///  Returns the ChunkSize for reading/writing large lobs
-    /// </summary>
+    /// <summary>Returns the ChunkSize for reading/writing large lobs</summary>
     /// <returns>the chunksize in bytes.</returns>
     function GetChunkSize: Integer;
-
     /// <summary>
     ///  Retrieves the first warning reported by calls on this <c>Statement</c> object.
     ///  Subsequent <c>Statement</c> object warnings will be chained to this
@@ -1558,9 +1981,9 @@ type
     ///  return <c>nil</c> until a new warning is reported for this
     ///  <c>Statement</c> object.</summary>
     procedure ClearWarnings;
-    /// <summary>The sender resultsets get's closed. Notify owner
-    ///  <c>Statement</c> about it. The statment, if rexecuted, will
-    ///  create a new resultset interface.</summary>
+    /// <summary>The sender resultset get's closed. Notify owner
+    ///  <c>Statement</c> about to drop the weak reference. The statement,
+    ///  if executed, will create a new resultset object.</summary>
     /// <param>"Sender" the closing resultset.</param>
     procedure FreeOpenResultSetReference(const Sender: IZResultSet);
     /// <summary>Result a unique internal Id per class.</summary>
@@ -1568,7 +1991,7 @@ type
     function GetStatementId: NativeUInt;
   end;
 
-  /// <summary>Prepared SQL statement interface.</summary>
+  /// <summary>Defines prepared SQL statement interface.</summary>
   IZPreparedStatement = interface(IZStatement)
     ['{990B8477-AF11-4090-8821-5B7AFEA9DD70}']
     /// <summary>Executes the SQL query in this <c>PreparedStatement</c> object
@@ -1589,48 +2012,335 @@ type
     ///  see IStatement.execute</summary>
     /// <returns>True if a ResultSet is available otherwise false.</returns>
     function ExecutePrepared: Boolean;
-
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    /// <summary>Sets the designated parameter to a <c>ShortInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetWord(ParameterIndex: Integer; Value: Word);
+    /// <summary>Sets the designated parameter to a <c>SmallInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    /// <summary>Sets the designated parameter to a <c>Cardinal</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    /// <summary>Sets the designated parameter to a <c>Integer</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    /// <summary>Sets the designated parameter to a <c>UInt64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    /// <summary>Sets the designated parameter to a <c>Int64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetLong(ParameterIndex: Integer; const Value: Int64);
+    /// <summary>Sets the designated parameter to a <c>Single</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetFloat(ParameterIndex: Integer; Value: Single);
+    /// <summary>Sets the designated parameter to a <c>Double</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
+    /// <summary>Sets the designated parameter to a <c>Currency</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
+    /// <summary>Sets the designated parameter to a <c>String</c> value.
+    ///  This method equals to SetUnicodeString on Unicode-Compilers. For
+    ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
+    ///  the ConnectionSettings record. The driver will convert the string to
+    ///  the Client-Characterset.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetString(ParameterIndex: Integer; const Value: String);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString); //AVZ
+    /// <summary>Sets the designated parameter to a <c>UnicodeString</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
+    /// <summary>Sets the designated parameter to a <c>byte array</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); overload;
+    /// <summary>Sets the designated parameter to a <c>ByteArray reference</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value reference.</param>
+    /// <param>"Len" the Length of the bytes buffer.</param>
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); overload;
-    procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
+    /// <summary>Sets the designated parameter to a <c>TGUID</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetGuid(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be GET_ACP encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Sets the designated parameter to a <c>RawByteString</c> value.
+    ///  The string must be UTF8 encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be DB-CodePage encoded. If the driver uses an UTF16
+    ///  encoding, the driver will convert the value using the conversion rules
+    ///  given by W2A2WEncodingSource of the ConnectionSettings record.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
+    /// <summary>Sets the designated parameter to a <c>Date(TDateTime)</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the <c>SetDate(Index: Integer; Value: TZDate)</c>
+    ///  overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload;
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload;
+    /// <summary>Sets the designated parameter to a <c>TZDate</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload;
+    /// <summary>Sets the designated parameter to a <c>Time(TDateTime)</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the <c>SetTime(Index: Integer; Value: TZtime)</c>
+    ///  overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload;
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload;
+    /// <summary>Sets the designated parameter to a <c>TZTime</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload;
+    /// <summary>Sets the designated parameter to a <c>TDateTime</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the
+    ///  <c>SetTimestamp(Index: Integer; Value: TZTimestamp)</c>overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
+    /// <summary>Sets the designated parameter to a <c>TZTimestamp</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload;
+    /// <summary>Sets the designated parameter to a raw character stream value.
+    ///  The stream must be DB-CodePage encoded. If the driver uses an UTF16
+    ///  encoding, the driver will convert the value using the conversion rules
+    ///  given by W2A2WEncodingSource of the ConnectionSettings record.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
+    /// <summary>Sets the designated parameter to a UTF16 character stream value.
+    ///  The driver will convert the value to the raw encoding if the driver
+    ///  does not support UTF16 streams.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
+    /// <summary>Sets the designated parameter to the given input stream, which
+    ///  will have the specified number of bytes.
+    ///  When a very large binary value is input to a <c>LONGVARBINARY</c>
+    ///  parameter, it may be more practical to send it via a
+    ///  <c>TStream</c> object. The data will be read from the stream
+    ///  as needed until end-of-file is reached.
+    ///  <B>Note:</B> This stream object can either be a standard
+    ///  TStream object or your own subclass that implements the
+    ///  standard interface.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
+    /// <summary>Sets the designated parameter to the given blob wrapper object.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" defines the lob constent. Valid values are:
+    ///  stAsciiStream(raw encoded text), stUnicodeStream(UTF16 encoded text)
+    ///  and stBinaryStream(binary data), stJSON, stXML</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    /// <summary>Sets the designated parameter to the value. The value content
+    ///  will be decoded and the associated setter will be called.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
+    procedure SetValue(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
+    /// <summary>Sets the designated parameter to a null array value. A null
+    ///  array can not be bound if not data array has been bound before. So
+    ///  SetDataArray() needs to be called first.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQLType of the array. Valid value is stBoolean.</param>
+    /// <param>"Value" the parameter null array value to be set. Note we just
+    ///  reference the array address. We do not increment the Array-Refcount.
+    ///  Means you need to keep the arrays alive until the statement has been
+    ///  excuted.</param>
+    /// <param>"VariantType" the VariantType of the array. Valid value is vtNull.</param>
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+    /// <summary>Sets the designated parameter to a data array value. This
+    ///  method usually initializes the BatchArray DML mode unless the parameter
+    ///  was registered as a PLSQLTable ( in (?) )before.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter array value to be set. Note we just
+    ///  reference the array address. We do not increment the Array-Refcount.
+    ///  Means you need to keep the arrays alive until the statement has been
+    ///  excuted.</param>
+    /// <param>"SQLType" the SQLType of the array</param>
+    /// <param>"VariantType" the VariantType of the array. It is used as a
+    ///  subtype like:
+    ///  (SQLType = stString, VariantType = vtUTF8String) or
+    ///  (SQLType = stDate, VariantType = vtDate or vtDateTime) </param>
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
-
+    /// <summary>Register the parameter properties. This method is required for
+    ///  all InOut, Out or Result parameters to access them afterwards. It's not
+    ///  requiered to register In params.</summary>
+    /// <param>"ParameterIndex" the first parameter is 0, the second is 1, ...
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the parameters SQLType.</param>
+    /// <param>"ParamType" the TZProcedureColumnType of the parameter.</param>
+    /// <param>"PrecisionOrSize" either the Precision for Numeric types or the
+    ///  Length for strings or bytes. The value is ignored for all other types.</param>
+    /// <param>"Scale" the numeric or second-fraction scale of the parameter.</param>
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       {%H-}Scale: LengthInt = 0);
@@ -1638,28 +2348,297 @@ type
     //======================================================================
     // Methods for accessing out parameters by index
     //======================================================================
-    function IsNull(Index: Integer): Boolean;
+
+    /// <summary>Indicates if the value of the designated paramert is Null.</summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>true</c>. <c>false</c> otherwise.</returns>
+    function IsNull(ParameterIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated parameter as a Booelan value.
+    ///  The driver will try to convert the value if it's not a Boolean value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>False</c>. The value otherwise.</returns>
     function GetBoolean(ParameterIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated parameter as a Byte value.
+    ///  The driver will try to convert the value if it's not a Byte value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetByte(ParameterIndex: Integer): Byte;
+    /// <summary>Gets the value of the designated parameter as a ShortInt value.
+    ///  The driver will try to convert the value if it's not a ShortInt value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetShort(ParameterIndex: Integer): ShortInt;
+    /// <summary>Gets the value of the designated parameter as a Word value.
+    ///  The driver will try to convert the value if it's not a Word value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetWord(ParameterIndex: Integer): Word;
+    /// <summary>Gets the value of the designated parameter as a SmallInt value.
+    ///  The driver will try to convert the value if it's not a SmallInt value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetSmall(ParameterIndex: Integer): SmallInt;
+    /// <summary>Gets the value of the designated parameter as a Cardinal value.
+    ///  The driver will try to convert the value if it's not a Cardinal value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetUInt(ParameterIndex: Integer): Cardinal;
+    /// <summary>Gets the value of the designated parameter as a Integer value.
+    ///  The driver will try to convert the value if it's not a Integer value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetInt(ParameterIndex: Integer): Integer;
+    /// <summary>Gets the value of the designated parameter as a UInt64 value.
+    ///  The driver will try to convert the value if it's not a UInt64 value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetULong(ParameterIndex: Integer): UInt64;
+    /// <summary>Gets the value of the designated parameter as a Int64 value.
+    ///  The driver will try to convert the value if it's not a Int64 value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetLong(ParameterIndex: Integer): Int64;
+    /// <summary>Gets the value of the designated parameter as a Single value.
+    ///  The driver will try to convert the value if it's not a Single value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetFloat(ParameterIndex: Integer): Single;
+    /// <summary>Gets the value of the designated parameter as a Double value.
+    ///  The driver will try to convert the value if it's not a Double value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDouble(ParameterIndex: Integer): Double;
+    /// <summary>Gets the value of the designated parameter as a Currency value.
+    ///  The driver will try to convert the value if it's not a Currency value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetCurrency(ParameterIndex: Integer): Currency;
+    /// <summary>Gets the value of the designated parameter as a TBCD value.
+    ///  The driver will try to convert the value if it's not a TBCD value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
+    /// <summary>Gets the value of the designated parameter as a TGUID value.
+    ///  The driver will try to convert the value if it's not a TGUID value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-GUID</c>. The value otherwise.</param>
     procedure GetGUID(Index: Integer; var Result: TGUID);
+    /// <summary>Gets the value of the designated parameter as a TBytes value.
+    ///  The driver will try to convert the value if it's not a TBytes value.
+    /// </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>nil</c>. The value otherwise.</returns>
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
+    /// <summary>Obsolate use overload instead. Gets the value of the designated
+    ///  parameter as a TDate value. The driver will try to convert the value if
+    ///  it's not a TDateTime value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDate(ParameterIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated parameter as a TZDate value.
+    ///  The driver will try to convert the value if it's not a Date value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" a reference to the TZDate record. If the value is SQL
+    ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetDate(ParameterIndex: Integer; Var Result: TZDate); overload;
+    /// <summary>Obsolate use overload instead. Gets the value of the designated
+    ///  parameter as a TTime value. The driver will try to convert the value if
+    ///  it's not a TDateTime value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTime(ParameterIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated parameter as a TZTime value.
+    ///  The driver will try to convert the value if it's not a Time value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" a reference to the TZTime record. If the value is SQL
+    ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetTime(ParameterIndex: Integer; Var Result: TZTime); overload;
+    /// <summary>Obsolate use overload instead. Gets the value of the designated
+    ///  parameter as a TDateTime value. The driver will try to convert the
+    ///  value if it's not a TDateTime value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated parameter as a TZTimeStamp value.
+    ///  The driver will try to convert the value if it's not a timestamp value.</summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" a reference to the TZTimeStamp record. If the value is SQL
+    ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
+    /// <summary>Gets the value of the designated parameter as a variable value</summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" an variable value.</param>
     function GetValue(ParameterIndex: Integer): TZVariant;
 
     function GetString(ParameterIndex: Integer): String;
@@ -1674,13 +2653,16 @@ type
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
     function GetCLob(ParameterIndex: Integer): IZClob;
-
+    /// <summary>Clears the current parameter values immediately.
+    ///  In general, parameter values remain in force for repeated use of a
+    ///  statement. Setting a parameter value automatically clears its
+    ///  previous value.  However, in some cases it is useful to immediately
+    ///  release the resources used by the current parameter values; this can
+    ///  be done by calling the method <c>ClearParameters</c>.</summary>
     procedure ClearParameters;
   end;
 
-  /// <summary>
-  ///   Callable SQL statement interface.
-  /// </summary>
+  /// <summary>Callable SQL statement interface.</summary>
   IZCallableStatement = interface(IZPreparedStatement)
     ['{E6FA6C18-C764-4C05-8FCB-0582BDD1EF40}']
     { Multiple ResultSet support API }
@@ -1698,20 +2680,32 @@ type
   end;
 
   /// <summary>Defines a compare method</summary>
-  TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
+  //TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
   /// <summary>Defines an array of compare methods.</summary>
-  TCompareFuncs = Array of TCompareFunc;
+  TZCompareFuncs = Array of TZCompareFunc;
 
   /// <summary>Defines Column-Comparison kinds</summary>
   TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
   /// <summary>Defines an array of compaison kinds.</summary>
   TComparisonKindArray = Array of TComparisonKind;
 
-  {$IFDEF USE_SYNCOMMONS}
+  {$IFDEF WITH_COLUMNS_TO_JSON}
+  /// <summary>Defines json compose options.</summary>
   TZJSONComposeOption = (jcoEndJSONObject, jcoDATETIME_MAGIC, jcoMongoISODate,
     jcoMilliseconds, jcsSkipNulls);
+  /// <summary>Defines a aet of json compose options.
+  ///  - if jcoEndJSONObject is included the row gets the closing '}'
+  ///  (curly bracket) to terminate the object.
+  ///  - if jcoDATETIME_MAGIC is included the each date string starts with the
+  ///   SynCommons.pas DataTime-Magic value.
+  ///  - if jcoMongoISODate is included the each date string starts with
+  ///   <c>ISODate(</c> and ends with <c>Z)</c>
+  ///  - if jcoMilliseconds is included the each date value uses millisecond
+  ///   precision
+  ///  - if jcsSkipNulls is included each SQL <c>NULL</c> null field will be
+  ///   skipped. This keeps the JSON tiny.</summary>
   TZJSONComposeOptions = set of TZJSONComposeOption;
-  {$ENDIF USE_SYNCOMMONS}
+  {$ENDIF WITH_COLUMNS_TO_JSON}
 
   /// <summary>
   ///   Rows returned by SQL query.
@@ -1739,100 +2733,991 @@ type
     /// <summary>Indicates whether the this <c>ResultSet</c> is closed.</summary>
     /// <returns><c>true</c> if closed; <c>false</c> otherwise.</returns>
     function IsClosed: Boolean;
+    /// <summary>get the number of columns in this <c>ResultSet</c> interface.</summary>
+    /// <returns>the number of columns</returns>
+    function GetColumnCount: Integer;
 
     //======================================================================
     // Methods for accessing results by column index
     //======================================================================
 
+    /// <summary>Indicates if the value of the designated column in the current
+    ///  row of this <c>ResultSet</c> object is Null.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>true</c>. <c>false</c> otherwise.</returns>
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>String</c>. This method equals to
+    ///  GetUnicodeString on Unicode-Compilers. For Raw-String compilers the
+    ///  string encoding is defined by W2A2WEncodingSource of the
+    ///  ConnectionSettings record. The driver will try to convert the
+    ///  value if it's necessary.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetString(ColumnIndex: Integer): String;
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>AnsiString</c>. The driver will
+    ///  try to convert the value if it's not a raw value in operating system
+    ///  encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UTF8String</c>. The driver will
+    ///  try to convert the value if it's not a raw value in UTF8 encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>RawByteString</c>.
+    ///  The driver will try to convert the value if it's not a raw value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UnicodeString</c> in
+    ///  the pascal programming language. The driver will try to convert the
+    ///  value if it's not a value in UTF16 encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PAnsiChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver try convert the value if it's not a
+    ///  raw text value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PWideChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver will try to convert the value if it's
+    ///  not a UTF16 text value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in words.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Boolean</c> value.The driver will
+    ///  try to convert the value if it's not a Boolean value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>False</c>. The value otherwise.</returns>
     function GetBoolean(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Byte</c> value.The driver will
+    ///  try to convert the value if it's not a Byte value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetByte(ColumnIndex: Integer): Byte;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>ShortInt</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetShort(ColumnIndex: Integer): ShortInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Word</c> value.The driver will
+    ///  try to convert the value if it's not a Word value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetWord(ColumnIndex: Integer): Word;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>SmallInt</c> value.The driver will
+    ///  try to convert the value if it's not a SmallInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetSmall(ColumnIndex: Integer): SmallInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Cardinal</c> value.The driver will
+    ///  try to convert the value if it's not a Cardinal value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetUInt(ColumnIndex: Integer): Cardinal;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Integer</c> value.The driver will
+    ///  try to convert the value if it's not a Integer value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetInt(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UInt64</c> value.The driver will
+    ///  try to convert the value if it's not a UInt64 value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetULong(ColumnIndex: Integer): UInt64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Int64</c> value.The driver will
+    ///  try to convert the value if it's not a Int64 value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetLong(ColumnIndex: Integer): Int64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Single</c> value.The driver will
+    ///  try to convert the value if it's not a Single value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetFloat(ColumnIndex: Integer): Single;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Double</c> value.The driver will
+    ///  try to convert the value if it's not a Double value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDouble(ColumnIndex: Integer): Double;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Currency</c> value.The driver will
+    ///  try to convert the value if it's not a Currency value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetCurrency(ColumnIndex: Integer): Currency;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBCD</c> value.The driver will
+    ///  try to convert the value if it's not a TBCD value. The value will be
+    ///  filled with the minimum of digits and precision.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TGUID</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-UID</c>. The value otherwise.</param>
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBytes</c> value.The driver will
+    ///  try to convert the value if it's not a TBytes value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>nil</c>. The value otherwise.</returns>
     function GetBytes(ColumnIndex: Integer): TBytes; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PByte</c> binary reference.
+    ///  Live time is per call. It's not guaranteed the address is valid after
+    ///  the row position changed, or another column of same row has been
+    ///  accessed. It is an error to write into the buffer. The driver will try
+    ///  to convert the value if it's not a binary value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Date value. Note this method
+    ///  is obsolate. It always calls the GetDate using the TZDate overload.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDate(ColumnIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZDate</c> value. The driver will
+    ///  try to convert the value if it's not a Date value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZDATE</c>. The value otherwise.</param>
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value. Note this method
+    ///  is obsolate. It always calls the GetTime using the TZTime overload.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTime(ColumnIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTime</c>. The value otherwise.</returns>
     procedure GetTime(ColumnIndex: Integer; Var Result: TZTime); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Timestamp value. Note this method
+    ///  is obsolate. It always calls the GetTimestamp using the TZTimestamp
+    ///  overload.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestamp(ColumnIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTimestamp</c> value. The driver
+    ///  will try to convert the value if it's not a Timestamp value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTimestamp</c>. The value otherwise.</param>
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into ASCII.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetAsciiStream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  operating system encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetAnsiStream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  UTF8 encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetUTF8Stream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of UTF16 characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGNVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into UTF16
+    ///  encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetUnicodeStream(ColumnIndex: Integer): TStream;
+    /// <summary>Gets the value of a column in the current row as a stream of
+    ///  Gets the value of the designated column in the current row of this
+    ///  <c>ResultSet</c> object as a binary stream of uninterpreted bytes. The
+    ///  value can then be read in chunks from the stream. This method is
+    ///  particularly suitable for retrieving large <c>LONGVARBINARY</c> values.
+    /// </summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetBinaryStream(ColumnIndex: Integer): TStream;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZBlob</c> object.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>Blob</c> object representing the SQL <c>BLOB</c> value in
+    ///  the specified column otherwise</returns>
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    function GetDataSet(ColumnIndex: Integer): IZDataSet;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZResultSet</c> object.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>ResultSet</c> object representing the SQL
+    ///  <c>ResultSet</c> value in the specified column otherwise</returns>
+    function GetResultSet(ColumnIndex: Integer): IZResultSet;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a TZVariant record.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-Variant</c>. The variable value otherwise.</returns>
     function GetValue(ColumnIndex: Integer): TZVariant;
+    /// <summary>Gets the DefaultExpression value of the designated column in
+    /// the current row of this <c>ResultSet</c> object as a <c>String</c>.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the DefaultExpression value</returns>
     function GetDefaultExpression(ColumnIndex: Integer): string;
 
     //======================================================================
     // Methods for accessing results by column name
     //======================================================================
 
+    /// <summary>Indicates if the value of the designated column in the current
+    ///  row of this <c>ResultSet</c> object is Null.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>true</c>. <c>false</c> otherwise.</returns>
     function IsNullByName(const ColumnName: string): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PAnsiChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver try convert the value if it's not a
+    ///  raw text value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>String</c>. This method equals to
+    ///  GetUnicodeString on Unicode-Compilers. For Raw-String compilers the
+    ///  string encoding is defined by W2A2WEncodingSource of the
+    ///  ConnectionSettings record. The driver will try to convert the
+    ///  value if it's necessary.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetStringByName(const ColumnName: string): String;
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>AnsiString</c>. The driver will
+    ///  try to convert the value if it's not a raw value in operating system
+    ///  encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UTF8String</c>. The driver will
+    ///  try to convert the value if it's not a raw value in UTF8 encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     {$ENDIF}
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>RawByteString</c>.
+    ///  The driver will try to convert the value if it's not a raw value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UnicodeString</c> in
+    ///  the pascal programming language. The driver will try to convert the
+    ///  value if it's not a value in UTF16 encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUnicodeStringByName(const ColumnName: string): UnicodeString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PWideChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver will try to convert the value if it's
+    ///  not a UTF16 text value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in words.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Boolean</c> value.The driver will
+    ///  try to convert the value if it's not a Boolean value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>False</c>. The value otherwise.</returns>
     function GetBooleanByName(const ColumnName: string): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Byte</c> value.The driver will
+    ///  try to convert the value if it's not a Byte value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetByteByName(const ColumnName: string): Byte;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>ShortInt</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetShortByName(const ColumnName: string): ShortInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Word</c> value.The driver will
+    ///  try to convert the value if it's not a Byte value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetWordByName(const ColumnName: string): Word;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>SmallInt</c> value.The driver will
+    ///  try to convert the value if it's not a SmallInt value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetSmallByName(const ColumnName: string): SmallInt;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Cardinal</c> value.The driver will
+    ///  try to convert the value if it's not a Cardinal value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetUIntByName(const ColumnName: string): Cardinal;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Integer</c> value.The driver will
+    ///  try to convert the value if it's not a Integer value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetIntByName(const ColumnName: string): Integer;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UInt64</c> value.The driver will
+    ///  try to convert the value if it's not a UInt64 value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetULongByName(const ColumnName: string): UInt64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Int64</c> value.The driver will
+    ///  try to convert the value if it's not a Int64 value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetLongByName(const ColumnName: string): Int64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Single</c> value.The driver will
+    ///  try to convert the value if it's not a Single value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetFloatByName(const ColumnName: string): Single;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Double</c> value.The driver will
+    ///  try to convert the value if it's not a Double value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDoubleByName(const ColumnName: string): Double;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Currency</c> value.The driver will
+    ///  try to convert the value if it's not a Currency value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetCurrencyByName(const ColumnName: string): Currency;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBCD</c> value.The driver will
+    ///  try to convert the value if it's not a TBCD value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Resuls" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TGUID</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-UID</c>. The value otherwise.</param>
     procedure GetGUIDByName(const ColumnName: string; var Result: TGUID);
-    function GetBytesByName(const ColumnName: string): TBytes;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBytes</c> value.The driver will
+    ///  try to convert the value if it's not a TBytes value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>nil</c>. The value otherwise.</returns>
+    function GetBytesByName(const ColumnName: string): TBytes; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PByte</c> binary reference.
+    ///  Live time is per call. It's not guaranteed the address is valid after
+    ///  the row position changed, or another column of same row has been
+    ///  accessed. It is an error to write into the buffer. The driver will try
+    ///  to convert the value if it's not a binary value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
+    function GetBytesByName(const ColumnName: string; out Len: NativeUInt): PByte; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Date value. Note this method
+    ///  is obsolate. It always calls the GetDate using the TZDate overload.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDateByName(const ColumnName: string): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZDate</c> value. The driver will
+    ///  try to convert the value if it's not a Date value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZDate</c>. The value otherwise.</param>
     procedure GetDateByName(const ColumnName: string; var Result: TZDate); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value. Note this method
+    ///  is obsolate. It always calls the GetTime using the TZTime overload.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimeByName(const ColumnName: string): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTime</c>. The value otherwise.</returns>
     procedure GetTimeByName(const ColumnName: string; Var Result: TZTime); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TDateTime</c> value. The driver will
+    ///  try to convert the value if it's not a Timestamp value. Note this method
+    ///  is obsolate. It always calls the GetTimestamp using the TZTimestamp
+    ///  overload.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestampByName(const ColumnName: string): TDateTime; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTimestamp</c> value. The driver
+    ///  will try to convert the value if it's not a Timestamp value.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTimestamp</c>. The value otherwise.</param>
     procedure GetTimeStampByName(const ColumnName: string; var Result: TZTimeStamp); overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into ASCII.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetAsciiStreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  operating system encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetAnsiStreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of raw characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into raw
+    ///  UTF8 encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetUTF8StreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a stream of UTF16 characters. The value
+    ///  can then be read in chunks from the stream. This method is particularly
+    ///  suitable for retrieving large <c>LONGNVARCHAR</c> values. The driver
+    ///  will do any necessary conversion from the database format into UTF16
+    ///  encoding.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
+    /// <summary>Gets the value of a column in the current row as a stream of
+    ///  Gets the value of the designated column in the current row of this
+    ///  <c>ResultSet</c> object as a binary stream of uninterpreted bytes. The
+    ///  value can then be read in chunks from the stream. This method is
+    ///  particularly suitable for retrieving large <c>LONGVARBINARY</c> values.
+    /// </summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The stream value otherwise.</returns>
     function GetBinaryStreamByName(const ColumnName: string): TStream;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZBlob</c> object.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>Blob</c> object representing the SQL <c>BLOB</c> value in
+    ///  the specified column otherwise</returns>
     function GetBlobByName(const ColumnName: string; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    function GetDataSetByName(const ColumnName: String): IZDataSet;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZResultSet</c> object.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>ResultSet</c> object representing the SQL
+    ///  <c>ResultSet</c> value in the specified column otherwise</returns>
+    function GetResultSetByName(const ColumnName: String): IZResultSet;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a TZVariant record.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-Variant</c>. The variable value otherwise.</returns>
     function GetValueByName(const ColumnName: string): TZVariant;
+    /// <summary>Gets the DefaultExpression value of the designated column in
+    /// the current row of this <c>ResultSet</c> object as a <c>String</c>.</summary>
+    /// <param>"ColumnName" the SQL name of the column. <c>Note</c> the cursor
+    ///  must be on a valid position and the Name must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the DefaultExpression value</returns>
+    function GetDefaultExpressionByName(const ColumnName: string): string;
 
     //=====================================================================
     // Advanced features:
@@ -1841,8 +3726,32 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
+    /// <summary>Not yet implpemented. Gets the name of the SQL cursor used by
+    ///  this <c>ResultSet</c> object. In SQL, a result table is retrieved
+    ///  through a cursor that is named. The current row of a result set can be
+    ///  updated or deleted using a positioned update/delete statement that
+    ///  references the cursor name. To insure that the cursor has the proper
+    ///  isolation level to support update, the cursor's <c>select</c> statement
+    ///  should be of the form 'select for update'. If the 'for update' clause
+    ///  is omitted, the positioned updates may fail.
+    ///  The ZDBC API supports this SQL feature by providing the name of the
+    ///  SQL cursor used by a <c>ResultSet</c> object. The current row of a
+    ///  <c>ResultSet</c> object is also the current row of this SQL cursor.
+    ///  <B>Note:</B> If positioned update is not supported, a
+    ///  <c>EZSQLException</c> is thrown.</summary>
+    /// <returns>the SQL name for this <c>ResultSet</c> object's cursor</returns>
     function GetCursorName: String;
+    /// <summary>Retrieves the IZResultSetMetadata interface containing all
+    ///  Informations of the <c>ResultSet</c> object's columns.</summary>
+    /// <returns>the description interface of this <c>ResultSet</c> object's
+    /// columns.</returns>
     function GetMetadata: IZResultSetMetadata;
+    /// <summary>Maps the given <c>Metadata</c> column name to its
+    ///  <c>Metadata</c> column index. First searches with case-sensivity then,
+    ///  if nothing matches, a case.insensitive search is performed.
+    /// <param>"ColumnName" the name of the column</param>
+    /// <returns>the column index of the given column name or an
+    ///  InvalidDbcIndex if nothing was found</returns>
     function FindColumn(const ColumnName: string): Integer;
 
     //---------------------------------------------------------------------
@@ -1949,11 +3858,26 @@ type
     // Properties
     //---------------------------------------------------------------------
 
+    /// <summary>Yet not implemented.
+    ///  Gives a hint as to the direction in which the rows in this
+    ///  <c>ResultSet</c> object will be processed. Default is fdForward.
+    ///  The initial value is determined by the
+    ///  <c>Statement</c> object
+    ///  that produced this <c>ResultSet</c> object.
+    ///  The fetch direction may be changed at any time.</summary>
+    /// <param>"Value" one of <c>fdForward, fdReverse, fdUnknown</c>.</param>
     procedure SetFetchDirection(Value: TZFetchDirection);
+    /// <summary>Returns the fetch direction for this <c>ResultSet</c> object.
+    /// </summary>
+    /// <returns>the current fetch direction for this <c>ResultSet</c> object</returns>
     function GetFetchDirection: TZFetchDirection;
 
     procedure SetFetchSize(Value: Integer);
     function GetFetchSize: Integer;
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the CursorLocation of this resultset</returns>
+    function GetCursorLocation: TZCursorLocation;
 
     function GetType: TZResultSetType;
     function GetConcurrency: TZResultSetConcurrency;
@@ -1984,7 +3908,29 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
+    /// <summary>Updates the designated column with a <c>PAnsiChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in bytes.</param>
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
+    /// <summary>Updates the designated column with a <c>PWideChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in words.</param>
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -2057,32 +4003,51 @@ type
     procedure DeleteRow;
     procedure RefreshRow;
     procedure CancelRowUpdates;
+    /// <summary>Moves the cursor to the insert row.  The current cursor
+    ///  position is remembered while the cursor is positioned on the insert
+    ///  row.
+    ///  The insert row is a special row associated with an updatable result
+    ///  set. It is essentially a buffer where a new row may be constructed by
+    ///  calling the <c>updateXXX</c> methods prior to inserting the row into
+    ///  the result set.
+    ///  Only the <c>updateXXX</c>, <c>getXXX</c> and <c>insertRow</c>
+    ///  methods may be called when the cursor is on the insert row. All of the
+    ///  columns in a result set must be given a value each time this method is
+    ///  called before calling <c>insertRow</c>. An <c>updateXXX</c> method must
+    ///  be called before a <c>getXXX</c> method can be called on a column value.</summary>
     procedure MoveToInsertRow;
+    /// <summary>Moves the cursor to the remembered cursor position, usually the
+    ///  current row. This method has no effect if the cursor is not on the
+    ///  insert row.</summary>
     procedure MoveToCurrentRow;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs): Integer;
+      const CompareFuncs: TZCompareFuncs; NullsFirst: Boolean = false): Integer;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 
     function GetStatement: IZStatement;
 
-    {$IFDEF USE_SYNCOMMONS}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
+    /// <summary>Fill the JSONWriter with column data</summary>
+    /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
+    ///  the JSON contents</param>
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
-  /// <summary>implements DataSet interface. Just prepare and will be omitted
-  ///  in future releases</summary>
-  IZDataSet = interface(IZInterface)
-    ['{DBC24011-EF26-4FD8-AC8B-C3E01619494A}']
-    //function GetDataSet: TDataSet;
-    function IsEmpty: Boolean;
-  end;
-
-  /// <summary>ResultSet metadata interface.</summary>
+  /// <summary>Defines the ResultSet metadata interface.</summary>
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
+    /// <author>EgonHugeist</author>
+    procedure AssignColumnInfosTo(ColumnsInfo: TObjectList);
+    /// <summary>Sets the databasemetadata to this object.</summary>
+    /// <param>"Value" a new IZDatabaseMetadata interface</param>
+    procedure SetMetadata(const Value: IZDatabaseMetadata);
+    /// <author>EgonHugeist</author>
+    /// <summary>Indicates whether the metainformations are loaded.</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
+    function IsMetadataLoaded: Boolean;
     /// <summary>Maps the given <c>Metadata</c> column name to its
     ///  <c>Metadata</c> column index. First searches with case-sensivity then,
     ///  if nothing matches, a case.insensitive search is performed.
@@ -2093,42 +4058,279 @@ type
     /// <summary>get the number of columns in this <c>ResultSet</c> interface.</summary>
     /// <returns>the number of columns</returns>
     function GetColumnCount: Integer;
+    /// <summary>Indicates whether the designated column is automatically
+    ///  numbered, thus read-only.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates whether a column's case matters.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsCaseSensitive(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates whether the designated column can be used in a where
+    ///  clause.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsSearchable(ColumnIndex: Integer): Boolean;
+    /// <summary>Set if the column can be used in a where
+    ///  clause.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Value" <c>true</c> if the column is searchable;
+    ///  <c>False</c> otherwise.</param>
     procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Indicates whether the designated column is a cash value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsCurrency(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates the nullability of values in the designated column.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the nullability status of the given column; one of
+    ///  <c>ntNoNulls</c>, <c>ntNullable</c> or <c>ntNullableUnknown</c></returns>
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType;
-
+    /// <summary>Indicates whether values in the designated column are signed
+    ///  numbers.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsSigned(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the designated column's suggested title for use in
+    ///  printouts and displays.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>a case sensitive unique column title.</returns>
     function GetColumnLabel(ColumnIndex: Integer): string;
+    /// <summary>Gets the designated column's original title for use in
+    ///  printouts and displays returned by the server.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the server given column title.</returns>
     function GetOrgColumnLabel(ColumnIndex: Integer): string;
+    /// <summary>Get the designated column's name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>return column name or "" if not applicable</returns>
     function GetColumnName(ColumnIndex: Integer): string;
+    /// <summary>Get the designated column's codepage.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the column codepage.</returns>
+    /// <remarks>If the column is a [var,long,fixed]binary the returned value is
+    ///  zero. If the column is a text/character column the returned value is
+    ///  depends to the connection characterset or if the Charset is vairable
+    ///  like IB/FB characterset "NONE" it's the column-characterset. Otherwise
+    ///  the value is High(Word) and indicates a zCP_NONE codepage. See
+    ///  ZEncoding.pas.</remarks>
     function GetColumnCodePage(ColumnIndex: Integer): Word;
+    /// <summary>Get the designated column's table's schema.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>schema name or "" if not applicable</returns>
     function GetSchemaName(ColumnIndex: Integer): string;
+    /// <summary>Get the designated column's number of decimal digits for
+    ///  numeric or decimal types or or the number of bytes for binary columns
+    ///  or the number of display characters any other column type</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>precision/bytes/visible characters</returns>
     function GetPrecision(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the designated column's number of digits to right of the
+    ///  decimal point for Numeric or Decimal types or the second fractions for
+    ///  time/timestamp types or the minimum chars/bytes for fixed
+    ///  binary/char/nchar columns, zero otherwise.
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>scale</returns>
     function GetScale(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the designated column's table name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>table name or "" if not applicable.</returns>
     function GetTableName(ColumnIndex: Integer): string;
+    /// <summary>Gets the designated column's catalog name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>catalog name or "" if not applicable.</returns>
     function GetCatalogName(ColumnIndex: Integer): string;
+    /// <summary>Retrieves the designated column's SQL type.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the ZDBC SQL type</returns>
     function GetColumnType(ColumnIndex: Integer): TZSQLType;
+    /// <summary>Retrieves the designated column's database-specific type name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>type name used by the database or "" if not applicable. If the
+    ///  column type is a user-defined type, then a fully-qualified type name is
+    ///  returned.</returns>
     function GetColumnTypeName(ColumnIndex: Integer): string;
+    /// <summary>Indicates whether the designated column is definitely not
+    ///  writable.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsReadOnly(ColumnIndex: Integer): Boolean;
     /// <summary>Set the readonly state of a field. The value will be ignored
     ///  if the field is not writable.</summary>
-    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
     /// <param>"Value" if <c>true</c> then the field will be ignored on
     ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Indicates whether it is possible for a write on the designated
+    ///  column to succeed.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsWritable(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates whether a write on the designated column will
+    ///  definitely succeed.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsDefinitelyWritable(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets a default value for this field.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>a default value for this field.</returns>
     function GetDefaultValue(ColumnIndex: Integer): string;
+    /// <summary>Finds whether this field has a default value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if this field has a default value; <c>false</c>
+    ///  otherwise.</returns>
     function HasDefaultValue(ColumnIndex: Integer): Boolean;
   end;
 
   TOnLobUpdate = procedure(Field: NativeInt) of object;
-  /// <summary>
-  ///   External or internal blob wrapper object.
-  /// </summary>
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a external or internal large object (LOB) wrapper
+  ///  interface.</summary>
   IZLob = interface(IZInterface)
     ['{DCF816A4-F21C-4FBB-837B-A12DCF886A6F}']
     function IsEmpty: Boolean;
@@ -2136,15 +4338,18 @@ type
     procedure SetUpdated(Value: Boolean);
     function Length: Integer; //deprecated;
     procedure Open(LobStreamMode: TZLobStreamMode);
+    /// <summary>Clear/NULL the lob content</summary>
     procedure Clear;
     procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);  //this is for the datasets only
   end;
 
   { IZBlob }
 
+  /// <summary>Defines the BLob interface.</summary>
   IZBlob = interface(IZLob)
     ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
     function IsClob: Boolean;
+    function IsCached: Boolean;
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
@@ -2155,6 +4360,10 @@ type
     function GetBuffer(var LocalBuffer: RawByteString; Out Len: NativeUInt): Pointer;
     procedure SetBuffer(Buffer: Pointer; Length: NativeUInt);
 
+    /// <summary>Clones this blob object.</summary>
+    /// <param>"LobStreamMode" the mode the cloned object is used for is one of:
+    ///  <c>lsmRead, lsmWrite, lsmReadWrite</c></param>
+    /// <returns> a cloned blob object.</returns>
     function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     {Clob operations}
@@ -2184,33 +4393,45 @@ type
     procedure SetCodePageTo(Value: Word);
   end;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines the CLob interface.</summary>
   IZClob = interface(IZBlob)
     ['{2E0ED2FE-5F9F-4752-ADCB-EFE92E39FF94}']
     function GetStream(CodePage: Word): TStream; overload;
     procedure SetStream(const Value: TStream; CodePage: Word); overload;
   end;
 
+  PILob = ^IZlob;
+  IZLobDynArray = array of IZLob;
+
   PIZLob = ^IZBlob;
-  IZLobDynArray = array of IZBLob;
+  IZBLobDynArray = array of IZBLob;
 
-  /// <summary>
-  ///   Database notification interface.
-  /// </summary>
-  IZNotification = interface(IZInterface)
-    ['{BF785C71-EBE9-4145-8DAE-40674E45EF6F}']
+  PICLob = ^IZClob;
+  IZCLobDynArray = array of IZCLob;
 
-    function GetEvent: string;
-    procedure Listen;
-    procedure Unlisten;
-    procedure DoNotify;
-    function CheckEvents: string;
-
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a generic event alerter interface</summary>
+  IZEventListener = interface (IZInterface)
+    ['{9E6DDBD2-86C9-4E5D-9625-FB1456F4545F}']
+    /// <summary>Returns the <c>Connection</c> object
+    ///  that produced this <c>Notification</c> object.</summary>
+    /// <returns>the connection that produced this EventListener.</returns>
     function GetConnection: IZConnection;
+    /// <summary>Test if the <c>EventListener is listening to events</c></summary>
+    /// <returns><c>true</c> if the EventListener is active.</returns>
+    function IsListening: Boolean;
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"ThreadSafeHandler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; ThreadSafeHandler: TZOnEventHandler);
+    /// <summary>Triggers an event.</summary>
+    procedure TriggerEvent(const Name: String);
+    /// <summary>Stop listening the events and cleares the registered events.</summary>
+    procedure Unlisten;
   end;
 
-  /// <summary>
-  ///   Database sequence generator interface.
-  /// </summary>
+  /// <summary>Defines the Database sequence generator interface.</summary>
   IZSequence = interface(IZInterface)
     ['{A9A54FE5-0DBE-492F-8DA6-04AC5FCE779C}']
     /// <summary>Get the name of the sequence generator.</summary>
@@ -2237,21 +4458,68 @@ type
     /// <summary>Returns the SQL to be get the next value.</summary>
     /// <returns>The SQL string</returns>
     function  GetNextValueSQL: string;
-    /// <summary>Returns the <code>Connection</code> interface
-    ///  that produced this <code>Sequence</code> object.</summary>
-    /// <returns> the connection that produced this sequernce.</returns>
+    /// <summary>Returns the <c>Connection</c> interface
+    ///  that produced this <c>Sequence</c> object.</summary>
+    /// <returns>the connection that produced this sequence.</returns>
     function  GetConnection: IZConnection;
   end;
 
+  TZVerboseCallback = procedure(Message: ZWideString) of object;
+  TZBackupDataCallback = procedure(Bytes: PByte; Count: Cardinal) of object;
+
+  IZBackup = Interface(IZInterface)
+    ['{0DB11896-0005-4817-8F8F-94E555A262BE}']
+    procedure SetHostName(HostName: ZWideString);
+    function GetHostName: ZWideString;
+    procedure SetDatabase(Database: ZWideString);
+    function GetDatabase: ZWideString;
+    procedure SetPort(Port: Word);
+    function GetPort: Word;
+    procedure SetOnVerbose(Callback: TZVerboseCallback);
+    function GetOnVerbose: TZVerboseCallback;
+    procedure SetLibLocation(LibLocation: ZWideString);
+    function GetLibLocation: ZWideString;
+    procedure SetUserName(UserName: ZWideString);
+    function GetUserName: ZWideString;
+    procedure SetPassword(Password: ZWideString);
+    function GetPassword: ZWideString;
+    procedure SetBackupFileName(FileName: ZWideString);
+    function GetBackupFileName: ZWideString;
+    procedure SetOnBackupData(Callback: TZBackupDataCallback);
+    function GetOnBackupData: TZBackupDataCallback;
+    procedure Backup;
+    property HostName: ZWideString read GetHostName write SetHostName;
+    property Database: ZWideString read GetDatabase write SetDatabase;
+    property Port: Word read GetPort write SetPort;
+    property OnVerbose: TZVerboseCallback read GetOnVerbose write SetOnVerbose;
+    property LibLocation: ZWideString read GetLibLocation write SetLibLocation;
+    property UserName: ZWideString read GetUserName write SetUserName;
+    property Password: ZWideString read GetPassword write SetPassword;
+    property BackupFileName: ZWideString read GetBackupFileName write SetBackupFileName;
+    property OnBackupdata: TZBackupDataCallback read GetOnBackupData write SetOnBackupData;
+  end;
+
 var
-  /// <summary>
-  ///   The common driver manager object.
-  /// </summary>
+  /// <summary>The common driver manager object.</summary>
   DriverManager: IZDriverManager;
+  /// <summary>The global critical section.</summary>
   GlobalCriticalSection: TCriticalSection;
 implementation
 
 uses ZMessages, ZEncoding, ZDbcProperties, ZFastCode;
+
+// Utility function, maybe belongs elsewhere.
+function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
+begin
+  if SysUtils.SameText(lcmString, LcmNoneStr) then
+    Result := lcmNone
+  else if SysUtils.SameText(lcmString, LcmOnLoadStr) then
+    Result := lcmOnLoad
+  else if SysUtils.SameText(lcmString, LcmOnAccessStr) then
+    Result := lcmOnAccess
+  else
+    Result := DefaultMode;
+end;
 
 type
 
@@ -2317,9 +4585,6 @@ end;
 
 { TZDriverManager }
 
-{**
-  Constructs this object with default properties.
-}
 constructor TZDriverManager.Create;
 begin
   FDriversCS := TCriticalSection.Create;
@@ -2330,9 +4595,6 @@ begin
   FHasLoggingListener := False;
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZDriverManager.Destroy;
 begin
   FDrivers := nil;
@@ -2493,14 +4755,6 @@ begin
   Result := nil;
 end;
 
-{**
-  Logs an error message about event with error result code.
-  @param Category a category of the message.
-  @param Protocol a name of the protocol.
-  @param Msg a description message.
-  @param ErrorCode an error code.
-  @param Error an error message.
-}
 procedure TZDriverManager.LogError(Category: TZLoggingCategory;
   const Protocol: String; const Msg: SQLString; ErrorCode: Integer;
   const Error: SQLString);
@@ -2530,12 +4784,6 @@ begin
       Listener.LogEvent(Event);
 end;
 
-{**
-  Logs a message about event with error result code.
-  @param Category a category of the message.
-  @param Protocol a name of the protocol.
-  @param Msg a description message.
-}
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: String; const Msg: SQLString);
 var
@@ -2609,70 +4857,6 @@ begin
     FDriversCS.Leave;
     FreeAndNil(ZURL);
   end;
-end;
-
-{ EZSQLThrowable }
-
-constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
-begin
-  inherited Create(E.Message);
-  FErrorCode := E.ErrorCode;
-  FStatusCode := E.Statuscode;
-  if E.SpecificData <> nil then
-    FSpecificData := E.SpecificData.Clone;
-end;
-
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.Create(const Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := -1;
-end;
-
-{**
-  Creates an exception with message string.
-  @param Msg a error description.
-  @param ErrorCode a native server error code.
-}
-constructor EZSQLThrowable.CreateWithCode(const ErrorCode: Integer;
-  const Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := ErrorCode;
-end;
-
-{**
-  Creates an exception with message string.
-  @param ErrorCode a native server error code.
-  @param StatusCode a server status code.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.CreateWithCodeAndStatus(ErrorCode: Integer;
-  const StatusCode, Msg: string);
-begin
-  inherited Create(Msg);
-  FErrorCode := ErrorCode;
-  FStatusCode := StatusCode;
-end;
-
-{**
-  Creates an exception with message string.
-  @param StatusCode a server status code.
-  @param Msg a error description.
-}
-constructor EZSQLThrowable.CreateWithStatus(const StatusCode, Msg: string);
-begin
-  inherited Create(Msg);
-  FStatusCode := StatusCode;
-end;
-
-destructor EZSQLThrowable.Destroy;
-begin
-  FreeAndNil(FSpecificData);
-  inherited;
 end;
 
 { TZCodePagedObject }
@@ -2851,11 +5035,9 @@ begin
 
   // HostName/Port
   if HostName <> '' then
-  begin
     Result := Result + HostName;
-    if Port <> 0 then
-      Result := Result + ':' + ZFastCode.IntToStr(Port);
-  end;
+  if Port <> 0 then
+    Result := Result + ':' + ZFastCode.IntToStr(Port);
 
   // Database
   if Database <> '' then
@@ -2909,13 +5091,13 @@ begin
   // APrefix
   I := ZFastCode.Pos(':', AValue);
   if I = 0 then
-    raise Exception.Create('TZURL.SetURL - The prefix is missing');
+    raise EZSQLException.Create('TZURL.SetURL - The prefix is missing');
   BreakString(AValue, ':', APrefix, AValue);
 
   // AProtocol
   I := ZFastCode.Pos(':', AValue);
   if I = 0 then
-    raise Exception.Create('TZURL.SetURL - The protocol is missing');
+    raise EZSQLException.Create('TZURL.SetURL - The protocol is missing');
   BreakString(AValue, ':', AProtocol, AValue);
 
   if StartsWith(AValue, '//') then
@@ -3018,6 +5200,27 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 
+{ TZEventData }
+
+procedure TZEventData.AfterConstruction;
+begin
+  inherited;
+  fCreationTime := now;
+end;
+
+function TZEventData.ToString: string;
+var S: String;
+begin
+  if fEventState = esSignaled
+  then S := ', received at'
+  else S := ', timed out at';
+  {$IFDEF WITH_FORMATSETTINGS}
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(FormatSettings.LongDateFormat+'.ZZZ', fCreationTime);
+  {$ELSE}
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(               LongDateFormat+'.ZZZ', fCreationTime);
+  {$ENDIF}
+end;
+
 initialization
   DriverManager := TZDriverManager.Create;
   GlobalCriticalSection := TCriticalSection.Create;
@@ -3025,4 +5228,3 @@ finalization
   DriverManager := nil;
   FreeAndNil(GlobalCriticalSection);
 end.
-

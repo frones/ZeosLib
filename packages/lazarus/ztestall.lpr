@@ -4,8 +4,10 @@ program ztestall;
 
 (*{$mode objfpc}*){$H+}
 
+{$SAFEFPUEXCEPTIONS ON}
+
 uses
-  custapp, sysutils,
+  custapp, sysutils, math,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
   {$IFDEF FPC2_6DOWN}
@@ -14,12 +16,18 @@ uses
   ZTestConfig,
   ZSqlTestCase,
   zxmltestreport,
+  //core
+  ZTestCore,
+  //parsesql
+  ZTestParseSql,
+  //dbc
+  ZTestDbc,
+  //component
+  ZTestComponents,
+  //bugreport
+  ZTestBugReports,
   //performance
-  ZTestPerformance, ZTestSysUtils, ZTestDbcCachedResultSet, ZTestDbcGeneric,
-  ZTestDbcInterbase, ZTestDataSetGeneric, ZTestMasterDetail,
-  ZTestStoredProcedure, ZTestBugCompCore, ZTestBugCompDbLib,
-  ZTestBugCompInterbase, ZTestBugCompMSSql, ZTestBugCompOracle,
-  ZTestBugCompPostgreSql, ZTestBugCompSQLite, ZTestBugDbcPostgreSql
+  ZTestPerformance
   ;
 
 type
@@ -287,10 +295,14 @@ end;
 var
   Applicationc: TMyTestRunner;
 
-{$IFDEF WINDOWS}{$R ztestall.rc}{$ENDIF}
+//JBau: This stuff is not needed anymore ans just triggers problems with windres.
+//Lazarus now can do this on its own - if needed.
+//{$IFDEF WINDOWS}{$R ztestall.rc}{$ENDIF}
+
+{$R *.res}
 
 begin
-  {$I ztestall.lrs}
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   if CommandLineSwitches.memcheck and (CommandLineSwitches.memcheck_file <> '') then
   begin
     if FileExists(CommandLineSwitches.memcheck_file) then
@@ -317,6 +329,7 @@ begin
   end
   else
   begin
+    Application.Title:='';
     Application.Initialize;
     Application.CreateForm(TMyGuiTestRunner, TestRunner);
     Application.Run;
