@@ -235,7 +235,7 @@ function CompareKeyFields(Field1: TField; const ResultSet: IZResultSet;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  const SortedFields: string; out FieldRefs: TZFieldsLookUpDynArray;
+  const SortedFields: string; Tokenizer: IZTokenizer; out FieldRefs: TZFieldsLookUpDynArray;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 
 {**
@@ -310,8 +310,6 @@ const
     'ffffffff',
     'fffffffff');
   {** Common variables. }
-var
-  CommonTokenizer: IZTokenizer;
 
 implementation
 
@@ -1321,7 +1319,7 @@ end;
   @param OnlyDataFields <code>True</code> if only data fields selected.
 }
 procedure DefineSortedFields(DataSet: TDataset;
-  const SortedFields: string; out FieldRefs: TZFieldsLookUpDynArray;
+  const SortedFields: string; Tokenizer: IZTokenizer; out FieldRefs: TZFieldsLookUpDynArray;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 var
   I, J, TokenValueInt: Integer;
@@ -1338,7 +1336,7 @@ begin
   SetLength(FieldRefs, FieldCount);
   {$IFDEF WITH_VAR_INIT_WARNING}CompareKinds := nil;{$ENDIF}
   SetLength(CompareKinds, FieldCount);
-  Tokens := CommonTokenizer.TokenizeBufferToList(SortedFields,
+  Tokens := Tokenizer.TokenizeBufferToList(SortedFields,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers]);
   FieldsLookupTable := TZDataSet(DataSet as TZAbstractRODataset).FieldsLookupTable;
   try
@@ -1366,7 +1364,7 @@ begin
             end
             else
             // No, this is a field
-              Field := DataSet.FieldByName(CommonTokenizer.GetQuoteState.DecodeToken(Tokens[i]^, Tokens[i].P^));  // Will raise exception if field not present
+              Field := DataSet.FieldByName(Tokenizer.GetQuoteState.DecodeToken(Tokens[i]^, Tokens[i].P^));  // Will raise exception if field not present
           end;
         ttNumber:
           begin
@@ -2061,8 +2059,4 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-initialization
-  CommonTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
-finalization
-  CommonTokenizer := nil;
 end.
