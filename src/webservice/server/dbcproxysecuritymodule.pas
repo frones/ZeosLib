@@ -532,7 +532,7 @@ var
   x: Integer;
 begin
   for x := 0 to Length(FModuleChain) - 1 do
-    if Assigned(FModuleChain[x]) then;
+    if Assigned(FModuleChain[x]) then
       FreeAndNil(FModuleChain[x]);
   inherited;
 end;
@@ -598,7 +598,7 @@ var
   x: Integer;
 begin
   for x := 0 to Length(FModuleChain) - 1 do
-    if Assigned(FModuleChain[x]) then;
+    if Assigned(FModuleChain[x]) then
       FreeAndNil(FModuleChain[x]);
   inherited;
 end;
