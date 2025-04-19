@@ -301,6 +301,7 @@ const
   OCI_DTYPE_TIMESTAMP           = 68;  { Timestamp }
   OCI_DTYPE_TIMESTAMP_TZ        = 69;  { Timestamp with timezone }
   OCI_DTYPE_TIMESTAMP_LTZ       = 70;  { Timestamp with local tz }
+  OCI_DTYPE_JSON                = 85;  { Json Descriptor Type }
 
   { OCI Attributes Types }
   OCI_ATTR_FNCODE               = 1;   // the OCI function code
@@ -560,6 +561,12 @@ const
 
   OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE = 438; // default prefetch size
 
+  OCI_ATTR_JSON_COL             = 534;
+
+  { OCI JSON formats }
+  OCI_JSON_FORMAT_JSON          = 0;  // Textual JSON format
+  OCI_JSON_FORMAT_OSON          = 1;  // Binary OSON format
+
   { OCI Error Return Values }
   OCI_SUCCESS             = 0;
   OCI_SUCCESS_WITH_INFO   = 1;
@@ -634,6 +641,7 @@ const
   SQLT_BFILEE = 114;    //binary file lob
   SQLT_CFILEE = 115;    //character file lob
   SQLT_RSET = 116;      //result set type
+  SQLT_JSON = 119;      // JSON/OSON binary
   SQLT_NCO = 122;       //named collection type (varray or nested table)
   SQLT_VST = 155;       //OCI STRING type / *OCIString
   SQLT_ODT = 156;       //OCIDate type
