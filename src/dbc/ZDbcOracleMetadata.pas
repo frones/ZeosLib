@@ -1782,7 +1782,7 @@ function TZOracleDatabaseMetadata.UncachedGetSchemas: IZResultSet;
 begin
   Result := CopyToVirtualResultSet(
     GetConnection.CreateStatement.ExecuteQuery(
-      'SELECT USERNAME AS TABLE_SCHEM FROM SYS.ALL_USERS'),
+      'SELECT USERNAME AS TABLE_SCHEM, NULL as TABLE_CATALOG FROM SYS.ALL_USERS'),
     ConstructVirtualResultSet(SchemaColumnsDynArray));
 end;
 
