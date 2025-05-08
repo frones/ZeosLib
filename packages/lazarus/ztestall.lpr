@@ -191,7 +191,7 @@ end;
 
 procedure TMyTestRunner.DoTestRun(ATest: TTest);
 begin
-  if CommandLineSwitches.suitename <> '' then ;
+  if CommandLineSwitches.suitename <> '' then
     if ATest.TestName = 'SuiteList' then
       (ATest as TTestSuite).TestName := CommandLineSwitches.suitename;
   inherited DoTestRun(ATest);

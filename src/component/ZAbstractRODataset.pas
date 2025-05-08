@@ -165,6 +165,7 @@ type
     FRowsAffected: Integer;
 
     FFilterEnabled: Boolean;
+    FTokenizer: IZTokenizer;
     FFilterExpression: IZExpression;
     FFilterStack: TZExecutionStack;
     FFilterFieldRefs: TZFieldsLookUpDynArray;
@@ -1670,7 +1671,8 @@ begin
   FFilterEnabled := False;
   FProperties := TStringList.Create;
   FFilterExpression := TZExpression.Create;
-  FFilterExpression.Tokenizer := CommonTokenizer;
+  FTokenizer := TZTokenizer.Create as IZTokenizer;
+  FFilterExpression.Tokenizer := FTokenizer;
   FFilterStack := TZExecutionStack.Create;
 
   FDataLink := TZDataLink.Create(Self);
@@ -5503,7 +5505,7 @@ begin
   //if FIndexFieldNames = '' then exit;
   if (ResultSet <> nil) and not IsUniDirectional then begin
     FIndexFieldNames := Trim(FIndexFieldNames);
-    DefineSortedFields(Self, {FSortedFields} FIndexFieldNames {bangfauzan modification},
+    DefineSortedFields(Self, {FSortedFields} FIndexFieldNames {bangfauzan modification}, FTokenizer,
     FSortedFieldRefs, FSortedComparsionKinds, FSortedOnlyDataFields);
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)

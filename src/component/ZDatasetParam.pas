@@ -73,9 +73,6 @@ type
   PBoolean = ^Boolean;
   {$ENDIF}
   TZParamValue = record //don't use any managed types here!!!!
-    {$IFDEF ILINK_HAS_TBCD_IN_UNIONS_BUG}
-    pvBCD: TBCD;
-    {$ENDIF}
     case Integer of
       0:  (pvBool: Boolean);
       1:  (pvByte: Byte);
@@ -89,9 +86,14 @@ type
       9:  (pvSingle: Single);
       10: (pvDouble: Double);
       11: (pvCurrency: Currency);
-      {$IFNDEF ILINK_HAS_TBCD_IN_UNIONS_BUG}
-      12: (pvBCD: TBCD);
-      {$ENDIF}
+      // using TBcd directly gives problems when using certain versions of C++Builder
+      // - or more precisely with the ilink in these versions. This is why we use
+      // the array of byte construct here instead of TBcd.
+      // this requires casting at other places.
+      // see https://zeoslib.sourceforge.io/viewtopic.php?t=194475 and 
+      // https://zeoslib.sourceforge.io/viewtopic.php?t=250607
+      // 12: (pvBCD: TBcd);
+      12: (pvBCD: array [1..sizeof(TBcd)] of Byte);
       13: (pvDateTime: TDateTime);
       14: (pvDate: TZDate);
       15: (pvTime: TZTime);
@@ -2311,7 +2313,7 @@ begin
                         TVarData(Result).VType := varCurrency;
                         TVarData(Result).VCurrency := FData.pvCurrency;
                       end;
-      stBigDecimal:   VarFMTBcdCreate(Result, FData.pvBCD);
+      stBigDecimal:   VarFMTBcdCreate(Result, TBcd(FData.pvBCD));
       stTime:         begin
                         TVarData(Result).VType := varDate;
                         if not ZSysUtils.TryTimeToDateTime(FData.pvTime, TVarData(Result).VDate) then
@@ -2721,7 +2723,7 @@ function TZParam.IsEqual(Value: TZParam): Boolean;
       stWord, stSmall: Result := FData.pvWord = Value.FData.pvWord;
       stLongWord, stInteger: Result := FData.pvCardinal = Value.FData.pvCardinal;
       stLong, stULong, stCurrency: Result := FData.pvInt64 = Value.FData.pvInt64;
-      stBigDecimal: Result := ZBCDCompare(FData.pvBCD, Value.FData.pvBCD) = 0;
+      stBigDecimal: Result := ZBCDCompare(TBcd(FData.pvBCD), TBcd(Value.FData.pvBCD)) = 0;
       stFloat: if FData.pvSingle > Value.FData.pvSingle then begin
                 sDiv := FData.pvSingle - Value.FData.pvSingle;
                 Result := sDiv > FLOAT_COMPARE_PRECISION_SINGLE;

@@ -2452,6 +2452,9 @@ begin
 
     FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
       @CurrentVar^.dty, nil, OCI_ATTR_DATA_TYPE, FOCIError);
+    // Oracle recommends binding JSON as CLOB.
+    if CurrentVar.dty = SQLT_JSON then
+      CurrentVar.dty := SQLT_CLOB;
     ColumnInfo.dty := CurrentVar^.dty;
 
     if CurrentVar.dty in [SQLT_CHR, SQLT_LNG, SQLT_VCS, SQLT_LVC, SQLT_AFC, SQLT_AVC, SQLT_CLOB, SQLT_VST] then begin
@@ -3562,6 +3565,13 @@ constructor TZOracleClob.Create(const Connection: IZOracleConnection;
 var CodePage: PZCodePage;
 begin
   inherited Create(Connection, Loblocator, OwnsLobLocator, SQLT_CLOB, OpenLobStreams);
+  if (csid = 0) and (CharsetForm = 0) then
+  begin
+    // This happens for SQLT_JSON types bound as clob in UTF8.
+    // Needs testing for non-unicode character sets.
+    csid := OCI_UTF16ID;
+    CharsetForm := SQLCS_IMPLICIT;
+  end;
   Fcsid := csid;
   FCharsetForm := CharsetForm;
   if (FCharsetForm = SQLCS_NCHAR) or (csid >= OCI_UTF16ID) then begin
