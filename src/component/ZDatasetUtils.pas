@@ -1680,7 +1680,7 @@ begin
       stFloat:        Statement.SetFloat(Index, TZHackParam(Param).FData.pvSingle);
       stDouble:       Statement.SetDouble(Index, TZHackParam(Param).FData.pvDouble);
       stCurrency:     Statement.SetCurrency(Index, TZHackParam(Param).FData.pvCurrency);
-      stBigDecimal:   Statement.SetBigDecimal(Index, TZHackParam(Param).FData.pvBCD);
+      stBigDecimal:   Statement.SetBigDecimal(Index, TBcd(TZHackParam(Param).FData.pvBCD));
       stDate:         Statement.SetDate(Index, TZHackParam(Param).FData.pvDate);
       stTime:         Statement.SetTime(Index, TZHackParam(Param).FData.pvTime);
       stTimestamp:    Statement.SetTimestamp(Index, TZHackParam(Param).FData.pvTimeStamp);
