@@ -1322,7 +1322,7 @@ var
                   INT8OID:  SQLWriter.AddOrd(PG2Int64(Data), TmpSQL);
                   FLOAT8OID: begin
                               dbl := PG2Double(Data);
-                              L := Ord ((dbl = Infinity) or (dbl = NegInfinity) or (dbl = NaN));
+                              L := Ord (IsInfinite(dbl) or IsNan(dbl));
                               if L <> 0 then
                                 SQLWriter.AddChar(#39, TmpSQL);
                               SQLWriter.AddFloat(dbl, TmpSQL);
