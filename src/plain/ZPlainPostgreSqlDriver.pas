@@ -892,7 +892,7 @@ begin
   with Loader do
   begin
   { ===	in fe-connect.c === }
-    @PQconnectdb    := GetAddress('PQconnectdb');
+    @PQconnectdb    := GetAddress('PQconnectdb', True);
     @PQsetdbLogin   := GetAddress('PQsetdbLogin');
     @PQconndefaults := GetAddress('PQconndefaults');
     @PQfinish       := GetAddress('PQfinish');
