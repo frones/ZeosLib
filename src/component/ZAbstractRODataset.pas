@@ -1671,7 +1671,7 @@ begin
   FFilterEnabled := False;
   FProperties := TStringList.Create;
   FFilterExpression := TZExpression.Create;
-  FTokenizer := TZTokenizer.Create as IZTokenizer;
+  FTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
   FFilterExpression.Tokenizer := FTokenizer;
   FFilterStack := TZExecutionStack.Create;
 

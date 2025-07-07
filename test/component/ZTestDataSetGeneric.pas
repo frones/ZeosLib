@@ -210,7 +210,7 @@ uses
   ZEncoding, ZFastCode, ZClasses,
   ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties, ZDbcLogging,
   ZDatasetUtils, ZSqlUpdate, {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
-  ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
+  ZDbcInterbaseFirebirdMetadata, ZSelectSchema, ZGenericSqlToken;
 
 { TZGenericTestDataSet }
 
@@ -218,7 +218,7 @@ constructor TZGenericTestDataSet.Create(MethodName: string);
 begin
   inherited;
 
-  FTokenizer := TZTokenizer.Create as IZTokenizer;
+  FTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
 end;
 
 procedure TZGenericTestDataSet.TestConnection;
