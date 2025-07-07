@@ -2009,7 +2009,7 @@ var
 begin
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
-      SQL := 'SELECT nspname AS TABLE_SCHEM FROM pg_catalog.pg_namespace'
+      SQL := 'SELECT nspname AS TABLE_SCHEM, null as TABLE_CATALOG FROM pg_catalog.pg_namespace'
         + ' WHERE nspname <> ''pg_toast'' AND nspname NOT'
         + ' LIKE ''pg\\_temp\\_%'' ORDER BY TABLE_SCHEM';
     end else
