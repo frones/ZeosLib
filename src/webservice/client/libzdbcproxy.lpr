@@ -79,6 +79,8 @@ end;
 
 exports GetInterface, GetLastErrorStr;
 
+{$R *.res}
+
 begin
   LastErrorStr := 'No error happened yet!';
 end.
