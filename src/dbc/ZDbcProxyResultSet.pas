@@ -1378,8 +1378,9 @@ function TZDbcProxyResultSet.GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobS
 var
   ColType: TZSQLType;
   Idx: Integer;
-  Val: String;
+  AnsiVal: AnsiString;
   ValVariant: Variant;
+  WideVal: ZWideString;
   //AnsiVal: {$IFDEF NEXTGEN}RawByteString{$ELSE}AnsiString{$ENDIF};
   Bytes: TBytes;
   ColInfo: TZColumnInfo;
@@ -1398,34 +1399,42 @@ begin
   end;
 
   Idx := ColumnIndex - FirstDbcIndex;
-  ValVariant := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
-  Val := VarToStr(ValVariant);
   ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
   ColType := ColInfo.ColumnType;
+  ValVariant := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  {$IF DECLARED(VarToUnicodeStr)}
+  WideVal := VarToUnicodeStr(ValVariant);
+  {$ELSE}
+  WideVal := VarToWideStr(ValVariant);
+  {$ENDIF}
   case ColType of
     stBinaryStream: begin
-      if Val = '' then
+      if WideVal = '' then
         Result := TZAbstractBLob.CreateWithData(nil, 0)
       else begin
         {$IFDEF NO_ANSISTRING}
         Bytes := ZDecodeBase64(Val);
         {$ELSE}
-        Bytes := ZDecodeBase64(AnsiString(Val));
+        Bytes := ZDecodeBase64(AnsiString(WideVal));
         {$ENDIF}
         Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
       end;
     end;
     stAsciiStream, stUnicodeStream: begin
-      if Val <> '' then
+      if WideVal <> '' then begin
          {$IFDEF WITH_ZEROBASEDSTRINGS}
          Result := TZAbstractCLob.CreateWithData(@Val[Low(Val)], Length(Val), GetConSettings) as IZBlob
          {$ELSE}
-         Result := TZAbstractCLob.CreateWithData(@Val[1], Length(Val), GetConSettings) as IZBlob
+         if ColType in [stUnicodeString, stUnicodeStream] then
+           Result := TZAbstractCLob.CreateWithData(@WideVal[1], Length(WideVal), GetConSettings) as IZBlob
+         else begin
+           AnsiVal := UTF8Encode(WideVal);
+           Result := TZAbstractCLob.CreateWithData(@AnsiVal[1], Length(AnsiVal), GetConSettings) as IZBlob;
+         end
          {$ENDIF}
-       else
+       end else
          Result := TZAbstractCLob.CreateWithData(nil, 0, GetConSettings) as IZBlob;
-    end;
-    else begin
+    end else begin
       raise EZSQLException.Create('GetBlob is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
     end;
   end;
