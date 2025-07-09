@@ -1423,7 +1423,7 @@ begin
     stAsciiStream, stUnicodeStream: begin
       if WideVal <> '' then begin
          {$IFDEF WITH_ZEROBASEDSTRINGS}
-         Result := TZAbstractCLob.CreateWithData(@Val[Low(Val)], Length(Val), GetConSettings) as IZBlob
+         Result := TZAbstractCLob.CreateWithData(@WideVal[Low(WideVal)], Length(WideVal), GetConSettings) as IZBlob
          {$ELSE}
          if ColType in [stUnicodeString, stUnicodeStream] then
            Result := TZAbstractCLob.CreateWithData(@WideVal[1], Length(WideVal), GetConSettings) as IZBlob
