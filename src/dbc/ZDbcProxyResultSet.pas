@@ -1406,7 +1406,7 @@ begin
   WideVal := VarToUnicodeStr(ValVariant);
   {$ELSE}
   WideVal := VarToWideStr(ValVariant);
-  {$ENDIF}
+  {$IFEND}
   case ColType of
     stBinaryStream: begin
       if WideVal = '' then
