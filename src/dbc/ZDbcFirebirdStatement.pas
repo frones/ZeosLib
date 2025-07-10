@@ -373,7 +373,8 @@ end;
 
 procedure TZAbstractFirebirdStatement.Prepare;
 var Transaction: ITransaction;
-  TimeOut, flags, sqltype: Cardinal;
+  TimeOut, flags: Cardinal;
+  sqltype: Integer;
   PreparedRowsOfArray: Integer;
   FinalChunkSize: Integer;
   MetadataBuilder: IMetadataBuilder;

@@ -69,7 +69,7 @@ type
 
   PZInterbaseFirebirdParam = ^TZInterbaseFirebirdParam;
   TZInterbaseFirebirdParam = record
-    sqltype:            Cardinal;      { datatype of field (normalized) }
+    sqltype:            Integer;      { datatype of field (normalized) }
     sqlsubtype:         Cardinal;      { subtype of field (normalized) }
     sqlscale:           Integer;       { scale factor }
     codepage:           word;          { the codepage of the field }

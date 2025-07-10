@@ -599,7 +599,7 @@ type
     sqldata: Pointer; //points to data in our buffer
     sqlind: PISC_SHORT; //null indicator, nil if not nullable
     sqltype: Cardinal;
-    sqlsubtype: Cardinal;
+    sqlsubtype: Integer;
     sqlscale: Integer;
   public
     function GetPCharFromTextVar(out Len: NativeUInt): PAnsiChar; {$IFDEF WITH_INLINE}inline;{$ENDIF}

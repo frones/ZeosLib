@@ -351,7 +351,7 @@ type
     function GetBlobId: TISC_QUAD;
   end;
 
-  function ConvertIB_FBType2SQLType(AType, ASubType: Cardinal; Scale: Integer): TZSQLType;
+  function ConvertIB_FBType2SQLType(AType: Cardinal; ASubType: Integer; Scale: Integer): TZSQLType;
 
 {$ENDIF ZEOS_DISABLE_FIREBIRD}
 implementation
@@ -359,7 +359,7 @@ implementation
 
 uses SysUtils, ZDbcUtils, ZSysUtils, ZFastCode, ZEncoding, ZMessages;
 
-function ConvertIB_FBType2SQLType(AType, ASubType: Cardinal; Scale: Integer): TZSQLType;
+function ConvertIB_FBType2SQLType(AType: Cardinal; ASubType: Integer; Scale: Integer): TZSQLType;
 begin
   case AType of
     SQL_VARYING, SQL_TEXT:
