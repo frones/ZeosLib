@@ -83,6 +83,7 @@ type
   protected
     procedure Ticket433BeforePost(DataSet: TDataSet);
   published
+    constructor Create; override;
     constructor Create(MethodName: string); override;
     procedure TestConnection;
     procedure TestReadOnlyQuery;
@@ -215,6 +216,13 @@ uses
 { TZGenericTestDataSet }
 
 constructor TZGenericTestDataSet.Create(MethodName: string);
+begin
+  inherited;
+
+  FTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
+end;
+
+constructor TZGenericTestDataSet.Create;
 begin
   inherited;
 
