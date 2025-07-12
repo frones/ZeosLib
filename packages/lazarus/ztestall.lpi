@@ -107,7 +107,6 @@
     <Other>
       <Verbosity>
         <ShoLineNum Value="True"/>
-        <ShowDebugInfo Value="True"/>
         <ShowCond Value="True"/>
         <ShowHintsForSenderNotUsed Value="True"/>
       </Verbosity>
