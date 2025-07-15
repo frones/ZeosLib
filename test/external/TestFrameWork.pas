@@ -2734,6 +2734,8 @@ begin
     for MethodIter := 0 to MethodEnumerator.Methodcount-1 do
       begin
         NameOfMethod := MethodEnumerator.nameOfMethod[MethodIter];
+        if NameOfMethod = 'Create' then
+          continue;
         self.addTest(testClass.Create(NameOfMethod) as ITest);
       end;
   finally

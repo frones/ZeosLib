@@ -83,7 +83,11 @@ type
   protected
     procedure Ticket433BeforePost(DataSet: TDataSet);
   published
+    {$IFDEF FPC}
+    constructor Create; override;
+    {$ELSE}
     constructor Create(MethodName: string); override;
+    {$ENDIF}
     procedure TestConnection;
     procedure TestReadOnlyQuery;
     procedure TestReadOnlyQueryUniDirectional;
@@ -210,16 +214,25 @@ uses
   ZEncoding, ZFastCode, ZClasses,
   ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties, ZDbcLogging,
   ZDatasetUtils, ZSqlUpdate, {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
-  ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
+  ZDbcInterbaseFirebirdMetadata, ZSelectSchema, ZGenericSqlToken;
 
 { TZGenericTestDataSet }
 
+{$IFNDEF FPC}
 constructor TZGenericTestDataSet.Create(MethodName: string);
 begin
   inherited;
 
-  FTokenizer := TZTokenizer.Create as IZTokenizer;
+  FTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
 end;
+{$ELSE}
+constructor TZGenericTestDataSet.Create;
+begin
+  inherited;
+
+  FTokenizer := TZGenericSQLTokenizer.Create as IZTokenizer;
+end;
+{$ENDIF}
 
 procedure TZGenericTestDataSet.TestConnection;
 var
