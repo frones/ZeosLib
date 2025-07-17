@@ -704,7 +704,7 @@ type
     Provider: TZServerProvider;
   end;
 const
-  KnownDriverName2TypeMap: array[0..22] of TDriverNameAndServerProvider = (
+  KnownDriverName2TypeMap: array[0..23] of TDriverNameAndServerProvider = (
     (DriverName: 'SQLNCLI';     Provider: spMSSQL),
     (DriverName: 'SQLSRV';      Provider: spMSSQL),
     (DriverName: 'LIBTDSODBC';  Provider: spMSSQL),
@@ -727,7 +727,8 @@ const
     (DriverName: 'SQLITE';      Provider: spSQLite),
     (DriverName: 'PSQLODBC';    Provider: spPostgreSQL),
     (DriverName: 'NXODBCDRIVER';Provider: spNexusDB),
-    (DriverName: 'ICLIT09B';    Provider: spInformix)
+    (DriverName: 'ICLIT09B';    Provider: spInformix),
+    (DriverName: 'FIREBIRDODBC';Provider: spIB_FB)
   );
 var
   tmp, OutConnectString: String;

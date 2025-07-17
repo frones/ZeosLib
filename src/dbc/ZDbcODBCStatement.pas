@@ -306,7 +306,8 @@ implementation
 uses Math, DateUtils, TypInfo, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZEncoding, ZTokenizer, ZFastCode, ZDbcLogging,
   ZDbcResultSet, ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZDbcMetadata;
+  ZDbcMetadata, ZDbcFirebirdInterbase, ZDbcASA, ZDbcDbLibResultSet, ZDbcOracle,
+  ZDbcPostgreSqlResultSet;
 
 var DefaultPreparableTokens: TPreparablePrefixTokens;
 
@@ -507,13 +508,26 @@ var
   CachedResolver: IZCachedResolver;
   NativeResultSet: IZResultSet;
   CachedResultSet: TZCachedResultSet;
+  SP: TZServerProvider;
 begin
   Result := nil;
   NativeResultSet := InternalCreateResultSet;
   if (GetResultSetConcurrency = rcUpdatable) or
      (GetResultSetType <> rtForwardOnly) then
   begin
-    CachedResolver := TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData);
+    SP := GetConnection.GetServerProvider;
+    case SP of // copied from the same place in ZDbcProxyStatement.
+      // The following cached resolvers cannot be used, because they need handles
+      // from their databases: ADO, MySQL, SQLite
+      spASA: CachedResolver := TZASACachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      spMSSQL, spASE: CachedResolver := TZDBLibCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      //spIB_FB: CachedResolver := TZInterbase6CachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      spIB_FB: CachedResolver := TZInterbaseFirebirdCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      spOracle: CachedResolver := TZOracleCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      spPostgreSQL: CachedResolver := TZPostgreSQLCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      else CachedResolver := TZGenericCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+    end;
+
     if (FClientEncoding = ceUTF16)
     then CachedResultSet := TZODBCachedResultSetW.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
     else CachedResultSet := TZODBCachedResultSetA.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
