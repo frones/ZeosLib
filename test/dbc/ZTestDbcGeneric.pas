@@ -499,7 +499,9 @@ var RS: IZResultSet;
     if (ProtocolType = protSQLite) and (SQLType = stBigDecimal) then
       Exit;
     RS.GetBigDecimal(ColumnIndex, BCD_A{%H-});
-    if not ((Provider = spIB_FB) and (RS.GetType = rtForwardOnly)) then
+    if not ((Connection.GetServerProvider = spIB_FB) and (RS.GetType = rtForwardOnly)) and
+       not ((Connection.GetServerProvider = spIB_FB) and (copy(Protocol, 1, 4) = 'odbc')) // It seems the ODBC driver doesn't fix up meta information.
+    then
       CheckEquals(Precision, Ord(RS.GetMetadata.GetPrecision(ColumnIndex)), Protocol+': Precision mismatch, for column "'+S+'"');
     if not (((ColumnIndex = BigD18_1_Index) or (ColumnIndex = Curr15_2_Index)) and
               (RS.GetType = rtForwardOnly) and (Provider = spIB_FB)) then
