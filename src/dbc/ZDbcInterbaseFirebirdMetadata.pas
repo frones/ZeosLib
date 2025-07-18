@@ -2377,7 +2377,7 @@ begin
     'ISF.RDB$INDEX_NAME = FK.RDB$INDEX_NAME AND ISP.RDB$FIELD_POSITION = ISF.RDB$FIELD_POSITION ' +
     AppendCondition(PKTable) + ' ' + AppendCondition(FKTable) + ' ' +
     'ORDER BY ' +
-    'PK.RDB$RELATION_NAME, ISP.RDB$FIELD_POSITION';
+    'FK.RDB$RELATION_NAME, ISP.RDB$FIELD_POSITION';
 
   Result := CopyToVirtualResultSet(
     CreateStatement.ExecuteQuery(SQL),
