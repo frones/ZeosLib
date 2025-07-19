@@ -69,7 +69,8 @@ type
   TZTestDbcMSSqlCase = class(TZAbstractDbcSQLTestCase)
   private
   protected
-    function GetSupportedProtocols: string; override;
+    //function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestConnection;
     procedure TestStoredResultSet;
@@ -90,13 +91,9 @@ uses ZTestConsts;
 
 { TZTestDbcMSSqlCase classes }
 
-{**
-  Gets an array of protocols valid for this test.
-  @return an array of valid protocols
-}
-function TZTestDbcMSSqlCase.GetSupportedProtocols: string;
+function TZTestDbcMSSqlCase.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := 'mssql,sybase,ado,odbc_w,odbc_a,OleDB';
+  Result := Config.Provider in [spMSSQL, spASE] ;
 end;
 
 {**
