@@ -68,7 +68,7 @@ type
   {** Implements a bug report test case for MSSql components. }
   TZTestCompMSSqlBugReport = class(TZAbstractCompSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure Test959307; //wrong defined????
     procedure Test953072;
@@ -100,9 +100,9 @@ uses SysUtils, Types, FmtBCD, DateUtils,
 
 { TZTestCompMSSqlBugReport }
 
-function TZTestCompMSSqlBugReport.GetSupportedProtocols: string;
+function TZTestCompMSSqlBugReport.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := 'mssql,sybase,OleDB,odbc_a,odbc_w,ado';
+  Result := Config.Provider in [spMSSQL, spASE];
 end;
 
 {**
