@@ -69,7 +69,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZClasses,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
-  ZPlainMySqlDriver, ZSelectSchema, ZVariant, ZdbcMySql, ZExceptions;
+  ZPlainMySqlDriver, ZSelectSchema, ZVariant, ZDbcMySql, ZExceptions;
 
 type
   {** Implements MySQL ResultSet Metadata. }
@@ -336,7 +336,7 @@ uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZTokenizer,
   ZGenericSqlAnalyser,
-  ZDbcUtils, ZDbcMetadata, ZDbcLogging;
+  ZDbcUtils, ZDbcMetadata, ZDbcLogging, ZDbcMySqlMetadata;
 
 { TZMySQLResultSetMetadata }
 
@@ -355,9 +355,12 @@ end;
 }
 constructor TZMySQLResultSetMetadata.Create(const Metadata: IZDatabaseMetadata;
   const SQL: string; ParentResultSet: TZAbstractResultSet);
+var
+  version: ULong;
 begin
   inherited Create(Metadata, SQL, ParentResultSet);
-  FHas_ExtendedColumnInfos := TZMySQLPlainDriver(MetaData.GetConnection.GetIZPlainDriver.GetInstance).mysql_get_client_version > 40000;
+  version := TZMySQLPlainDriver(MetaData.GetConnection.GetIZPlainDriver.GetInstance).mysql_get_client_version;
+  FHas_ExtendedColumnInfos := (Metadata.GetConnection.GetMetadata as IZMySQLDatabaseMetadata).isMariaDB or (version > 40000);
 end;
 
 {**
