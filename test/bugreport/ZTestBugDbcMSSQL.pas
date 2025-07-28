@@ -65,7 +65,8 @@ type
   {** Implements a DBC bug report test case for DB Lib. }
   ZTestDbcMSSQLBugReport = class(TZAbstractDbcSQLTestCase)
   protected
-    function GetSupportedProtocols: string; override;
+    //function GetSupportedProtocols: string; override;
+    function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestTicket375;
     procedure TestTicket375_B;
@@ -82,9 +83,14 @@ uses ZSysUtils, ZDbcProperties, FmtBCD;
 
 { ZTestDbcMSSQLBugReport }
 
-function ZTestDbcMSSQLBugReport.GetSupportedProtocols: string;
+//function ZTestDbcMSSQLBugReport.GetSupportedProtocols: string;
+//begin
+//  Result := 'mssql,sybase,odbc_a,odbc_w,OleDB,ado';
+//end;
+
+function ZTestDbcMSSQLBugReport.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
-  Result := 'mssql,sybase,odbc_a,odbc_w,OleDB,ado';
+  Result := Config.Provider in [spMSSQL, spASE];
 end;
 
 (*
