@@ -311,6 +311,7 @@ type
   TODBCDatabaseMetadataW = class(TAbstractODBCDatabaseMetadata)
   private
     fPlainW: TODBC3UnicodePlainDriver;
+    function CleanupString(InStr: UnicodeString): UnicodeString;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
     function DecomposeObjectString(const S: String): UnicodeString; reintroduce;
@@ -1837,6 +1838,17 @@ begin
   fPlainW := Connection.GetIZPlainDriver.GetInstance as TODBC3UnicodePlainDriver;
 end;
 
+// this function is meant to give us a chance to cleanup data that ODBC drivers give to us.
+// Firebird requires it because it seems that the ODBC driver an give a string with #0 as a
+// result for the TABLE_CAT column.
+function TODBCDatabaseMetadataW.CleanupString(InStr: UnicodeString): UnicodeString;
+begin
+  If (Length(InStr) > 0) and (SysUtils.StrLen(PWideChar(InStr)) = 0) then
+    Result := EmptyStr
+  else
+    Result := InStr;
+end;
+
 function TODBCDatabaseMetadataW.CreateDatabaseInfo: IZDatabaseInfo;
 begin
   Result := TZODBCDatabaseInfoW.Create(Self, fPHDBC);
@@ -1871,7 +1883,6 @@ function TODBCDatabaseMetadataW.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Proc: UnicodeString;
   ODBCConnection: IZODBCConnection;
@@ -1881,7 +1892,6 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -1895,11 +1905,11 @@ begin
       begin
         IntializeProcedureMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureMap.ColIndices[CatalogNameIndex], Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureMap.ColIndices[SchemaNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcedureNameIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureNameIndex], Len), Len);
+        Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+        Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+        Result.UpdateUnicodeString(ProcedureNameIndex, CleanupString(GetUnicodeString(ProcedureNameIndex)));
         //overload?
-        Result.UpdatePWideChar(ProcedureRemarksIndex, GetPWideChar(fProcedureMap.ColIndices[ProcedureRemarksIndex], Len), Len);
+        Result.UpdateUnicodeString(ProcedureRemarksIndex, CleanupString(GetUnicodeString(ProcedureRemarksIndex)));
         Result.UpdateSmall(ProcedureTypeIndex, GetSmall(fProcedureMap.ColIndices[ProcedureTypeIndex]) - 1);
         Result.InsertRow;
       end;
@@ -1994,10 +2004,10 @@ begin
       begin
         IntializeProceduresProcedureColumnsColMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[CatalogNameIndex], Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[SchemaNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcColProcedureNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColProcedureNameIndex], Len), Len);
-        Result.UpdatePWideChar(ProcColColumnNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColColumnNameIndex], Len), Len);
+        Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+        Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+        Result.UpdateUnicodeString(ProcColProcedureNameIndex, CleanupString(GetUnicodeString(ProcColProcedureNameIndex)));
+        Result.UpdateUnicodeString(ProcColColumnNameIndex, CleanupString(GetUnicodeString(ProcColColumnNameIndex)));
         case GetSmall(fProcedureColumnsColMap.ColIndices[ProcColColumnTypeIndex]) of
           SQL_PARAM_INPUT:        Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctIn));
           SQL_PARAM_INPUT_OUTPUT: Result.UpdateSmall(ProcColColumnTypeIndex, Ord(pctInOut));
@@ -2015,13 +2025,13 @@ begin
           else //test unsigned
             SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fProcedureColumnsColMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
         Result.UpdateSmall(ProcColDataTypeIndex, Ord(SQLType));
-        Result.UpdatePWideChar(ProcColTypeNameIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColTypeNameIndex], Len), Len);
+        Result.UpdateUnicodeString(ProcColTypeNameIndex, CleanupString(GetUnicodeString(ProcColTypeNameIndex)));
         Result.UpdateInt(ProcColPrecisionIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColPrecisionIndex]));
         Result.UpdateInt(ProcColLengthIndex, GetInt(fProcedureColumnsColMap.ColIndices[ProcColLengthIndex]));
         Result.UpdateSmall(ProcColScaleIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColScaleIndex]));
         Result.UpdateSmall(ProcColRadixIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColRadixIndex]));
         Result.UpdateSmall(ProcColNullableIndex, GetSmall(fProcedureColumnsColMap.ColIndices[ProcColNullableIndex]));
-        Result.UpdatePWideChar(ProcColRemarksIndex, GetPWideChar(fProcedureColumnsColMap.ColIndices[ProcColRemarksIndex], Len), Len);
+        Result.UpdateUnicodeString(ProcColRemarksIndex, CleanupString(GetUnicodeString(ProcColRemarksIndex)));
         Result.InsertRow;
       end;
       Close;
@@ -2076,7 +2086,7 @@ var
     //This will lead to problems with metadata caching.
     WChar := RS.GetPWideChar(ColIdx, Len);
     if (Len > 0) and (SysUtils.StrLen(WChar) = 0) then
-      Result.UpdateNull(ColIdx)
+      Result.UpdateString(ColIdx, EmptyStr)
     else
       Result.UpdatePWideChar(ColIdx, WChar, Len);
   end;
@@ -2174,11 +2184,10 @@ function TODBCDatabaseMetadataW.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
   Cat, Schem, Table, Column: UnicodeString;
-  aTypeName: PWideChar;
+  aTypeName: UnicodeString;
   ODBCConnection: IZODBCConnection;
   IsUnsigned: Boolean;
 begin
@@ -2189,7 +2198,6 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
   Column := DecomposeObjectString(ColumnNamePattern);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2202,13 +2210,13 @@ begin
       while Next do begin
         IntializeTableColColumnMap(RS);
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[CatalogNameIndex], Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
-        aTypeName := GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len);
-        Result.UpdatePWideChar(TableColColumnTypeNameIndex, aTypeName, Len);
-        IsUnsigned := (aTypeName <> nil) and ((PWord(aTypeName)^ or $0020) = Ord('u')); //test unsigned
+        Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+        Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+        Result.UpdateUnicodeString(TableNameIndex, CleanupString(GetUnicodeString(TableNameIndex)));
+        Result.UpdateUnicodeString(ColumnNameIndex, CleanupString(GetUnicodeString(ColumnNameIndex)));
+        aTypeName := GetUnicodeString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]);
+        Result.UpdateUnicodeString(TableColColumnTypeNameIndex, CleanupString(aTypeName));
+        IsUnsigned := (aTypeName <> EmptyStr) and ((PWord(aTypeName)^ or $0020) = Ord('u')); //test unsigned
         SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
           SmallInt(GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex])), IsUnsigned, ConSettings, nil);
@@ -2220,13 +2228,13 @@ begin
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNumPrecRadixIndex]));
         Result.UpdateSmall(TableColColumnNullableIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnNullableIndex]));
-        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnRemarksIndex], Len), Len);
-        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), Len);
+        Result.UpdateUnicodeString(TableColColumnRemarksIndex, CleanupString(GetUnicodeString(TableColColumnRemarksIndex)));
+        Result.UpdateUnicodeString(TableColColumnColDefIndex, CleanupString(GetUnicodeString(TableColColumnColDefIndex)));
         Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex]));
         Result.UpdateSmall(TableColColumnSQLDateTimeSubIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDateTimeSubIndex]));
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex]));
         Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]));
-        Result.UpdatePWideChar(TableColColumnIsNullableIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex], Len), Len);
+        Result.UpdateUnicodeString(TableColColumnIsNullableIndex, CleanupString(GetUnicodeString(TableColColumnIsNullableIndex)));
         { here equals do end just test if we know the column then do something }
         if fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex] <> InvalidDbcIndex then
           Result.UpdateBoolean(TableColColumnAutoIncIndex, GetBoolean(fTableColColumnMap.ColIndices[TableColColumnAutoIncIndex]));
@@ -2251,7 +2259,6 @@ function TODBCDatabaseMetadataW.UncachedGetColumnPrivileges(const Catalog: strin
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl, Col: UnicodeString;
   ODBCConnection: IZODBCConnection;
@@ -2262,7 +2269,6 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
   Col := DecomposeObjectString(ColumnNamePattern);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2275,14 +2281,14 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(ColumnNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableColPrivGrantorIndex, GetPWideChar(TableColPrivGrantorIndex, Len), Len);
-        Result.UpdatePWideChar(TableColPrivGranteeIndex, GetPWideChar(TableColPrivGranteeIndex, Len), Len);
-        Result.UpdatePWideChar(TableColPrivPrivilegeIndex, GetPWideChar(TableColPrivPrivilegeIndex, Len), Len);
-        Result.UpdatePWideChar(TableColPrivIsGrantableIndex, GetPWideChar(TableColPrivIsGrantableIndex, Len), Len);
+        Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+        Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+        Result.UpdateUnicodeString(TableNameIndex, CleanupString(GetUnicodeString(TableNameIndex)));
+        Result.UpdateUnicodeString(ColumnNameIndex, CleanupString(GetUnicodeString(ColumnNameIndex)));
+        Result.UpdateUnicodeString(TableColPrivGrantorIndex, CleanupString(GetUnicodeString(TableColPrivGrantorIndex)));
+        Result.UpdateUnicodeString(TableColPrivGranteeIndex, CleanupString(GetUnicodeString(TableColPrivGranteeIndex)));
+        Result.UpdateUnicodeString(TableColPrivPrivilegeIndex, CleanupString(GetUnicodeString(TableColPrivPrivilegeIndex)));
+        Result.UpdateUnicodeString(TableColPrivIsGrantableIndex, CleanupString(GetUnicodeString(TableColPrivIsGrantableIndex)));
         Result.InsertRow;
       end;
       Close;
@@ -2293,7 +2299,6 @@ function TODBCDatabaseMetadataW.UncachedGetTablePrivileges(const Catalog: string
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Table: UnicodeString;
   ODBCConnection: IZODBCConnection;
@@ -2303,7 +2308,6 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2316,14 +2320,14 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
-        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(ColumnNameIndex, Len), Len);
-        Result.UpdatePWideChar(TablePrivGrantorIndex, GetPWideChar(TablePrivGrantorIndex, Len), Len);
-        Result.UpdatePWideChar(TablePrivGranteeIndex, GetPWideChar(TablePrivGranteeIndex, Len), Len);
-        Result.UpdatePWideChar(TablePrivPrivilegeIndex, GetPWideChar(TablePrivPrivilegeIndex, Len), Len);
-        Result.UpdatePWideChar(TablePrivIsGrantableIndex, GetPWideChar(TablePrivIsGrantableIndex, Len), Len);
+        Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+        Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+        Result.UpdateUnicodeString(TableNameIndex, CleanupString(GetUnicodeString(TableNameIndex)));
+        Result.UpdateUnicodeString(ColumnNameIndex, CleanupString(GetUnicodeString(ColumnNameIndex)));
+        Result.UpdateUnicodeString(TablePrivGrantorIndex, CleanupString(GetUnicodeString(TablePrivGrantorIndex)));
+        Result.UpdateUnicodeString(TablePrivGranteeIndex, CleanupString(GetUnicodeString(TablePrivGranteeIndex)));
+        Result.UpdateUnicodeString(TablePrivPrivilegeIndex, CleanupString(GetUnicodeString(TablePrivPrivilegeIndex)));
+        Result.UpdateUnicodeString(TablePrivIsGrantableIndex, CleanupString(GetUnicodeString(TablePrivIsGrantableIndex)));
         Result.InsertRow;
       end;
       Close;
@@ -2334,7 +2338,6 @@ function TODBCDatabaseMetadataW.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: UnicodeString;
   ODBCConnection: IZODBCConnection;
@@ -2344,7 +2347,6 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2357,12 +2359,12 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
-        Result.UpdatePWideChar(PrimaryKeyColumnNameIndex, GetPWideChar(PrimaryKeyColumnNameIndex, Len), Len);
+        Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+        Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+        Result.UpdateUnicodeString(TableNameIndex, CleanupString(GetUnicodeString(TableNameIndex)));
+        Result.UpdateUnicodeString(PrimaryKeyColumnNameIndex, CleanupString(GetUnicodeString(PrimaryKeyColumnNameIndex)));
         Result.UpdateSmall(PrimaryKeyKeySeqIndex, GetSmall(PrimaryKeyKeySeqIndex));
-        Result.UpdatePWideChar(PrimaryKeyPKNameIndex, GetPWideChar(PrimaryKeyPKNameIndex, Len), Len);
+        Result.UpdateUnicodeString(PrimaryKeyPKNameIndex, CleanupString(GetUnicodeString(PrimaryKeyPKNameIndex)));
         Result.InsertRow;
       end;
       Close;
@@ -2449,7 +2451,6 @@ function TODBCDatabaseMetadataW.UncachedGetCrossReference(const PrimaryCatalog: 
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   PKCat, PKSchem, PKTabl, FKCat, FKSchem, FKTabl: UnicodeString;
   ODBCConnection: IZODBCConnection;
@@ -2463,7 +2464,6 @@ begin
   FKCat := DecomposeObjectString(ForeignCatalog);
   FKSchem := DecomposeObjectString(ForeignSchema);
   FKTabl := DecomposeObjectString(ForeignTable);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2478,21 +2478,21 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CrossRefKeyColPKTableCatalogIndex, GetPWideChar(CrossRefKeyColPKTableCatalogIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKTableSchemaIndex, GetPWideChar(CrossRefKeyColPKTableSchemaIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKTableNameIndex, GetPWideChar(CrossRefKeyColPKTableNameIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKColumnNameIndex, GetPWideChar(CrossRefKeyColPKColumnNameIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableCatalogIndex, GetPWideChar(CrossRefKeyColFKTableCatalogIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableSchemaIndex, GetPWideChar(CrossRefKeyColFKTableSchemaIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKTableNameIndex, GetPWideChar(CrossRefKeyColFKTableNameIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColFKColumnNameIndex, GetPWideChar(CrossRefKeyColFKColumnNameIndex, Len), Len);
+        Result.UpdateUnicodeString(CrossRefKeyColPKTableCatalogIndex, CleanupString(GetUnicodeString(CrossRefKeyColPKTableCatalogIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColPKTableSchemaIndex, CleanupString(GetUnicodeString(CrossRefKeyColPKTableSchemaIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColPKTableNameIndex, CleanupString(GetUnicodeString(CrossRefKeyColPKTableNameIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColPKColumnNameIndex, CleanupString(GetUnicodeString(CrossRefKeyColPKColumnNameIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColFKTableCatalogIndex, CleanupString(GetUnicodeString(CrossRefKeyColFKTableCatalogIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColFKTableSchemaIndex, CleanupString(GetUnicodeString(CrossRefKeyColFKTableSchemaIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColFKTableNameIndex, CleanupString(GetUnicodeString(CrossRefKeyColFKTableNameIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColFKColumnNameIndex, CleanupString(GetUnicodeString(CrossRefKeyColFKColumnNameIndex)));
         Result.UpdateSmall(CrossRefKeyColKeySeqIndex, GetSmall(CrossRefKeyColKeySeqIndex));
         if not IsNull(CrossRefKeyColUpdateRuleIndex) then
           Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, GetSmall(CrossRefKeyColUpdateRuleIndex));
         if not IsNull(CrossRefKeyColDeleteRuleIndex) then
           Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, GetSmall(CrossRefKeyColDeleteRuleIndex));;
-        Result.UpdatePWideChar(CrossRefKeyColFKNameIndex, GetPWideChar(CrossRefKeyColFKNameIndex, Len), Len);
-        Result.UpdatePWideChar(CrossRefKeyColPKNameIndex, GetPWideChar(CrossRefKeyColPKNameIndex, Len), Len);
+        Result.UpdateUnicodeString(CrossRefKeyColFKNameIndex, CleanupString(GetUnicodeString(CrossRefKeyColFKNameIndex)));
+        Result.UpdateUnicodeString(CrossRefKeyColPKNameIndex, CleanupString(GetUnicodeString(CrossRefKeyColPKNameIndex)));
         Result.UpdateInt(CrossRefKeyColDeferrabilityIndex, GetSmall(CrossRefKeyColDeferrabilityIndex));
         Result.InsertRow;
       end;
@@ -2555,7 +2555,6 @@ function TODBCDatabaseMetadataW.UncachedGetIndexInfo(const Catalog, Schema,
   Table: string; Unique, Approximate: Boolean): IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl: UnicodeString;
   ODBCConnection: IZODBCConnection;
@@ -2565,7 +2564,6 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2578,19 +2576,19 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-      Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-      Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
+      Result.UpdateUnicodeString(CatalogNameIndex, CleanupString(GetUnicodeString(CatalogNameIndex)));
+      Result.UpdateUnicodeString(SchemaNameIndex, CleanupString(GetUnicodeString(SchemaNameIndex)));
+      Result.UpdateUnicodeString(TableNameIndex, CleanupString(GetUnicodeString(TableNameIndex)));
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex, GetBoolean(IndexInfoColNonUniqueIndex));
-      Result.UpdatePWideChar(IndexInfoColIndexQualifierIndex, GetPWideChar(IndexInfoColIndexQualifierIndex, Len), Len);
-      Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideChar(IndexInfoColIndexNameIndex, Len), Len);
+      Result.UpdateUnicodeString(IndexInfoColIndexQualifierIndex, CleanupString(GetUnicodeString(IndexInfoColIndexQualifierIndex)));
+      Result.UpdateUnicodeString(IndexInfoColIndexNameIndex, CleanupString(GetUnicodeString(IndexInfoColIndexNameIndex)));
       Result.UpdateSmall(IndexInfoColTypeIndex, GetSmall(IndexInfoColTypeIndex));
       Result.UpdateSmall(IndexInfoColOrdPositionIndex, GetSmall(IndexInfoColOrdPositionIndex));
-      Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideChar(IndexInfoColColumnNameIndex, Len), Len);
-      Result.UpdatePWideChar(IndexInfoColAscOrDescIndex, GetPWideChar(IndexInfoColAscOrDescIndex, Len), Len);
+      Result.UpdateUnicodeString(IndexInfoColColumnNameIndex, CleanupString(GetUnicodeString(IndexInfoColColumnNameIndex)));
+      Result.UpdateUnicodeString(IndexInfoColAscOrDescIndex, CleanupString(GetUnicodeString(IndexInfoColAscOrDescIndex)));
       Result.UpdateInt(IndexInfoColCardinalityIndex, GetInt(IndexInfoColCardinalityIndex));
       Result.UpdateInt(IndexInfoColPagesIndex, GetInt(IndexInfoColPagesIndex));
-      Result.UpdatePWideChar(IndexInfoColFilterConditionIndex, GetPWideChar(IndexInfoColFilterConditionIndex, Len), Len);
+      Result.UpdateUnicodeString(IndexInfoColFilterConditionIndex, CleanupString(GetUnicodeString(IndexInfoColFilterConditionIndex)));
       Result.InsertRow;
     end;
     Close;
@@ -2645,12 +2643,10 @@ end;
 function TODBCDatabaseMetadataW.UncachedGetTypeInfo: IZResultSet;
 var
   RS: IZResultSet;
-  Len: NativeUInt;
   HSTMT: SQLHSTMT;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTypeInfo;
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2659,20 +2655,20 @@ begin
   with RS do begin
     while Next do begin
       Result.MoveToInsertRow;
-      Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideChar(TypeInfoTypeNameIndex, Len), Len);
+      Result.UpdateUnicodeString(TypeInfoTypeNameIndex, CleanupString(GetUnicodeString(TypeInfoTypeNameIndex)));
       Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertODBCTypeToSQLType(
          GetSmall(TypeInfoDataTypeIndex), 0,0,GetBoolean(TypeInfoUnsignedAttributeIndex), ConSettings, nil)));
       Result.UpdateInt(TypeInfoPecisionIndex, GetInt(TypeInfoPecisionIndex));
-      Result.UpdatePWideChar(TypeInfoLiteralPrefixIndex, GetPWideChar(TypeInfoLiteralPrefixIndex, Len), Len);
-      Result.UpdatePWideChar(TypeInfoLiteralSuffixIndex, GetPWideChar(TypeInfoLiteralSuffixIndex, Len), Len);
-      Result.UpdatePWideChar(TypeInfoCreateParamsIndex, GetPWideChar(TypeInfoCreateParamsIndex, Len), Len);
+      Result.UpdateUnicodeString(TypeInfoLiteralPrefixIndex, CleanupString(GetUnicodeString(TypeInfoLiteralPrefixIndex)));
+      Result.UpdateUnicodeString(TypeInfoLiteralSuffixIndex, CleanupString(GetUnicodeString(TypeInfoLiteralSuffixIndex)));
+      Result.UpdateUnicodeString(TypeInfoCreateParamsIndex, CleanupString(GetUnicodeString(TypeInfoCreateParamsIndex)));
       Result.UpdateSmall(TypeInfoNullAbleIndex, Ord(GetBoolean(TypeInfoNullAbleIndex)));
       Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, GetBoolean(TypeInfoCaseSensitiveIndex));
       Result.UpdateSmall(TypeInfoSearchableIndex, GetSmall(TypeInfoSearchableIndex));
       Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, GetBoolean(TypeInfoUnsignedAttributeIndex));
       Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, GetBoolean(TypeInfoFixedPrecScaleIndex));
       Result.UpdateBoolean(TypeInfoAutoIncrementIndex, GetBoolean(TypeInfoAutoIncrementIndex));
-      Result.UpdatePWideChar(TypeInfoLocaleTypeNameIndex, GetPWideChar(TypeInfoLocaleTypeNameIndex, Len), Len);
+      Result.UpdateUnicodeString(TypeInfoLocaleTypeNameIndex, CleanupString(GetUnicodeString(TypeInfoLocaleTypeNameIndex)));
       Result.UpdateSmall(TypeInfoMinimumScaleIndex, GetSmall(TypeInfoMinimumScaleIndex));
       Result.UpdateSmall(TypeInfoMaximumScaleIndex, GetSmall(TypeInfoMaximumScaleIndex));
       Result.UpdateSmall(TypeInfoSQLDataTypeIndex, GetSmall(TypeInfoSQLDataTypeIndex));
