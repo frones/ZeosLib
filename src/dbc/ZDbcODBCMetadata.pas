@@ -2068,6 +2068,19 @@ var
   HSTMT: SQLHSTMT;
   Cat, Schem, Table, TableTypes: UnicodeString;
   ODBCConnection: IZODBCConnection;
+  procedure TransferStr(ColIdx: Integer);
+  var
+    WChar: PWideChar;
+  begin
+    //Check the strings because the Firebird SQL driver under some circumstances returns #00 for the Catalog
+    //This will lead to problems with metadata caching.
+    WChar := RS.GetPWideChar(ColIdx, Len);
+    if (Len > 0) and (SysUtils.StrLen(WChar) = 0) then
+      Result.UpdateNull(ColIdx)
+    else
+      Result.UpdatePWideChar(ColIdx, WChar, Len);
+  end;
+
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
@@ -2091,17 +2104,17 @@ begin
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.SQLTablesW(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Table), Length(Table), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
-  if Assigned(RS) then with RS do begin
-    while Next do begin
+  if Assigned(RS) then begin
+    while RS.Next do begin
       Result.MoveToInsertRow;
-      Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-      Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-      Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
-      Result.UpdatePWideChar(TableColumnsSQLType, GetPWideChar(TableColumnsSQLType, Len), Len);
-      Result.UpdatePWideChar(TableColumnsRemarks, GetPWideChar(TableColumnsRemarks, Len), Len);
+      TransferStr(CatalogNameIndex);
+      TransferStr(SchemaNameIndex);
+      TransferStr(TableNameIndex);
+      TransferStr(TableColumnsSQLType);
+      TransferStr(TableColumnsRemarks);
       Result.InsertRow;
     end;
-    Close;
+    Rs.Close;
   end;
 end;
 
