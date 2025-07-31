@@ -1202,7 +1202,8 @@ var
 begin
   Version := Connection.GetClientVersion;
 
-  CheckNotEquals(0, Version, 'Expected a client library version of anything but 0.');
+  if Supports(Connection, IZInterbaseFirebirdConnection) then
+    CheckNotEquals(0, Version, 'Expected a client library version of anything but 0.');
 end;
 
 procedure TZTestDbcInterbaseCase.TestDefaultReadCommittedMode;

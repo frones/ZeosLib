@@ -89,16 +89,18 @@ end;
 procedure TZTestDbcODBCCase.TestFetchSequenceValue;
 var PStatement: IZPreparedStatement;
 begin
-  PStatement := Connection.PrepareStatement('SELECT current_value FROM sys.sequences WHERE name = ''generate_id''');
-  try
-    with PStatement.ExecuteQueryPrepared do
-    begin
-      Next;
-      CheckEquals(90000250, GetLong(FirstDbcIndex), 'current_value');
-      Close;
+  if Connection.GetServerProvider in [spMSSQL, spASE] then begin
+    PStatement := Connection.PrepareStatement('SELECT current_value FROM sys.sequences WHERE name = ''generate_id''');
+    try
+      with PStatement.ExecuteQueryPrepared do
+      begin
+        Next;
+        CheckEquals(90000250, GetLong(FirstDbcIndex), 'current_value');
+        Close;
+      end;
+    finally
+      PStatement.Close;
     end;
-  finally
-    PStatement.Close;
   end;
 end;
 
