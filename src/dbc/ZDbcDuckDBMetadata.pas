@@ -211,15 +211,16 @@ type
     function GetExtraNameCharacters: string; override;
   end;
 
-  IZProxyDatabaseMetadata = Interface(IZDatabaseMetadata)
+  IZDuckDBDatabaseMetadata = Interface(IZDatabaseMetadata)
+    ['{89439611-FAE2-48F2-BBF3-AFD70520CDE9}']
     // hier
   End;
 
   {** Implements PostgreSQL Database Metadata. }
-  TZDuckDBDatabaseMetadata = class(TZAbstractDatabaseMetadata, IZProxyDatabaseMetadata)
+  TZDuckDBDatabaseMetadata = class(TZAbstractDatabaseMetadata, IZDuckDBDatabaseMetadata)
   private
   protected
-    function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
+    function CreateDatabaseInfo: IZDatabaseInfo; override;
 
 //    function EscapeString(const S: string): string; override;
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
