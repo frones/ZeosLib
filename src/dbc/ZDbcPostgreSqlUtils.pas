@@ -1583,145 +1583,220 @@ end;
 
 {$Q-} {$R-} //else my shift fail
 {$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
-// for a description of the structures delivered in Src see:
-// https://www.postgresql.org/message-id/16572.1091489720%40sss.pgh.pa.us
+
+
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
   i, NBASEDigitsCount, Precision, Scale, Digits: Integer;
   NBASEDigit, FirstNibbleDigit: Word;
   Weight, PosWeight: SmallInt;
   pNibble, pLastNibble: PAnsiChar;
-  HalfNibbles: Boolean; //fpc compare fails in all areas if not strict left padded
-label ZeroBCD, FourNibbles, Loop, Done, Final2, Final3, jmpScale;
+  HalfNibbles: Boolean;
 begin
-  FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); //init fraction
-  {$IFNDEF ENDIAN_BIG}
-  NBASEDigit := PWord(Src)^;
-  NBASEDigitsCount := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
-  NBASEDigit := PWord(Src+4)^;
-  NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8); //read sign
-  {$ELSE !ENDIAN_BIG}
-  NBASEDigitsCount := PWord(Src)^;
-  NBASEDigit := PWord(Src+4)^; //read sign
-  {$ENDIF ENDIAN_BIG}
-  if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or      // zero
-     ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then begin // NaN or NULL
-ZeroBCD:
-    PCardinal(@Dst.Precision)^ := ZInitZeroBCD;
-    Exit;
-  end;
-  if NBASEDigit = NUMERIC_NEG
-  then Dst.SignSpecialPlaces := $80
-  else Dst.SignSpecialPlaces := 0;
+  FillChar(Dst.Fraction[0], MaxFMTBcdDigits, #0); // Initialize the fraction
 
-  Weight := PSmallInt(Src+2)^;
-  {$IFNDEF ENDIAN_BIG}Word(Weight) := (Word(Weight) and $00FF shl 8) or (Word(Weight) and $FF00 shr 8);{$ENDIF} //weight can be less than zero!
-  Inc(Src, 8);
-  pNibble := @Dst.Fraction[0];
-  pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
+  try
+    // Read the number of digits and the sign
+    {$IFNDEF ENDIAN_BIG}
+    NBASEDigit := PWord(Src)^;
+    NBASEDigitsCount := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+    NBASEDigit := PWord(Src + 4)^;
+    NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8); // Read the sign
+    {$ELSE}
+    NBASEDigitsCount := PWord(Src)^;
+    NBASEDigit := PWord(Src + 4)^; // Read the sign
+    {$ENDIF}
 
-  if Weight < 0 then begin {save absolute Weight value to I }
-    PosWeight := -Weight;
-    Inc(pNibble, (PosWeight - 1) shl 1); //set new bcd nibble offset
-    if pNibble > pLastNibble then //overflow -> raise AV ?
-      goto ZeroBCD;
-  end else
-    PosWeight := Weight;
+    // Check if the number is zero or invalid
+    if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or
+       ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then
+    begin
+      PCardinal(@Dst.Precision)^ := ZInitZeroBCD;
+      // Force precision to 0
+      Precision := 0;
+      Exit;
+    end;
 
-  if NBASEDigitsCount <= PosWeight then begin
-    Precision := ((PosWeight - NBASEDigitsCount +1)) * BASE1000Digits;
-    Scale := Precision * Ord(Weight < 0);
-    Precision := Precision + (NBASEDigitsCount * BASE1000Digits);
-    for i := 0 to NBASEDigitsCount - 1 do
-      if i > Weight then
-        Scale := Scale + BASE1000Digits;
-  end else if Weight < -1 then begin //scale starts with weight -1 nbase digits
-    Precision := (PosWeight - 1) * BASE1000Digits;
-    Scale := Precision;
-  end else begin
-    // determine precision as a multiple of 4 (because a Base1000-Digit always contains 4 Base10-Digits)
-    // later on the precision will be reduced to map to left packed TBCD requirements.
-    Precision := NBASEDigitsCount * BASE1000Digits;
-    Scale := (NBASEDigitsCount-(Weight + 1)) * BASE1000Digits;
-  end;
-  //process first base-digit -> pack nibbles top most left  i.e. '0001' will be '1'
-  NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF}; //each digit is a base 10000 digit -> 0..9999
-  FirstNibbleDigit := NBASEDigit div 100;
-  HalfNibbles := False;
-  if Weight > -1 then begin
-    if FirstNibbleDigit > 0 then begin
-      if NBASEDigit > 999 then begin
-        I := 0;
-        goto FourNibbles
-      end else begin
-        HalfNibbles := True;
-        NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
-        FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-        PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
-        PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
-        Inc(pNibble);
-Final3: Digits := 3;
+    // Set the sign
+    if NBASEDigit = NUMERIC_NEG then
+      Dst.SignSpecialPlaces := $80
+    else
+      Dst.SignSpecialPlaces := 0;
+
+    // Read the weight
+    Weight := PSmallInt(Src + 2)^;
+    {$IFNDEF ENDIAN_BIG}Word(Weight) := (Word(Weight) and $00FF shl 8) or (Word(Weight) and $FF00 shr 8);{$ENDIF}
+    Inc(Src, 8);
+
+    // Initialize nibble pointers
+    pNibble := @Dst.Fraction[0];
+    pLastNibble := pNibble + MaxFMTBcdDigits - 1;
+
+    // Handle negative weight
+    if Weight < 0 then
+    begin
+      PosWeight := -Weight;
+      Inc(pNibble, (PosWeight - 1) shl 1); // Set nibble offset
+      if pNibble > pLastNibble then
+      begin
+        PCardinal(@Dst.Precision)^ := ZInitZeroBCD;
+        Exit;
       end;
-    end else if NBASEDigit > 9 then begin
-      PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
-Final2: Digits := 2;
-    end else begin
-      HalfNibbles := True;
-      PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
-      Digits := 1;
+    end
+    else
+      PosWeight := Weight;
+
+    // Calculate precision and scale
+    if NBASEDigitsCount <= PosWeight then
+    begin
+      Precision := ((PosWeight - NBASEDigitsCount + 1)) * BASE1000Digits;
+      Scale := Precision * Ord(Weight < 0);
+      Precision := Precision + (NBASEDigitsCount * BASE1000Digits);
+      for i := 0 to NBASEDigitsCount - 1 do
+        if i > Weight then
+          Scale := Scale + BASE1000Digits;
+    end
+    else if Weight < -1 then
+    begin
+      Precision := (PosWeight - 1) * BASE1000Digits;
+      Scale := Precision;
+    end
+    else
+    begin
+      Precision := NBASEDigitsCount * BASE1000Digits;
+      Scale := (NBASEDigitsCount - (Weight + 1)) * BASE1000Digits;
     end;
-    // reduce the precision (still a multiple of 4) to the requirements of left packed TBCD
-    Dec(Precision, BASE1000Digits-Digits);
-    if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
-    then goto done;
-    if not HalfNibbles then Inc(pNibble);
-    I := 1;
-  end else I := 0;
-Loop:
-  NBASEDigit := PWord(Src+(i shl 1))^;  //each digit is a base 10000 digit -> 0..9999
-  {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8){$ENDIF};
-  FirstNibbleDigit := NBASEDigit div 100;
-FourNibbles:
-  NBASEDigit := NBASEDigit - (FirstNibbleDigit * 100); //mod 100
-  NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit] {shl 8}; //move lookup 2 half bytes forward
-  FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-  if HalfNibbles then begin
-    PByte(pNibble  )^ := PByte(pNibble)^ or Byte(FirstNibbleDigit shr 4);
-    PByte(pNibble+1)^ := Byte((FirstNibbleDigit) shl 4) or Byte(NBASEDigit shr 4);
-    if pNibble < pLastNibble
-    then PByte(pNibble+2)^ := Byte(NBASEDigit) shl 4
-    else goto Final3;  //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
-  end else if pNibble < pLastNibble
-    then PWord(pNibble)^   := (NBASEDigit shl 8) or FirstNibbleDigit
-    else begin
-      PByte(pNibble)^   := FirstNibbleDigit;
-      goto Final2;  //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
+
+    // Process the first digit
+    NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF};
+    FirstNibbleDigit := NBASEDigit div 100;
+    HalfNibbles := False;
+
+    if Weight > -1 then
+    begin
+      if FirstNibbleDigit > 0 then
+      begin
+        if NBASEDigit > 999 then
+        begin
+          // Handle 4 nibbles
+          i := 0;
+          NBASEDigit := NBASEDigit - (FirstNibbleDigit * 100);
+          NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+          FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+          PByte(pNibble)^ := Byte(FirstNibbleDigit);
+          PByte(pNibble + 1)^ := Byte(NBASEDigit);
+          Inc(pNibble);
+          if pNibble >= pLastNibble then
+            Exit;
+          Digits := 4;
+        end
+        else
+        begin
+          // Handle 3 nibbles
+          HalfNibbles := True;
+          NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)];
+          FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+          PByte(pNibble)^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
+          PByte(pNibble + 1)^ := Byte(NBASEDigit) shl 4;
+          Inc(pNibble);
+          if pNibble >= pLastNibble then
+            Exit;
+          Digits := 3;
+        end;
+      end
+      else if NBASEDigit > 9 then
+      begin
+        // Handle 2 nibbles
+        PByte(pNibble)^ := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+        Digits := 2;
+      end
+      else
+      begin
+        // Handle 1 nibble
+        HalfNibbles := True;
+        PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
+        Digits := 1;
+      end;
+
+      // Adjust precision
+      Dec(Precision, BASE1000Digits - Digits);
+      if (NBASEDigitsCount = 1) or (pNibble = pLastNibble) then
+        Exit;
+
+      if not HalfNibbles then
+        Inc(pNibble);
+      i := 1;
+    end
+    else
+      i := 0;
+
+    // Process remaining digits
+    while i < NBASEDigitsCount do
+    begin
+      NBASEDigit := PWord(Src + (i shl 1))^;
+      {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);{$ENDIF}
+      FirstNibbleDigit := NBASEDigit div 100;
+      NBASEDigit := NBASEDigit - (FirstNibbleDigit * 100);
+      NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+      FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+
+      if HalfNibbles then
+      begin
+        PByte(pNibble)^ := PByte(pNibble)^ or Byte(FirstNibbleDigit shr 4);
+        PByte(pNibble + 1)^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
+        if pNibble < pLastNibble then
+          PByte(pNibble + 2)^ := Byte(NBASEDigit) shl 4
+        else
+          Break;
+      end
+      else if pNibble < pLastNibble then
+        PWord(pNibble)^ := (NBASEDigit shl 8) or FirstNibbleDigit
+      else
+        Break;
+
+      if pNibble < pLastNibble then
+        Inc(pNibble, 1 + Ord(i < NBASEDigitsCount - 1))
+      else
+        Break;
+
+      Inc(i);
     end;
-  if pNibble < pLastNibble
-  then Inc(pNibble, 1+Ord(I<NBASEDigitsCount-1)) //keep offset of pNibble to lastnibble if loop end reached
-  else goto Done; //overflow -> raise EBcdOverflowException.Create(SBcdOverflow)
-  Inc(I);
-  if I < NBASEDigitsCount then
-    goto Loop;
-Done:
-  if (Scale > 0) then begin  //padd trailing zeroes away
-    pLastNibble := PAnsiChar(@Dst.Fraction[0])+(Precision shr 1);//  pNibble + Ord(HalfNibbles);
-    for I := Precision downto (Precision-Scale) do begin
-      if (Scale > 0) and ((i and 1 = 1) and (PByte(pLastNibble)^ shr 4 = 0) or (i and 1 = 0) and (PByte(pLastNibble-1)^ and $0F = 0)) then begin
-        Dec(Precision);
-        Dec(Scale);
-      end else Break;
-      if (i and 1 = 0) then
-        Dec(PLastNibble)
-    end;
-jmpScale:
+
+    // Final handling of scale and precision
     if Scale > 0 then
-      if Dst.SignSpecialPlaces = $80
-      then Dst.SignSpecialPlaces := Scale or $80
-      else Dst.SignSpecialPlaces := Scale;
+    begin
+      pLastNibble := PAnsiChar(@Dst.Fraction[0]) + (Precision shr 1);
+      for i := Precision downto (Precision - Scale) do
+      begin
+        if (Scale > 0) and ((i and 1 = 1) and (PByte(pLastNibble)^ shr 4 = 0) or (i and 1 = 0) and (PByte(pLastNibble - 1)^ and $0F = 0)) then
+        begin
+          Dec(Precision);
+          Dec(Scale);
+        end
+        else
+          Break;
+
+        if i and 1 = 0 then
+          Dec(pLastNibble);
+      end;
+
+      if Scale > 0 then
+        if Dst.SignSpecialPlaces = $80 then
+          Dst.SignSpecialPlaces := Scale or $80
+        else
+          Dst.SignSpecialPlaces := Scale;
+    end;
+  finally
+    Dst.Precision := Max(Precision, 1);
+    if Dst.Precision >= 64 then
+    begin
+      Dst.SignSpecialPlaces:= Dst.SignSpecialPlaces - (Dst.Precision - 64);
+      Dst.Precision := 64;
+    end;
   end;
-  Dst.Precision := Max(Precision, 1);
 end;
+
+
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 {$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O+}{$ENDIF}
