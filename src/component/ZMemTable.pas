@@ -122,7 +122,7 @@ implementation
 
 uses ZMessages, ZEncoding,
   ZDbcStatement, ZDbcMetadata, ZDbcUtils, ZDbcCache, ZDbcConnection,
-  ZDbcCachedResultSet, ZGenericSqlToken{$IFNDEF ZEOS_DISABLE_PROXY}, ZDbcXmlUtils{$ENDIF};
+  ZDbcCachedResultSet, ZGenericSqlToken{$IFNDEF ZEOS_DISABLE_PROXY}, ZDbcXmlUtils{$ELSE}{$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}, ZDbcXmlUtils{$ENDIF}{$ENDIF};
 
 type
   TZMemResultSetPreparedStatement = Class(TZBeginnerPreparedStatement,
