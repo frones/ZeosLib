@@ -257,7 +257,7 @@ var
 
   procedure RaiseBindError(ParamIdx: Integer; ParamType: String);
   begin
-    EZSQLException.CreateFmt('Could not bind parameter %d as type %s', [ParamIdx, ParamType]);
+    raise EZSQLException.CreateFmt('Could not bind parameter %d as type %s', [ParamIdx, ParamType]);
   end;
 begin
   ParamCount := FPlainDriver.DuckDB_NParams(FStatement);
@@ -265,63 +265,63 @@ begin
      raise EZSQLException.Create('DuckDB and Zeos have different opinions about the parameter count.');
   for x := 0 to ParamCount - 1 do begin
     if ClientVarManager.IsNull(InParamValues[x]) then begin
-      if FPlainDriver.DuckDB_Bind_Null(FStatement, x) <> DuckDBSuccess then
+      if FPlainDriver.DuckDB_Bind_Null(FStatement, x + 1) <> DuckDBSuccess then
          RaiseBindError(x, 'null');
     end else begin
       case InParamTypes[x] of
         stBoolean:
-          if FPlainDriver.DuckDB_Bind_Boolean(FStatement, x, ClientVarManager.GetAsBoolean(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Boolean(FStatement, x + 1, ClientVarManager.GetAsBoolean(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'boolean');
         stShort:
-          if FPlainDriver.DuckDB_Bind_UInt8(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_UInt8(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'uint8');
         stByte:
-          if FPlainDriver.DuckDB_Bind_Int8(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Int8(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'int8');
         stWord:
-          if FPlainDriver.DuckDB_Bind_UInt16(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_UInt16(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'uint16');
         stSmall:
-          if FPlainDriver.DuckDB_Bind_Int16(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Int16(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'int16');
         stLongWord:
-          if FPlainDriver.DuckDB_Bind_UInt32(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_UInt32(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'uint32');
         stInteger:
-          if FPlainDriver.DuckDB_Bind_Int32(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Int32(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'int32');
         stULong:
-          if FPlainDriver.DuckDB_Bind_Uint64(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Uint64(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'uint64');
         stLong:
-          if FPlainDriver.DuckDB_Bind_int64(FStatement, x, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_int64(FStatement, x + 1, ClientVarManager.GetAsInteger(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'int64');
         stFloat:
-          if FPlainDriver.DuckDB_Bind_Float(FStatement, x, ClientVarManager.GetAsDouble(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Float(FStatement, x + 1, ClientVarManager.GetAsDouble(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'float');
         stDouble, stCurrency, stBigDecimal:
-          if FPlainDriver.DuckDB_Bind_Double(FStatement, x, ClientVarManager.GetAsDouble(InParamValues[x])) <> DuckDBSuccess then
+          if FPlainDriver.DuckDB_Bind_Double(FStatement, x + 1, ClientVarManager.GetAsDouble(InParamValues[x])) <> DuckDBSuccess then
              RaiseBindError(x, 'double');
         stString, stUnicodeString: begin
             TempStr := ClientVarManager.GetAsUTF8String(InParamValues[x]);
-            if FPlainDriver.DuckDB_Bind_Varchar_Length(FStatement, x, PAnsiChar(TempStr), Length(TempStr)) <> DuckDBSuccess then
+            if FPlainDriver.DuckDB_Bind_Varchar_Length(FStatement, x + 1, PAnsiChar(TempStr), Length(TempStr)) <> DuckDBSuccess then
                RaiseBindError(x, 'varchar');
           end;
         stDate: begin
             TempDuckDate.days := Trunc(ClientVarManager.GetAsDateTime(InParamValues[x])) - DuckDBDateShift;
-            if FPlainDriver.DuckDB_Bind_Date(FStatement, x, TempDuckDate) <> DuckDBSuccess then
+            if FPlainDriver.DuckDB_Bind_Date(FStatement, x + 1, TempDuckDate) <> DuckDBSuccess then
                RaiseBindError(x, 'date');
           end;
         stTime: begin
             ClientVarManager.GetAsTime(InParamValues[x], TempZTime);
             TempDuckTime := ZTimeToDuckTime(TempZTime);
-            if FPlainDriver.DuckDB_Bind_Time(FStatement, x, TempDuckTime) <> DuckDBSuccess then
+            if FPlainDriver.DuckDB_Bind_Time(FStatement, x + 1, TempDuckTime) <> DuckDBSuccess then
               RaiseBindError(x, 'time');
           end;
         stTimestamp: begin
             ClientVarManager.GetAsTimeStamp(InParamValues[x], TempZTimeStamp);
             TempDuckTimeStamp := ZTimeStampToDuckTimeStamp(TempZTimeStamp);
-            if FPlainDriver.DuckDB_Bind_Timestamp(FStatement, x, TempDuckTimeStamp) <> DuckDBSuccess then
+            if FPlainDriver.DuckDB_Bind_Timestamp(FStatement, x + 1, TempDuckTimeStamp) <> DuckDBSuccess then
               RaiseBindError(x, 'timestamp');
           end;
         stAsciiStream, stUnicodeStream: begin
@@ -329,14 +329,14 @@ begin
               TempStr := TempBlob.GetUTF8String
             else
               TempStr := ClientVarManager.GetAsUTF8String(InParamValues[x]);
-            if FPlainDriver.DuckDB_Bind_Varchar_Length(FStatement, x, PAnsiChar(TempStr), Length(TempStr)) <> DuckDBSuccess then
+            if FPlainDriver.DuckDB_Bind_Varchar_Length(FStatement, x + 1, PAnsiChar(TempStr), Length(TempStr)) <> DuckDBSuccess then
                RaiseBindError(x, 'varchar');
           end;
         stBinaryStream: begin
             if (InParamValues[x].VType = vtInterface) and Supports(InParamValues[x].VInterface, IZBlob, TempBlob) then begin
               TempBytes := TempBlob.GetBytes;
               try
-                if FPlainDriver.DuckDB_Bind_Blob(FStatement, x, Pointer(@TempBytes[0]), Length(TempBytes)) <> DuckDBSuccess then
+                if FPlainDriver.DuckDB_Bind_Blob(FStatement, x + 1, Pointer(@TempBytes[0]), Length(TempBytes)) <> DuckDBSuccess then
                   RaiseBindError(x, 'blob');
               finally
                 Setlength(TempBytes, 0);
@@ -347,7 +347,7 @@ begin
           end;
         stBytes: begin
             TempRawByteString:= InParamValues[x].VRawByteString;
-            if FPlainDriver.DuckDB_Bind_Blob(FStatement, x, Pointer(PansiChar(TempRawByteString)), Length(TempRawByteString)) <> DuckDBSuccess then
+            if FPlainDriver.DuckDB_Bind_Blob(FStatement, x + 1, Pointer(PansiChar(TempRawByteString)), Length(TempRawByteString)) <> DuckDBSuccess then
               RaiseBindError(x, 'blob');
           end;
         else

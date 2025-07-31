@@ -721,7 +721,8 @@ end;
 }
 function TZDuckDBDatabaseInfo.SupportsCatalogsInDataManipulation: Boolean;
 begin
-  Result := true;
+  //Result := true;
+  Result := false;
 end;
 
 {**
@@ -1575,11 +1576,11 @@ begin
       CopyData('numeric_precision_radix', 'NUM_PREC_RADIX', stInteger);
       CopyData('numeric_scale', 'DECIMAL_DIGITS', stInteger);
       CopyData('is_identity', 'AUTO_INCREMENT', stBoolean);
-      if DuckData.IsNullByName('is_updatable') then begin
+      {if DuckData.IsNullByName('is_updatable') then begin
         Result.UpdateNullByName('WRITABLE');
         Result.UpdateNullByName('DEFINITELYWRITABLE');
         Result.UpdateNullByName('READONLY')
-      end else if DuckData.GetBooleanByName('is_updatable') then begin
+      end else} if DuckData.IsNullByName('is_updatable') or DuckData.GetBooleanByName('is_updatable') then begin
         Result.UpdateBooleanByName('WRITABLE', true);
         Result.UpdateBooleanByName('DEFINITELYWRITABLE', true);
         Result.UpdateBooleanByName('READONLY', false);
