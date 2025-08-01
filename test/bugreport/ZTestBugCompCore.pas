@@ -139,6 +139,7 @@ type
     procedure TestSF600;
     // A test for https://zeoslib.sourceforge.io/viewtopic.php?t=200781
     procedure TestForum200781;
+    procedure TestPR116;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -2229,6 +2230,32 @@ begin
     Table.Close;
   finally
     FreeAndNil(Table);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestPR116;
+var
+  Q: TZQuery;
+  Works: Boolean;
+begin
+  Works := False;
+  Q := CreateQuery;
+  try
+    Q.Close;
+    Q.SQL.Text := 'delete from number_values where n_id in (1001, 1002, 1003, 1003, 1004, 1005)';
+    Q.ExecSQL;
+
+    Q.Close;
+    Q.SQL.Text := '';
+    try
+      Q.ExecSQL;
+      Works := False;
+    except
+      Works := True;
+    end;
+    Check(Works, 'An exception was expected for an empty statement.')
+  finally
+    FreeAndNil(Q);
   end;
 end;
 
