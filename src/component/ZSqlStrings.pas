@@ -345,17 +345,18 @@ begin
   end;
   if (FDataset = nil) or not (csLoading in FDataset.ComponentState) then
     FParams.Clear;
-  { Optimization for empty query. }
-  S := Text;
-  NormalizedParam := Trim(S);
-  if NormalizedParam = '' then
-    Exit;
-
+  
   FStatements.Clear;
   SQL := '';
   ParamIndexCount := 0;
   {$IFDEF WITH_VAR_INIT_WARNING}ParamIndices := nil;{$ENDIF}
   SetLength(ParamIndices, ParamIndexCount);
+
+  { Optimization for empty query. }
+  S := Text;
+  NormalizedParam := Trim(S);
+  if NormalizedParam = '' then
+    Exit;
 
   { Optimization for single query without parameters. }
   if (not FParamCheck or (Pos(FParamChar, S) = 0))
